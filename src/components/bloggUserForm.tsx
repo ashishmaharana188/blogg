@@ -1,9 +1,21 @@
+import { useEffect, useState } from "react";
 import { userForm } from "./pageTypes";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 
+// Matched exact imports from notesFormUI
+import "@blocknote/core/fonts/inter.css";
+import "@blocknote/mantine/style.css";
+
 const UserForm = ({ onContentChange }: userForm) => {
   const editor = useCreateBlockNote();
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Safeguard: Defers editor rendering until React has stabilized the parent DOM
+  useEffect(() => {
+    const timer = setTimeout(() => setIsMounted(true), 50);
+    return () => clearTimeout(timer);
+  }, []);
 
   const saveForm = () => {
     onContentChange("Form Saved");
@@ -12,20 +24,16 @@ const UserForm = ({ onContentChange }: userForm) => {
   return (
     <div className="w-full min-h-screen">
       <div className="max-w-6xl mx-auto flex flex-col gap-4 p-4">
-        <div onClick={() => editor.focus()}>
-          <BlockNoteView editor={editor} theme="light" filePanel={true} />
+        <div>
+          {/* Editor only mounts after the timeout */}
+          {isMounted && (
+            <BlockNoteView editor={editor} theme="light" filePanel={true} />
+          )}
         </div>
-
-        <button
-          className="bg-slate-800 text-white p-2 rounded"
-          onClick={() => console.log("Current Blocks:", editor.document)}
-        >
-          Debug State
-        </button>
 
         <div className="flex justify-end">
           <button
-            className="px-5 py-1 ml-5 text-base bg-white text-black rounded shadow hover:bg-black hover:text-white"
+            className="px-5 py-1 text-base bg-slate-800 text-white rounded shadow hover:bg-black"
             onClick={() => saveForm()}
           >
             SAVE
