@@ -1,9 +1,9 @@
-import BloggPage from "./components/bloggMain";
+import Router from "./components/router";
 
 function App() {
   return (
     <>
-      <BloggPage />
+      <Router />
     </>
   );
 }
