@@ -1,10 +1,7 @@
 import { BrowserRouter } from "react-router-dom";
-import { useState } from "react";
-import Router from "./components/router";
+import Router from "./components/Router";
 
 function App() {
-  const [isHomePage, setHomePage] = useState();
-
   return (
     <>
       <BrowserRouter>

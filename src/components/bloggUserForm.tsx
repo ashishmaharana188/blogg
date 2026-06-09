@@ -69,7 +69,7 @@ const UserForm = ({ onContentChange }: userForm) => {
 
         <div className="flex justify-end mt-4">
           <button
-            className="px-5 py-1 text-l bg-white text-black rounded  hover:bg-black hover:text-white"
+            className="px-5 py-1 text-l bg-white text-black rounded font-bold hover:bg-black hover:text-white"
             onClick={saveForm}
           >
             SAVE
