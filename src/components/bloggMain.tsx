@@ -1,16 +1,18 @@
-import React from "react";
+import { useState } from "react";
 import UserForm from "./bloggUserForm";
 
 const BloggPage = () => {
-  const handleSave = () => {
-    console.log("Form Saved");
+  const [value, setValue] = useState("");
+
+  const handleSave = (newValue: string) => {
+    console.log("incoming:", newValue);
+
+    setValue(newValue);
+
+    console.log("current state:", value);
   };
 
-  return (
-    <div>
-      <UserForm textSaved={handleSave} />
-    </div>
-  );
+  return <UserForm onContentChange={handleSave} />;
 };
 
 export default BloggPage;

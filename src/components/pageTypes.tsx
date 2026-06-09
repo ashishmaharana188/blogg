@@ -1,5 +1,5 @@
 import React from "react";
 
 export interface userForm {
-  textSaved: () => void;
+  onContentChange: (value: string) => void;
 }
