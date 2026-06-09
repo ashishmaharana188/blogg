@@ -1,14 +1,14 @@
-import { Link } from "react-router-dom";
+import { Link, Route, Routes } from "react-router-dom";
+import HomePage from "../pages/HomePage";
+import BlogPage from "../pages/BlogPage";
 
 const Router = () => {
   return (
-    <div className="flex gap-4 p-4 text-black">
-      <Link to="/">Home</Link>
+    <Routes>
+      <Route path="/" element={<HomePage />} />
 
-      <Link className="text-black" to="/blog">
-        New Blog
-      </Link>
-    </div>
+      <Route path="/blog" element={<BlogPage />} />
+    </Routes>
   );
 };
 
