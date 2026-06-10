@@ -13,12 +13,17 @@
     "@blocknote/core": "0.47.1",
     "@blocknote/mantine": "0.47.1",
     "@blocknote/react": "0.47.1",
+    "@ionic/react": "^8.8.9",
     "@mantine/core": "^8.3.11",
     "@mantine/hooks": "^8.3.11",
     "@tailwindcss/vite": "^4.3.0",
+    "axios": "^1.17.0",
+    "framer-motion": "^12.40.0",
+    "ionicons": "^8.0.13",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.17.0",
+    "react-zoom-pan-pinch": "^4.0.3",
     "tailwindcss": "^4.3.0"
   },
   "devDependencies": {

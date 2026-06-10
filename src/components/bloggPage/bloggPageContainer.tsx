@@ -1,7 +1,7 @@
 import { useState } from "react";
 import UserForm from "./bloggUserForm";
 
-const BloggPage = () => {
+const BloggPageContainer = () => {
   const [value, setValue] = useState("");
 
   const handleSave = (newValue: string) => {
@@ -15,4 +15,4 @@ const BloggPage = () => {
   return <UserForm onContentChange={handleSave} />;
 };
 
-export default BloggPage;
+export default BloggPageContainer;

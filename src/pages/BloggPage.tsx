@@ -1,8 +1,9 @@
 import { useState } from "react";
-import BloggPage from "../components/bloggPage";
 import { Link } from "react-router-dom";
+import BloggPageContainer from "../components/bloggPage/bloggPageContainer";
+import BloggCanvasUI from "../components/bloggProfile/blogCanvasUI";
 
-const BlogPage = () => {
+const BloggPage = () => {
   const [isNewNote, setNewNote] = useState(false);
 
   const newNote = () => {
@@ -17,7 +18,7 @@ const BlogPage = () => {
       <div className="flex flex-col">
         <div className="mt-10 ml-10">
           <Link className="text-black break hover:font-bold" to="/">
-            HOME PAGE
+            BLOG FEED
             <hr className="w-355 ml-30 border-black border-2"></hr>
           </Link>
         </div>
@@ -29,10 +30,12 @@ const BlogPage = () => {
             Close Note
           </button>
         </div>
-        <div className="">{isNewNote && <BloggPage />}</div>
+        <div className="">
+          {isNewNote ? <BloggPageContainer /> : <BloggCanvasUI />}
+        </div>
       </div>
     </div>
   );
 };
 
-export default BlogPage;
+export default BloggPage;
