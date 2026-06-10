@@ -4,21 +4,25 @@ import { BlockNoteView } from "@blocknote/mantine";
 
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
-import { useRef, useState } from "react";
+import { HtmlHTMLAttributes, useRef, useState } from "react";
 
 const UserForm = ({ onContentChange }: userForm) => {
   const [formData, setFormData] = useState({
+    author: "",
     title: "",
     subtitle: "",
   });
 
   const editor = useCreateBlockNote();
 
+  const authorRef = useRef<HTMLTextAreaElement>(null);
   const titleRef = useRef<HTMLTextAreaElement>(null);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
-  const subtitleRef = useRef<HTMLTextAreaElement>(null);
-
-  const handleTitleChange = (field: "title" | "subtitle", value: string) => {
+  const handleTitleChange = (
+    field: "author" | "title" | "subtitle",
+    value: string,
+  ) => {
     setFormData({
       ...formData,
       [field]: value,
@@ -41,6 +45,18 @@ const UserForm = ({ onContentChange }: userForm) => {
   return (
     <div className="mt-10 w-full min-h-screen relative">
       <div className="max-w-6xl mx-auto flex flex-col gap-4 p-4 relative">
+        <div className="self-center -mt-4">
+          <textarea
+            ref={authorRef}
+            value={formData.author}
+            onChange={(e) => {
+              handleTitleChange("subtitle", e.target.value);
+              autoResize(authorRef);
+            }}
+            placeholder="Author"
+            className="w-[400px] resize-none overflow-hidden whitespace-pre-wrap break-words text-2xl font-bold outline-none text-center"
+          />
+        </div>
         <textarea
           ref={titleRef}
           value={formData.title}
@@ -49,20 +65,25 @@ const UserForm = ({ onContentChange }: userForm) => {
             autoResize(titleRef);
           }}
           placeholder="Document Title"
-          className="w-[800px] mt-10 resize-none overflow-hidden whitespace-pre-wrap  break-words text-4xl font-bold outline-none"
+          className="w-[800px]  resize-none overflow-hidden whitespace-pre-wrap break-words text-4xl font-bold outline-none self-center text-center"
         />
-        <div className="self-end -mt-4">
+        <div className="self-center -mt-4">
           <textarea
-            ref={subtitleRef}
+            ref={descriptionRef}
             value={formData.subtitle}
             onChange={(e) => {
               handleTitleChange("subtitle", e.target.value);
-              autoResize(subtitleRef);
+              autoResize(descriptionRef);
             }}
-            placeholder="Author"
-            className="w-[400px] mr-20 resize-none overflow-hidden whitespace-pre-wrap break-words text-2xl font-bold outline-none"
+            placeholder="Description"
+            className="w-[400px] resize-none overflow-hidden whitespace-pre-wrap break-words text-2xl font-bold outline-none text-center"
           />
         </div>
+
+        <button className="w-30 rounded-full border font-semibold self-center text-center">
+          + Add Tag
+        </button>
+
         <div className="mt-10">
           <BlockNoteView editor={editor} theme="dark" filePanel={true} />
         </div>

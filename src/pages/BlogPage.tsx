@@ -16,11 +16,12 @@ const BlogPage = () => {
     <div className="w-full min-h-screen relative">
       <div className="flex flex-col">
         <div className="mt-10 ml-10">
-          <Link className="text-black hover:font-bold" to="/">
+          <Link className="text-black break hover:font-bold" to="/">
             HOME PAGE
+            <hr className="w-355 ml-30 border-black border-2"></hr>
           </Link>
         </div>
-        <div className="flex justify-end gap-4 mr-20">
+        <div className="flex justify-end gap-4 mr-15">
           <button className={"w-30 hover:font-bold self-end"} onClick={newNote}>
             New Note
           </button>
