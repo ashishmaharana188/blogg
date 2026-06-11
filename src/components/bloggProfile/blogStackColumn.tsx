@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { IonIcon } from "@ionic/react";
 import { addOutline, createOutline } from "ionicons/icons";
-import GroupDivider from "./GroupDivider";
-import GroupCard from "./GroupCard";
+import GroupDivider from "./bloggGroupDivider";
+import GroupCard from "./bloggGroupCard";
 import useIsTouchDevice from "../../hooks/useIsTouchDevice";
 
 // 1. Local Type Definitions (Replaces old useNotes import)

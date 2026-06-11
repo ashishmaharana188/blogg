@@ -74,7 +74,8 @@ const GroupCard = React.memo(
     const controls = useAnimation();
     const y = useMotionValue(0);
     const [isDragging, setIsDragging] = useState(false);
-
+    //NEW NOTE
+    const [isNewNote, setIsNewNote] = useState(false);
     // NEW EDIT STATES
     const [isRenaming, setIsRenaming] = useState(false);
     const [editTitle, setEditTitle] = useState(group.title);

@@ -1,11 +1,12 @@
 import { useState } from "react";
 import UserForm from "./bloggUserForm";
 
-const BloggPageContainer = () => {
+const BloggPageContainer = ({ groupId }: { groupId?: string | null }) => {
   const [value, setValue] = useState("");
 
   const handleSave = (newValue: string) => {
-    console.log("incoming:", newValue);
+    console.log(`Incoming Content:`, newValue);
+    console.log(`Target Group ID:`, groupId || "Unassigned");
 
     setValue(newValue);
 
