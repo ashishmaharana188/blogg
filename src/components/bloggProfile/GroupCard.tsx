@@ -217,6 +217,7 @@ const GroupCard = React.memo(
                       autoFocus
                       value={editTitle}
                       onChange={(e) => setEditTitle(e.target.value)}
+                      onPointerDown={(e) => e.stopPropagation()} // Prevents Framer Motion from swallowing keystrokes
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           onRenameGroup(group.group_id, editTitle);

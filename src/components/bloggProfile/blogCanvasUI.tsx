@@ -80,14 +80,8 @@ export default function BloggCanvasUI({
         maxScale={3}
         limitToBounds={false}
         centerZoomedOut={false}
-        wheel={{
-          step: 0.08,
-          activationKeys: ["Control", "Meta"],
-        }}
-        panning={{
-          excluded: ["no-pan"],
-          wheelPanning: true,
-        }}
+        wheel={{ step: 0.08, activationKeys: ["Control", "Meta"] }}
+        panning={{ excluded: ["no-pan"], wheelPanning: true } as any}
         onInit={handleViewportUpdate}
         onWheelStart={() => startInteraction()}
         onWheelStop={(ref) => {

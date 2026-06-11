@@ -237,10 +237,10 @@ const NoteStackColumn = React.memo(
         }}
       >
         <div
-          className={`group relative mb-8 flex w-[600px] flex-col gap-4 rounded-xl border bg-surface/80 p-4 transition-[box-shadow,border-color,transform] duration-300 canvas-heavy-shell ${
+          className={`group relative mb-8 flex w-[600px] flex-col gap-4 rounded-xl border bg-white/95 p-4 transition-[box-shadow,border-color,transform] duration-300 shadow-xl ${
             isHighlighted
               ? "border-blue-500 shadow-[0_0_40px_rgba(59,130,246,0.4)] scale-[1.03]"
-              : "border-gray-300 shadow-sm"
+              : "border-gray-300"
           } ${isDragging ? "shadow-2xl cursor-grabbing" : "cursor-grab"}`}
           onPointerDown={handlePointerDown}
           style={{ touchAction: "none" }}
@@ -379,9 +379,13 @@ const NoteStackColumn = React.memo(
                 placeholder="Folder Name..."
                 value={draftTitle}
                 onChange={(e) => setDraftTitle(e.target.value)}
-                onKeyDown={(e) =>
-                  e.key === "Enter" && onCreateGroup(draftTitle, stack.stack_id)
-                }
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    onCreateGroup(draftTitle, stack.stack_id);
+                    setIsCreatingGroup(false);
+                    setDraftTitle("");
+                  }
+                }}
                 className="flex-1 p-2 text-sm border border-gray-300 rounded focus:outline-none focus:border-gray-900 font-bold"
               />
               <button
