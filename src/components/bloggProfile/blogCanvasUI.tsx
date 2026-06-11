@@ -71,7 +71,7 @@ export default function BloggCanvasUI({
   );
 
   return (
-    <div className="relative w-full h-screen bg-[#f8f9fa] overflow-hidden font-sans">
+    <div className="absolute inset-0 bg-[#f8f9fa] overflow-hidden font-sans">
       <TransformWrapper
         initialScale={1}
         initialPositionX={0}
@@ -80,8 +80,14 @@ export default function BloggCanvasUI({
         maxScale={3}
         limitToBounds={false}
         centerZoomedOut={false}
-        wheel={{ step: 0.1, smoothStep: 0.0005 }}
-        panning={{ excluded: ["no-pan"] }}
+        wheel={{
+          step: 0.08,
+          activationKeys: ["Control", "Meta"],
+        }}
+        panning={{
+          excluded: ["no-pan"],
+          wheelPanning: true,
+        }}
         onInit={handleViewportUpdate}
         onWheelStart={() => startInteraction()}
         onWheelStop={(ref) => {
@@ -107,7 +113,13 @@ export default function BloggCanvasUI({
               onZoomed={() => {}}
             />
             <TransformComponent
-              wrapperStyle={{ width: "100%", height: "100%" }}
+              wrapperStyle={{
+                width: "100%",
+                height: "100%",
+                position: "absolute",
+                top: 0,
+                left: 0,
+              }}
             >
               <div
                 className={`relative w-0 h-0 ${isInteracting ? "canvas-interaction-reduced" : ""}`}

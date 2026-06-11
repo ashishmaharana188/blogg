@@ -10,7 +10,7 @@ const UserForm = ({ onContentChange }: userForm) => {
   const [formData, setFormData] = useState({
     author: "",
     title: "",
-    subtitle: "",
+    description: "",
   });
 
   const editor = useCreateBlockNote();
@@ -20,7 +20,7 @@ const UserForm = ({ onContentChange }: userForm) => {
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
   const handleTitleChange = (
-    field: "author" | "title" | "subtitle",
+    field: "author" | "title" | "description",
     value: string,
   ) => {
     setFormData({
@@ -50,11 +50,11 @@ const UserForm = ({ onContentChange }: userForm) => {
             ref={authorRef}
             value={formData.author}
             onChange={(e) => {
-              handleTitleChange("subtitle", e.target.value);
+              handleTitleChange("author", e.target.value);
               autoResize(authorRef);
             }}
             placeholder="Author"
-            className="w-[400px] resize-none overflow-hidden whitespace-pre-wrap break-words text-2xl font-bold outline-none text-center"
+            className="w-[500px] resize-none overflow-hidden whitespace-pre-wrap break-words text-xl outline-none text-center"
           />
         </div>
         <textarea
@@ -65,18 +65,18 @@ const UserForm = ({ onContentChange }: userForm) => {
             autoResize(titleRef);
           }}
           placeholder="Document Title"
-          className="w-[800px]  resize-none overflow-hidden whitespace-pre-wrap break-words text-4xl font-bold outline-none self-center text-center"
+          className="w-[1100px]  resize-none overflow-hidden whitespace-pre-wrap break-words text-4xl font-bold outline-none self-center text-center"
         />
         <div className="self-center -mt-4">
           <textarea
             ref={descriptionRef}
-            value={formData.subtitle}
+            value={formData.description}
             onChange={(e) => {
-              handleTitleChange("subtitle", e.target.value);
+              handleTitleChange("description", e.target.value);
               autoResize(descriptionRef);
             }}
             placeholder="Description"
-            className="w-[400px] resize-none overflow-hidden whitespace-pre-wrap break-words text-2xl font-bold outline-none text-center"
+            className="w-[800px] mt-5 resize-none overflow-hidden whitespace-pre-wrap break-words text-xl outline-none text-center italic"
           />
         </div>
 

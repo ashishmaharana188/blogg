@@ -1,1 +1,35 @@
 @import "tailwindcss";
+
+@theme {
+  --color-surface: #ffffff;
+  --color-primary: #0f172a;
+  --color-muted: #64748b;
+  --color-accent: #2563eb;
+  --color-accent-hover: #1d4ed8;
+  --color-accent-text: #ffffff;
+  --color-border-subtle: #e2e8f0;
+  --color-canvas: #f8fafc;
+}
+
+/* 1. Kill native browser scrolling and bounce effects entirely */
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/* 2. Lock the React root to absolute screen bounds */
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  max-width: none;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+}
