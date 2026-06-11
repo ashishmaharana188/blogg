@@ -27,8 +27,6 @@ const UserForm = ({ onContentChange }: userForm) => {
       ...formData,
       [field]: value,
     });
-
-    console.log(...formData.title);
   };
 
   const autoResize = (ref: React.RefObject<HTMLTextAreaElement | null>) => {

@@ -239,7 +239,7 @@ const NoteStackColumn = React.memo(
         <div
           className={`group relative mb-8 flex w-[600px] flex-col gap-4 rounded-xl border bg-white/95 p-4 transition-[box-shadow,border-color,transform] duration-300 shadow-xl ${
             isHighlighted
-              ? "border-blue-500 shadow-[0_0_40px_rgba(59,130,246,0.4)] scale-[1.03]"
+              ? "border-black shadow-[0_0_40px_rgba(59,130,246,0.4)] scale-[1.03]"
               : "border-gray-300"
           } ${isDragging ? "shadow-2xl cursor-grabbing" : "cursor-grab"}`}
           onPointerDown={handlePointerDown}
@@ -314,7 +314,7 @@ const NoteStackColumn = React.memo(
             ) : (
               <div className="absolute left-10 flex items-center gap-2 group/stack pointer-events-auto">
                 <h3
-                  className="font-extrabold text-xl text-primary tracking-tight cursor-pointer hover:text-blue-600 transition-colors"
+                  className="font-extrabold text-xl text-primary tracking-tight cursor-pointer hover:text-black transition-colors"
                   onClick={(e) => {
                     e.stopPropagation();
                     setIsRenamingStack(true);
@@ -332,7 +332,7 @@ const NoteStackColumn = React.memo(
                     setEditStackTitle(stack.title);
                   }}
                   onPointerDown={(e) => e.stopPropagation()}
-                  className="text-gray-400 hover:text-blue-500 opacity-0 group-hover/stack:opacity-100 transition-opacity"
+                  className="text-gray-400 hover:text-black opacity-0 group-hover/stack:opacity-100 transition-opacity"
                 >
                   <IonIcon icon={createOutline} className="w-4 h-4" />
                 </button>
@@ -400,7 +400,7 @@ const NoteStackColumn = React.memo(
                   setIsCreatingGroup(false);
                   setDraftTitle("");
                 }}
-                className="px-3 text-xs font-bold bg-accent text-accent-text rounded hover:bg-accent-hover"
+                className="px-3 text-xs font-bold bg-black text-accent-text rounded hover:bg-black"
               >
                 Save
               </button>

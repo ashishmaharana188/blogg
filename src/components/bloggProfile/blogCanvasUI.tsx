@@ -80,8 +80,11 @@ export default function BloggCanvasUI({
         maxScale={3}
         limitToBounds={false}
         centerZoomedOut={false}
-        wheel={{ step: 0.08, activationKeys: ["Control", "Meta"] }}
-        panning={{ excluded: ["no-pan"], wheelPanning: true } as any}
+        // 1. Restored standard wheel mechanics now that the math bug is fixed
+        wheel={{
+          step: 0.001,
+        }}
+        panning={{ excluded: ["no-pan"] }}
         onInit={handleViewportUpdate}
         onWheelStart={() => startInteraction()}
         onWheelStop={(ref) => {
@@ -106,6 +109,7 @@ export default function BloggCanvasUI({
               zoomToElement={zoomToElement}
               onZoomed={() => {}}
             />
+
             <TransformComponent
               wrapperStyle={{
                 width: "100%",
@@ -114,9 +118,15 @@ export default function BloggCanvasUI({
                 top: 0,
                 left: 0,
               }}
+              // 2. CRITICAL FIX: Forces the internal engine bounding box to map to the screen
+              contentStyle={{
+                width: "100%",
+                height: "100%",
+              }}
             >
+              {/* 3. CRITICAL FIX: Replaced w-0 h-0 with w-full h-full to stop division-by-zero */}
               <div
-                className={`relative w-0 h-0 ${isInteracting ? "canvas-interaction-reduced" : ""}`}
+                className={`relative w-full h-full ${isInteracting ? "canvas-interaction-reduced" : ""}`}
               >
                 <div
                   className="absolute pointer-events-none opacity-40"
@@ -130,9 +140,11 @@ export default function BloggCanvasUI({
                     backgroundSize: "24px 24px",
                   }}
                 />
+
+                {/* 4. CRITICAL FIX: Replaced w-0 h-0 with w-full h-full */}
                 <div
                   id="canvas-container"
-                  className="absolute left-0 top-0 z-10 w-0 h-0"
+                  className="absolute left-0 top-0 z-10 w-full h-full"
                 >
                   {!state.stacks || state.stacks.length === 0 ? (
                     <div className="absolute top-[200px] left-[100px] text-slate-500 font-mono text-sm bg-white/80 px-6 py-2 rounded-lg border border-slate-300 shadow-sm whitespace-nowrap">
@@ -179,11 +191,10 @@ export default function BloggCanvasUI({
               </div>
             </TransformComponent>
 
-            {/* UI Viewport Controls */}
             <div className="absolute bottom-6 left-6 z-[100] flex flex-col gap-1 rounded-lg border border-slate-200 bg-white/95 p-1.5 shadow-sm pointer-events-auto">
               <button
                 onClick={() => zoomIn(0.2)}
-                className="p-2 text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-md transition-colors"
+                className="p-2 text-slate-600 hover:text-black hover:bg-slate-100 rounded-md transition-colors"
               >
                 <IonIcon icon={addOutline} className="w-5 h-5" />
               </button>
@@ -192,13 +203,13 @@ export default function BloggCanvasUI({
               </div>
               <button
                 onClick={() => zoomOut(0.2)}
-                className="p-2 text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-md transition-colors"
+                className="p-2 text-slate-600 hover:text-black hover:bg-slate-100 rounded-md transition-colors"
               >
                 <IonIcon icon={removeOutline} className="w-5 h-5" />
               </button>
               <button
                 onClick={() => zoomToElement("canvas-container", 1, 600)}
-                className="p-2 text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-md transition-colors mt-1 border-t border-slate-100 flex flex-col items-center justify-center"
+                className="p-2 text-slate-600 hover:text-black hover:bg-slate-100 rounded-md transition-colors mt-1 border-t border-slate-100 flex flex-col items-center justify-center"
               >
                 <IonIcon icon={scanOutline} className="w-5 h-5" />
               </button>
@@ -207,7 +218,6 @@ export default function BloggCanvasUI({
         )}
       </TransformWrapper>
 
-      {/* UI Creation Controls */}
       <div className="absolute right-6 top-6 z-[2000] pointer-events-auto flex gap-4 items-start">
         {state.isCreatingStack ? (
           <div className="bg-white/95 p-4 rounded-lg shadow-xl border border-slate-400 flex flex-col gap-2">
@@ -239,7 +249,7 @@ export default function BloggCanvasUI({
                   state.setIsCreatingStack(false);
                   state.setDraftStackTitle("");
                 }}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-blue-600 text-white transition-colors hover:bg-blue-700"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-black text-white transition-colors hover:bg-black"
               >
                 <IonIcon icon={checkmarkOutline} className="h-4 w-4" />
               </button>

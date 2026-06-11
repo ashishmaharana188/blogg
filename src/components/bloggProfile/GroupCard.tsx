@@ -243,7 +243,7 @@ const GroupCard = React.memo(
                 ) : (
                   <div className="flex items-center gap-2 w-full pr-4 overflow-hidden group/title">
                     <h2
-                      className="text-xl font-bold text-slate-800 truncate cursor-pointer hover:text-blue-600 transition-colors"
+                      className="text-xl font-bold text-slate-800 truncate cursor-pointer hover:text-black transition-colors"
                       onClick={() => {
                         setIsRenaming(true);
                         setEditTitle(group.title);
@@ -257,7 +257,7 @@ const GroupCard = React.memo(
                         setIsRenaming(true);
                         setEditTitle(group.title);
                       }}
-                      className="text-gray-400 opacity-100 transition-opacity hover:text-blue-500 sm:opacity-0 sm:group-hover/title:opacity-100"
+                      className="text-gray-400 opacity-100 transition-opacity hover:text-black sm:opacity-0 sm:group-hover/title:opacity-100"
                     >
                       <svg
                         className="w-4 h-4"
@@ -278,7 +278,7 @@ const GroupCard = React.memo(
 
                 <button
                   onClick={onInitiateCreateNote}
-                  className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-md hover:bg-blue-700 transition shadow-sm whitespace-nowrap"
+                  className="px-3 py-1.5 bg-black text-white text-xs font-bold rounded-md hover:bg-black transition shadow-sm whitespace-nowrap"
                 >
                   + New Note
                 </button>
