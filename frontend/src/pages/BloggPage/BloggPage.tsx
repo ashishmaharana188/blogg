@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import BloggPageContainer from "../components/bloggPage/bloggPageContainer";
-import BloggCanvasUI from "../components/bloggProfile/bloggCanvasUI";
+import BloggPageContainer from "../../pages/BloggPage/bloggPage/bloggPageContainer";
+import BloggCanvasUI from "../../pages/BloggPage/bloggProfile/bloggCanvasUI";
 
 const BloggPage = () => {
   const [activeForm, setActiveForm] = useState<{

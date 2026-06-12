@@ -1,4 +1,4 @@
-import { userForm } from "../../types/pageTypes";
+import { userForm } from "../../../types/pageTypes";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 
@@ -11,6 +11,7 @@ const UserForm = ({ onContentChange }: userForm) => {
     author: "",
     title: "",
     description: "",
+    content: <object data="" type=""></object>,
   });
 
   const editor = useCreateBlockNote();
@@ -37,7 +38,13 @@ const UserForm = ({ onContentChange }: userForm) => {
   };
 
   const saveForm = () => {
-    onContentChange("Form Saved");
+    const blog = {
+      author: formData.author,
+      title: formData.title,
+      subtitle: formData.description,
+      content: editor.document,
+    };
+    onContentChange(blog);
   };
 
   return (

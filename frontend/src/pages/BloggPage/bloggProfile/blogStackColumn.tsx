@@ -3,7 +3,7 @@ import { IonIcon } from "@ionic/react";
 import { addOutline, createOutline } from "ionicons/icons";
 import GroupDivider from "./bloggGroupDivider";
 import GroupCard from "./bloggGroupCard";
-import useIsTouchDevice from "../../hooks/useIsTouchDevice";
+import useIsTouchDevice from "../hooks/useIsTouchDevice";
 
 // 1. Local Type Definitions (Replaces old useNotes import)
 export interface NoteStack {
