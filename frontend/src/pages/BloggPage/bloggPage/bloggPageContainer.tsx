@@ -1,16 +1,22 @@
-import { useState } from "react";
 import UserForm from "./bloggUserForm";
+import { BlogSavetypes } from "../../../types/pageTypes";
 
 const BloggPageContainer = ({ groupId }: { groupId?: string | null }) => {
-  const [value, setValue] = useState("");
+  //save blogUserForm
+  const handleSave = async (blog: BlogSavetypes) => {
+    const response = await fetch("http://localhost:3000/blogSaveRequest", {
+      method: "POST",
+      headers: {
+        "Conten-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...blog,
+        groupId,
+      }),
+    });
+    const text = await response.text();
 
-  const handleSave = (newValue: string) => {
-    console.log(`Incoming Content:`, newValue);
-    console.log(`Target Group ID:`, groupId || "Unassigned");
-
-    setValue(newValue);
-
-    console.log("current state:", value);
+    console.log(text);
   };
 
   return <UserForm onContentChange={handleSave} />;

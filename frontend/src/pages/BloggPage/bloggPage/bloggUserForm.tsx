@@ -1,4 +1,4 @@
-import { userForm } from "../../../types/pageTypes";
+import { userFormtypes } from "../../../types/pageTypes";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 
@@ -6,7 +6,7 @@ import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
 import { useRef, useState } from "react";
 
-const UserForm = ({ onContentChange }: userForm) => {
+const UserForm = ({ onContentChange }: userFormtypes) => {
   const [formData, setFormData] = useState({
     author: "",
     title: "",

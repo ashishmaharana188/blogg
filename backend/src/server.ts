@@ -12,6 +12,18 @@ app.get("/", (req, res) => {
   });
 });
 
+app.post("/blogSaveRequest", (req, res) => {
+  const savedBlog = req.body;
+
+  console.log(req.body);
+
+  res.json({
+    success: true,
+    message: "Blog saved",
+    blog: savedBlog,
+  });
+});
+
 app.listen(3000, () => {
   console.log("Server running");
 });

@@ -22,7 +22,7 @@ const NOTE_STACK_HEIGHT = 2600;
 export default function BloggCanvasUI({
   onOpenForm,
 }: {
-  onOpenForm?: (groupId: string, noteId?: string) => void;
+  onOpenForm?: (groupId: string, bloggId?: string) => void;
 }) {
   const state = useNotesSectionState();
   const { isInteracting, startInteraction, settleInteraction } =
