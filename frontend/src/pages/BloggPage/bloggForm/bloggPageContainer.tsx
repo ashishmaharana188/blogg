@@ -7,16 +7,17 @@ const BloggPageContainer = ({ groupId }: { groupId?: string | null }) => {
     const response = await fetch("http://localhost:3000/blogSaveRequest", {
       method: "POST",
       headers: {
-        "Conten-Type": "application/json",
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         ...blog,
         groupId,
       }),
     });
-    const text = await response.text();
 
-    console.log(text);
+    const data = await response.json();
+
+    console.log(data);
   };
 
   return <UserForm onContentChange={handleSave} />;
