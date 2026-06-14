@@ -1,5 +1,5 @@
 import express from "express";
-import { getDB } from "../db/mongodbConnect.ts";
+import { getDB } from "../db/mongoDBConnect.ts";
 import { trace } from "../middleware/trace.ts";
 import saveBlog from "../db/mongoInsert.ts";
 
@@ -10,12 +10,11 @@ blogInterceptRouter.post(
 
   trace("BLOG_SAVE", async (req) => {
     const savedBlog = await saveBlog(req.body);
-    const result = await getDB().collection("bloggs").insertOne(savedBlog);
 
     return {
       success: true,
       message: "Blog saved",
-      blog: result,
+      blog: savedBlog,
     };
   }),
 );

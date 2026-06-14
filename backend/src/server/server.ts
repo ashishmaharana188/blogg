@@ -3,7 +3,8 @@ import cors from "cors";
 import logger from "../logs/logger.ts";
 import { trace } from "../middleware/trace.ts";
 import { middleware } from "../middleware/middleWare.ts";
-import { connectDB } from "../routes/blogs.ts";
+import { mongoConnectDB } from "../db/mongoDBConnect.ts";
+import blogInterceptRouter from "../routes/blogIntercept.ts";
 
 const app = express();
 
@@ -13,21 +14,9 @@ app.use(express.json());
 
 app.use(middleware);
 
-app.post(
-  "/blogSaveRequest",
+await mongoConnectDB();
 
-  trace("BLOG_SAVE", async (req) => {
-    const savedBlog = req.body;
-
-    return {
-      success: true,
-      message: "Blog saved",
-      blog: savedBlog,
-    };
-  }),
-);
-
-await connectDB();
+app.use(blogInterceptRouter);
 
 app.listen(3000, () => {
   logger.info("Server running on port 3000");
