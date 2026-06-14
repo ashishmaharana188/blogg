@@ -9,6 +9,7 @@
   },
   "devDependencies": {
     "concurrently": "^10.0.3",
-    "tsx": "^4.22.4"
+    "tsx": "^4.22.4",
+    "winston": "^3.19.0"
   }
 }
