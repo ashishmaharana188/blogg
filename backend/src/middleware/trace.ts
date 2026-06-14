@@ -34,13 +34,10 @@ export function trace(operation: string, handler: Handler) {
         event: "RESPONSE_PAYLOAD",
         requestId: req.requestId,
         sessionId: req.sessionId,
-
-        payloadSummary: {
-          success: response.success,
-          message: response.message,
+        payload: {
+          success: response?.success,
+          message: response?.message,
         },
-
-        payload: response,
       });
 
       res.json(response);
