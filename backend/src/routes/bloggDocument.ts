@@ -3,6 +3,7 @@ import { getDB } from "../db/mongoDBConnect.ts";
 import type { BlogInput, BlogDocument } from "../types/blogTypes.ts";
 import { Readable } from "stream";
 import cloudinary from "../cloudinary/cloudinary.ts";
+import logger from "../logs/logger.ts";
 
 export const upload = multer({
   storage: multer.memoryStorage(),
@@ -43,7 +44,17 @@ export const saveBlogMedia = async (file: Express.Multer.File) => {
           return;
         }
 
-        resolve(result);
+        logger.info({
+          event: "MEDIA_UPLOAD_SUCCESS",
+          mediaId: result?.public_id,
+          resourceType: result?.resource_type,
+        });
+
+        resolve({
+          id: result?.public_id,
+          url: result?.secure_url,
+          resourceType: result?.resource_type,
+        });
       },
     );
 

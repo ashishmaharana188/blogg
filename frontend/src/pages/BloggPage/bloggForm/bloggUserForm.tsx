@@ -14,7 +14,28 @@ const UserForm = ({ onContentChange }: userFormtypes) => {
     content: <object data="" type=""></object>,
   });
 
-  const editor = useCreateBlockNote();
+  async function uploadFile(file: File) {
+    const formData = new FormData();
+
+    formData.append("file", file);
+
+    const response = await fetch("http://localhost:3000/blogMediaUpload", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error("Media upload failed");
+    }
+
+    const data = await response.json();
+
+    return data.media.url;
+  }
+
+  const editor = useCreateBlockNote({
+    uploadFile,
+  });
 
   const authorRef = useRef<HTMLTextAreaElement>(null);
   const titleRef = useRef<HTMLTextAreaElement>(null);
