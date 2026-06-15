@@ -186,7 +186,7 @@ const UserForm = ({ onContentChange }: userFormtypes) => {
         </div>
 
         <div className="mt-10">
-          <BlockNoteView editor={editor} theme="light" filePanel={true} />
+          <BlockNoteView editor={editor} theme="dark" filePanel={true} />
         </div>
 
         <div className="flex justify-end mt-4">
