@@ -12,9 +12,9 @@ import {
 
 import AutoZoomTrigger from "./autoZoomTrigger";
 import NoteStackColumn from "./blogStackColumn";
-import useNotesSectionState from "../hooks/useBloggSectionState";
-import useCanvasViewport from "../hooks/useCanvasViewport";
-import useCanvasInteractionMode from "../hooks/useCanvasInteractionMode";
+import useNotesSectionState from "../../hooks/useBloggSectionState";
+import useCanvasViewport from "../../hooks/useCanvasViewport";
+import useCanvasInteractionMode from "../../hooks/useCanvasInteractionMode";
 
 const NOTE_STACK_WIDTH = 650;
 const NOTE_STACK_HEIGHT = 2600;

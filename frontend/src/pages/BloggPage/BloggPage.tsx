@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import BloggPageContainer from "../../pages/BloggPage/bloggForm/bloggPageContainer";
-import BloggCanvasUI from "../../pages/BloggPage/bloggProfile/bloggCanvasUI";
+import BloggPageContainer from "../BloggPage/components/bloggForm/bloggPageContainer";
+import BloggCanvasUI from "../BloggPage/components/bloggProfile/bloggCanvasUI";
 
 const BloggPage = () => {
   const [activeForm, setActiveForm] = useState<{
@@ -41,7 +41,13 @@ const BloggPage = () => {
         </div>
       </div>
 
-      <div className="flex-1 relative w-full">
+      <div
+        className={`flex-1 relative w-full ${
+          activeForm.isOpen
+            ? "overflow-y-auto custom-scrollbar"
+            : "overflow-hidden"
+        }`}
+      >
         {activeForm.isOpen ? (
           <BloggPageContainer groupId={activeForm.groupId} />
         ) : (

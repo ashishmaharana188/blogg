@@ -1,5 +1,5 @@
 import UserForm from "./bloggUserForm";
-import { BlogSavetypes } from "../../../types/pageTypes";
+import { BlogSavetypes } from "../../../../types/pageTypes";
 
 const BloggPageContainer = ({ groupId }: { groupId?: string | null }) => {
   //save blogUserForm
