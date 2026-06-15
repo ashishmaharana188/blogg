@@ -1,0 +1,72 @@
+import multer from "multer";
+import { getDB } from "../db/mongoDBConnect.ts";
+import type { BlogInput, BlogDocument } from "../types/blogTypes.ts";
+import { Readable } from "stream";
+import cloudinary from "../cloudinary/cloudinary.ts";
+
+export const upload = multer({
+  storage: multer.memoryStorage(),
+
+  limits: {
+    fileSize: 50 * 1024 * 1024,
+  },
+
+  fileFilter: (req, file, callback) => {
+    const allowedMimeTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "video/mp4",
+      "video/webm",
+      "video/quicktime",
+    ];
+
+    if (allowedMimeTypes.includes(file.mimetype)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Unsupported file type"));
+    }
+  },
+});
+
+export const saveBlogMedia = async (file: Express.Multer.File) => {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: "blogg",
+        resource_type: "auto",
+      },
+
+      (error, result) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+
+        resolve(result);
+      },
+    );
+
+    Readable.from(file.buffer).pipe(uploadStream);
+  });
+};
+
+export const saveBlog = async (blog: BlogInput): Promise<BlogDocument> => {
+  const blogDocument = {
+    ...blog,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  const result = await getDB().collection("bloggs").insertOne(blogDocument);
+
+  const savedBlog = await getDB().collection<BlogDocument>("bloggs").findOne({
+    _id: result.insertedId,
+  });
+
+  if (!savedBlog) {
+    throw new Error("Failed to retrieve saved blog");
+  }
+
+  return savedBlog;
+};
