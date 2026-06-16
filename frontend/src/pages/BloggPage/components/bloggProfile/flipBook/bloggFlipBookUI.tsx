@@ -1,3 +1,5 @@
+// frontend/src/pages/BloggPage/components/bloggProfile/flipBook/bloggFlipBookUI.tsx
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import FlipBookThumbnailBar from "./flipBookThumbnailBar";
@@ -76,6 +78,8 @@ const TurningSheet = ({
 const BlogFlipBookUI = ({ pages }: BlogFlipBookUIProps) => {
   const [currentSpread, setCurrentSpread] = useState(0);
   const [turn, setTurn] = useState<TurnState | null>(null);
+
+  const isTurning = Boolean(turn);
 
   const sourcePages = pages?.length ? pages : dummyPages;
 
@@ -160,8 +164,6 @@ const BlogFlipBookUI = ({ pages }: BlogFlipBookUIProps) => {
       ? bookPages[turn.to + 1]
       : bookPages[displaySpread + 1];
 
-  // Build the caption label to match reference: "Cover · spread 1 of N"
-  // or "Artworks 1–2 · spread 2 of N"
   const captionLabel = (() => {
     if (pendingSpread === 0) {
       return `Cover\u00a0· spread 1\u00a0of\u00a0${totalSpreads}`;
@@ -175,17 +177,16 @@ const BlogFlipBookUI = ({ pages }: BlogFlipBookUIProps) => {
 
   return (
     <div className="flipbook-profile">
-      {/* NO header — reference design has none */}
-
       <main className="flipbook-stage" aria-live="polite">
         <div className="flipbook-book" aria-label="Artwork flipbook">
-          <div className="flipbook-stack flipbook-stack-left" />
-          <div className="flipbook-stack flipbook-stack-right" />
-
           <div className="flipbook-spread">
             <PagePane page={leftPage} side="left" />
             <PagePane page={rightPage} side="right" />
-            <div className="flipbook-center-shadow" />
+            <div
+              className={`flipbook-center-shadow ${
+                isTurning ? "flipbook-center-shadow-active" : ""
+              }`}
+            />
           </div>
 
           {turn && (
@@ -199,7 +200,7 @@ const BlogFlipBookUI = ({ pages }: BlogFlipBookUIProps) => {
           <button
             type="button"
             onClick={goPrevious}
-            disabled={currentSpread === 0 || Boolean(turn)}
+            disabled={currentSpread === 0 || isTurning}
           >
             &larr; Prev
           </button>
@@ -209,7 +210,7 @@ const BlogFlipBookUI = ({ pages }: BlogFlipBookUIProps) => {
           <button
             type="button"
             onClick={goNext}
-            disabled={currentSpread >= maxSpread || Boolean(turn)}
+            disabled={currentSpread >= maxSpread || isTurning}
           >
             Next &rarr;
           </button>
