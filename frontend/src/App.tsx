@@ -9,7 +9,6 @@ function App() {
 
   return (
     <>
-      <button onClick={pingBackend}>Ping Backend</button>
       <BrowserRouter>
         <Router />
       </BrowserRouter>
