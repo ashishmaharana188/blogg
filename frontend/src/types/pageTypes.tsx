@@ -1,5 +1,3 @@
-import React from "react";
-
 export interface BlogSavetypes {
   //**type for parent handleSave(blog) receive structure since blog is an object */
   author: string;

@@ -25,6 +25,7 @@ const FlipBookThumbnailBar = ({
         const isActive = index === currentSpread || index === currentSpread + 1;
 
         const isBlank = page.id === "blank";
+        const isCover = page.id === "cover";
 
         return (
           <button
@@ -49,11 +50,15 @@ const FlipBookThumbnailBar = ({
               }
             `}
             style={{
-              width: 48,
-              height: 68,
+              width: 112,
+              height: 70,
             }}
           >
-            {!isBlank ? (
+            {isCover ? (
+              <div className="flex h-full w-full items-center justify-center bg-[#111827] font-serif text-base text-[#d9c8a6]">
+                Cover
+              </div>
+            ) : !isBlank ? (
               <img
                 src={page.image}
                 alt={page.title ?? `Page ${index + 1}`}
@@ -69,31 +74,9 @@ const FlipBookThumbnailBar = ({
                 className="
                   h-full
                   w-full
-                  bg-black
+                bg-black
                 "
               />
-            )}
-
-            {/* Page Number */}
-            {!isBlank && (
-              <div
-                className="
-                  absolute
-                  bottom-1
-                  right-1
-
-                  rounded
-
-                  bg-black/50
-
-                  px-1
-
-                  text-[10px]
-                  text-white
-                "
-              >
-                {index + 1}
-              </div>
             )}
           </button>
         );

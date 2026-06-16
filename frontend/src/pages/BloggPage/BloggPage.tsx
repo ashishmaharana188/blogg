@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import BloggPageContainer from "../BloggPage/components/bloggForm/bloggPageContainer";
-import BloggCanvasUI from "../BloggPage/components/bloggProfile/bloggCanvasUI";
-import BlogFlipBookUI from "./components/bloggProfile/flipBook/bloggFlipBookUi";
+import BlogFlipBookUI from "./components/bloggProfile/flipBook/bloggFlipBookUI";
 
 const BloggPage = () => {
   const [activeForm, setActiveForm] = useState<{
@@ -15,10 +14,6 @@ const BloggPage = () => {
 
   const toggleNote = () => {
     setActiveForm((prev) => ({ isOpen: !prev.isOpen, groupId: null }));
-  };
-
-  const handleOpenFormFromCanvas = (groupId: string) => {
-    setActiveForm({ isOpen: true, groupId });
   };
 
   return (
