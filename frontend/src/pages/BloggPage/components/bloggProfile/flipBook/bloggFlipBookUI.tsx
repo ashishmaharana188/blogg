@@ -343,7 +343,6 @@ const BlogFlipBookUI = ({ pages }: BlogFlipBookUIProps) => {
           Click any page half to upload artwork <span>&middot;</span> Arrow keys
           to flip
         </p>
-        <p className="flipbook-signature">Artwork by Hachimi</p>
       </footer>
     </div>
   );
