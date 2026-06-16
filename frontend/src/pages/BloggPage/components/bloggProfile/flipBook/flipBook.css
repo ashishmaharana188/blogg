@@ -467,7 +467,7 @@
   }
 }
 
-.flipbook-rapid-mode .flipbook-turning-sheet {
-  animation-duration: 150ms !important;
+.flipbook-rapid {
+  animation-duration: 500ms !important;
   animation-timing-function: linear !important;
 }

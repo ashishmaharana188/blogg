@@ -1,6 +1,4 @@
-// frontend/src/pages/BloggPage/components/bloggProfile/flipBook/bloggFlipBookUI.tsx
-
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import FlipBookThumbnailBar from "./flipBookThumbnailBar";
 import "./flipBook.css";
@@ -9,10 +7,12 @@ import type { BlogFlipBookUIProps, FlipBookPageType } from "./flipBookTypes";
 
 type TurnDirection = "next" | "previous";
 
-type TurnState = {
+type ActiveTurn = {
+  id: number;
   direction: TurnDirection;
   from: number;
   to: number;
+  isRapid: boolean;
 };
 
 type PagePaneProps = {
@@ -30,6 +30,7 @@ const PagePane = ({ page, side, className = "" }: PagePaneProps) => {
     <div className={`flipbook-page flipbook-page-${side} ${className}`}>
       {!isBlank ? (
         <img
+          key={page.id}
           src={page.image}
           alt={page.title ?? `Artwork ${page.id}`}
           draggable={false}
@@ -50,10 +51,11 @@ const TurningSheet = ({
   onDone,
 }: {
   pages: FlipBookPageType[];
-  turn: TurnState;
+  turn: ActiveTurn;
   onDone: () => void;
 }) => {
   const isNext = turn.direction === "next";
+
   const frontPage = pages[isNext ? turn.from + 1 : turn.from];
   const backPage = pages[isNext ? turn.to : turn.to + 1];
 
@@ -61,8 +63,11 @@ const TurningSheet = ({
     <div
       className={`flipbook-turning-sheet ${
         isNext ? "flipbook-turn-next" : "flipbook-turn-previous"
-      }`}
-      onAnimationEnd={onDone}
+      } ${turn.isRapid ? "flipbook-rapid" : ""}`}
+      onAnimationEnd={(e) => {
+        if (e.target !== e.currentTarget) return;
+        onDone();
+      }}
     >
       <div className="flipbook-sheet-face flipbook-sheet-front">
         <PagePane page={frontPage} side={isNext ? "right" : "left"} />
@@ -76,10 +81,12 @@ const TurningSheet = ({
 };
 
 const BlogFlipBookUI = ({ pages }: BlogFlipBookUIProps) => {
-  const [currentSpread, setCurrentSpread] = useState(0);
-  const [turn, setTurn] = useState<TurnState | null>(null);
+  const [settledSpread, setSettledSpread] = useState(0);
+  const [activeTurns, setActiveTurns] = useState<ActiveTurn[]>([]);
 
-  const isTurning = Boolean(turn);
+  const turnIdRef = useRef(0);
+  const holdTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rapidIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const sourcePages = pages?.length ? pages : dummyPages;
 
@@ -89,88 +96,180 @@ const BlogFlipBookUI = ({ pages }: BlogFlipBookUIProps) => {
   }, [sourcePages]);
 
   const maxSpread = Math.max(0, bookPages.length - 2);
-  const displaySpread = turn?.from ?? currentSpread;
-  const pendingSpread = turn?.to ?? currentSpread;
-  const spreadNumber = pendingSpread / 2 + 1;
-  const totalSpreads = bookPages.length / 2;
 
-  const completeTurn = useCallback(() => {
-    setCurrentSpread((activeSpread) => turn?.to ?? activeSpread);
-    setTurn(null);
-  }, [turn]);
+  // 1. Math-Armored logical spread. Completely immune to out-of-order execution
+  const currentLogicalSpread = useMemo(() => {
+    if (activeTurns.length === 0) return settledSpread;
+    const direction = activeTurns[0].direction;
+    const targets = activeTurns.map((t) => t.to);
+    return direction === "next"
+      ? Math.max(settledSpread, ...targets)
+      : Math.min(settledSpread, ...targets);
+  }, [activeTurns, settledSpread]);
 
-  const startTurn = useCallback(
-    (direction: TurnDirection) => {
-      if (turn) return;
-
-      setCurrentSpread((from) => {
-        const to =
-          direction === "next"
-            ? Math.min(from + 2, maxSpread)
-            : Math.max(from - 2, 0);
-
-        if (to !== from) {
-          setTurn({ direction, from, to });
-        }
-
-        return from;
+  const completeTurn = useCallback(
+    (id: number, targetSpread: number, direction: TurnDirection) => {
+      // 2. State Armor: Ensure settled pages NEVER mathematically bounce backward
+      setSettledSpread((prev) => {
+        if (direction === "next") return Math.max(prev, targetSpread);
+        if (direction === "previous") return Math.min(prev, targetSpread);
+        return targetSpread;
       });
+      setActiveTurns((prev) => prev.filter((t) => t.id !== id));
     },
-    [maxSpread, turn],
+    [],
   );
 
-  const goNext = useCallback(() => startTurn("next"), [startTurn]);
-  const goPrevious = useCallback(() => startTurn("previous"), [startTurn]);
+  const startTurn = useCallback(
+    (direction: TurnDirection, isRapid = false) => {
+      setActiveTurns((prev) => {
+        if (prev.length > 0 && prev[0].direction !== direction) return prev;
+
+        let lastLogical = settledSpread;
+        if (prev.length > 0) {
+          const targets = prev.map((t) => t.to);
+          lastLogical =
+            direction === "next"
+              ? Math.max(settledSpread, ...targets)
+              : Math.min(settledSpread, ...targets);
+        }
+
+        const to =
+          direction === "next"
+            ? Math.min(lastLogical + 2, maxSpread)
+            : Math.max(lastLogical - 2, 0);
+
+        if (to === lastLogical) return prev;
+
+        const newTurn: ActiveTurn = {
+          id: turnIdRef.current++,
+          direction,
+          from: lastLogical,
+          to,
+          isRapid,
+        };
+
+        return [...prev, newTurn];
+      });
+    },
+    [maxSpread, settledSpread],
+  );
+
+  const stopHold = useCallback(() => {
+    if (holdTimeoutRef.current) clearTimeout(holdTimeoutRef.current);
+    if (rapidIntervalRef.current) clearInterval(rapidIntervalRef.current);
+    holdTimeoutRef.current = null;
+    rapidIntervalRef.current = null;
+  }, []);
+
+  // 3. The Boundary Watchdog: Kills interval zombies immediately
+  useEffect(() => {
+    if (currentLogicalSpread <= 0 || currentLogicalSpread >= maxSpread) {
+      stopHold();
+    }
+  }, [currentLogicalSpread, maxSpread, stopHold]);
+
+  const startHold = useCallback(
+    (direction: TurnDirection) => {
+      stopHold();
+      startTurn(direction, false);
+
+      holdTimeoutRef.current = setTimeout(() => {
+        rapidIntervalRef.current = setInterval(() => {
+          startTurn(direction, true);
+        }, 120);
+      }, 300);
+    },
+    [startTurn, stopHold],
+  );
+
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent, direction: TurnDirection) => {
+      if (e.button !== 0) return;
+      startHold(direction);
+    },
+    [startHold],
+  );
 
   const goToPage = useCallback(
     (pageIndex: number) => {
-      if (turn) return;
+      if (activeTurns.length > 0) return;
+      stopHold();
 
       const nextSpread = Math.max(
         0,
         Math.min(normalizeSpread(pageIndex), maxSpread),
       );
 
-      if (Math.abs(nextSpread - currentSpread) === 2) {
-        setTurn({
-          direction: nextSpread > currentSpread ? "next" : "previous",
-          from: currentSpread,
-          to: nextSpread,
-        });
+      if (nextSpread === settledSpread) return;
+
+      if (Math.abs(nextSpread - settledSpread) === 2) {
+        startTurn(nextSpread > settledSpread ? "next" : "previous", false);
         return;
       }
 
-      setCurrentSpread(nextSpread);
+      setSettledSpread(nextSpread);
+      setActiveTurns([]);
     },
-    [currentSpread, maxSpread, turn],
+    [activeTurns.length, maxSpread, settledSpread, startTurn, stopHold],
   );
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "ArrowRight") goNext();
-      if (event.key === "ArrowLeft") goPrevious();
+      // 4. Keyboard Emulation: Blocks the 30ms native OS spam
+      if (event.repeat) return;
+      if (event.key === "ArrowRight") startHold("next");
+      if (event.key === "ArrowLeft") startHold("previous");
+    };
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+        stopHold();
+      }
     };
 
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [goNext, goPrevious]);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [startHold, stopHold]);
 
-  const leftPage =
-    turn?.direction === "previous"
-      ? bookPages[turn.to]
-      : bookPages[displaySpread];
-  const rightPage =
-    turn?.direction === "next"
-      ? bookPages[turn.to + 1]
-      : bookPages[displaySpread + 1];
+  let leftIndex = settledSpread;
+  let rightIndex = settledSpread + 1;
+
+  if (activeTurns.length > 0) {
+    const currentDir = activeTurns[0].direction;
+    if (currentDir === "next") {
+      leftIndex = settledSpread;
+      rightIndex = currentLogicalSpread + 1;
+    } else {
+      leftIndex = currentLogicalSpread;
+      rightIndex = settledSpread + 1;
+    }
+  }
+
+  const leftPage = bookPages[leftIndex];
+  const rightPage = bookPages[rightIndex];
+
+  const spreadNumber = currentLogicalSpread / 2 + 1;
+  const totalSpreads = bookPages.length / 2;
+
+  const disablePrev =
+    currentLogicalSpread === 0 ||
+    (activeTurns.length > 0 && activeTurns[0].direction === "next");
+  const disableNext =
+    currentLogicalSpread >= maxSpread ||
+    (activeTurns.length > 0 && activeTurns[0].direction === "previous");
 
   const captionLabel = (() => {
-    if (pendingSpread === 0) {
+    if (currentLogicalSpread === 0) {
       return `Cover\u00a0· spread 1\u00a0of\u00a0${totalSpreads}`;
     }
-    const isEnd = pendingSpread >= maxSpread;
-    const leftNum = pendingSpread + 1;
-    const rightNum = pendingSpread + 2;
+    const isEnd = currentLogicalSpread >= maxSpread;
+    const leftNum = currentLogicalSpread + 1;
+    const rightNum = currentLogicalSpread + 2;
     const prefix = isEnd ? "End" : `Artworks\u00a0${leftNum}\u2013${rightNum}`;
     return `${prefix}\u00a0\u00b7 spread\u00a0${spreadNumber}\u00a0of\u00a0${totalSpreads}`;
   })();
@@ -179,19 +278,27 @@ const BlogFlipBookUI = ({ pages }: BlogFlipBookUIProps) => {
     <div className="flipbook-profile">
       <main className="flipbook-stage" aria-live="polite">
         <div className="flipbook-book" aria-label="Artwork flipbook">
+          <div className="flipbook-stack flipbook-stack-left" />
+          <div className="flipbook-stack flipbook-stack-right" />
+
           <div className="flipbook-spread">
             <PagePane page={leftPage} side="left" />
             <PagePane page={rightPage} side="right" />
             <div
               className={`flipbook-center-shadow ${
-                isTurning ? "flipbook-center-shadow-active" : ""
+                activeTurns.length > 0 ? "flipbook-center-shadow-active" : ""
               }`}
             />
           </div>
 
-          {turn && (
-            <TurningSheet pages={bookPages} turn={turn} onDone={completeTurn} />
-          )}
+          {activeTurns.map((turn) => (
+            <TurningSheet
+              key={turn.id}
+              pages={bookPages}
+              turn={turn}
+              onDone={() => completeTurn(turn.id, turn.to, turn.direction)}
+            />
+          ))}
         </div>
       </main>
 
@@ -199,8 +306,12 @@ const BlogFlipBookUI = ({ pages }: BlogFlipBookUIProps) => {
         <div className="flipbook-controls">
           <button
             type="button"
-            onClick={goPrevious}
-            disabled={currentSpread === 0 || isTurning}
+            onPointerDown={(e) => handlePointerDown(e, "previous")}
+            onPointerUp={stopHold}
+            onPointerLeave={stopHold}
+            onPointerCancel={stopHold}
+            onContextMenu={stopHold}
+            disabled={disablePrev}
           >
             &larr; Prev
           </button>
@@ -209,8 +320,12 @@ const BlogFlipBookUI = ({ pages }: BlogFlipBookUIProps) => {
 
           <button
             type="button"
-            onClick={goNext}
-            disabled={currentSpread >= maxSpread || isTurning}
+            onPointerDown={(e) => handlePointerDown(e, "next")}
+            onPointerUp={stopHold}
+            onPointerLeave={stopHold}
+            onPointerCancel={stopHold}
+            onContextMenu={stopHold}
+            disabled={disableNext}
           >
             Next &rarr;
           </button>
@@ -219,7 +334,7 @@ const BlogFlipBookUI = ({ pages }: BlogFlipBookUIProps) => {
         <div className="flipbook-thumbnails">
           <FlipBookThumbnailBar
             pages={bookPages}
-            currentSpread={pendingSpread}
+            currentSpread={currentLogicalSpread}
             onSelect={goToPage}
           />
         </div>
