@@ -3,7 +3,7 @@ import { IonIcon } from "@ionic/react";
 import { addOutline, createOutline } from "ionicons/icons";
 import GroupDivider from "./bloggGroupDivider";
 import GroupCard from "./bloggGroupCard";
-import useIsTouchDevice from "../../hooks/useIsTouchDevice";
+import useIsTouchDevice from "../../../hooks/canvasView/useIsTouchDevice";
 
 // 1. Local Type Definitions (Replaces old useNotes import)
 export interface NoteStack {
@@ -35,7 +35,7 @@ interface NoteStackColumnProps {
   onCreateGroup: (title: string, stackId: string) => void;
   onDeleteStack: (stackId: string) => void;
   onOpenGroup: (groupId: string) => void;
-  onInitiateCreateNote: (groupId: string) => void;
+  onInitiateCreateNote: (stackId: string, groupId: string) => void;
   onOpenNote: (note: NoteItem) => void;
   onDeleteGroup: (groupId: string) => void;
   onDeleteNote: (noteId: string) => void;
@@ -199,7 +199,9 @@ const NoteStackColumn = React.memo(
             isActive={activeGroupId === g.group_id}
             notes={activeGroupId === g.group_id ? currentNotes : []}
             onOpen={() => onOpenGroup(g.group_id)}
-            onInitiateCreateNote={() => onInitiateCreateNote(g.group_id)}
+            onInitiateCreateNote={() =>
+              onInitiateCreateNote(g.stack_id, g.group_id)
+            }
             onOpenNote={onOpenNote}
             onDeleteGroup={onDeleteGroup}
             onDeleteNote={onDeleteNote}

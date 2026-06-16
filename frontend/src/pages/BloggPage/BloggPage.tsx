@@ -2,29 +2,35 @@ import { useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import BloggPageContainer from "../BloggPage/components/bloggForm/bloggPageContainer";
 import BlogFlipBookUI from "./components/bloggProfile/flipBook/bloggFlipBookUI";
-import BloggCanvasUI from "./components/bloggProfile/bloggCanvasUI";
+import BloggCanvasUI from "./components/bloggProfile/canvasView/bloggCanvasUI";
 type ViewMode = "canvas" | "flipbook";
 
 const BloggPage = () => {
   const [activeForm, setActiveForm] = useState<{
     isOpen: boolean;
+    stackId: string | null;
     groupId: string | null;
   }>({
     isOpen: false,
+    stackId: null,
     groupId: null,
   });
   const [viewMode, setViewMode] = useState<ViewMode>("canvas");
 
   const toggleNote = () => {
-    setActiveForm((prev) => ({ isOpen: !prev.isOpen, groupId: null }));
+    setActiveForm((prev) => ({
+      isOpen: !prev.isOpen,
+      stackId: null,
+      groupId: null,
+    }));
   };
 
   const toggleViewMode = useCallback(() => {
     setViewMode((prev) => (prev === "canvas" ? "flipbook" : "canvas"));
   }, []);
 
-  const handleOpenFormFromCanvas = (groupId: string) => {
-    setActiveForm({ isOpen: true, groupId });
+  const handleOpenFormFromCanvas = (stackId: string, groupId: string) => {
+    setActiveForm({ isOpen: true, stackId, groupId });
   };
 
   return (
@@ -64,7 +70,10 @@ const BloggPage = () => {
         }`}
       >
         {activeForm.isOpen ? (
-          <BloggPageContainer groupId={activeForm.groupId} />
+          <BloggPageContainer
+            groupId={activeForm.groupId}
+            stackId={activeForm.stackId}
+          />
         ) : viewMode === "canvas" ? (
           <BloggCanvasUI onOpenForm={handleOpenFormFromCanvas} />
         ) : (

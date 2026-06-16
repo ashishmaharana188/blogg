@@ -33,6 +33,7 @@ export function middleware(req: Request, res: Response, next: NextFunction) {
       contentBlocks:
         req.body?.content?.filter((block: any) => block.content?.length > 0)
           .length ?? 0,
+      stackId: req.body?.stackId,
       groupId: req.body?.groupId,
     },
 

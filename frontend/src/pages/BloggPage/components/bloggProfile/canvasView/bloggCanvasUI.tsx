@@ -12,9 +12,9 @@ import {
 
 import AutoZoomTrigger from "./autoZoomTrigger";
 import NoteStackColumn from "./blogStackColumn";
-import useNotesSectionState from "../../hooks/useBloggSectionState";
-import useCanvasViewport from "../../hooks/useCanvasViewport";
-import useCanvasInteractionMode from "../../hooks/useCanvasInteractionMode";
+import useBloggSectionState from "../../../hooks/canvasView/useBloggSectionState";
+import useCanvasViewport from "../../../hooks/canvasView/useCanvasViewport";
+import useCanvasInteractionMode from "../../../hooks/canvasView/useCanvasInteractionMode";
 
 const NOTE_STACK_WIDTH = 650;
 const NOTE_STACK_HEIGHT = 2600;
@@ -22,9 +22,9 @@ const NOTE_STACK_HEIGHT = 2600;
 export default function BloggCanvasUI({
   onOpenForm,
 }: {
-  onOpenForm?: (groupId: string, bloggId?: string) => void;
+  onOpenForm?: (stackId: string, groupId: string, bloggId?: string) => void;
 }) {
-  const state = useNotesSectionState();
+  const state = useBloggSectionState();
   const { isInteracting, startInteraction, settleInteraction } =
     useCanvasInteractionMode(140);
   const { canvasScale, syncViewport, isRectVisible } = useCanvasViewport({
@@ -170,12 +170,19 @@ export default function BloggCanvasUI({
                         onCreateGroup={state.createGroup}
                         onDeleteStack={state.handleDeleteStack}
                         onOpenGroup={state.handleOpenGroup}
-                        onInitiateCreateNote={(groupId: string) => {
-                          if (onOpenForm) onOpenForm(groupId);
+                        onInitiateCreateNote={(
+                          stackId: string,
+                          groupId: string,
+                        ) => {
+                          if (onOpenForm) onOpenForm(stackId, groupId);
                         }}
-                        onOpenNote={(note: any) => {
+                        onOpenNote={(blog: any) => {
                           if (onOpenForm)
-                            onOpenForm(note.group_id, note.note_id);
+                            onOpenForm(
+                              blog.stack_id,
+                              blog.group_id,
+                              blog.blog_id,
+                            );
                         }}
                         onDeleteGroup={state.handleDeleteGroup}
                         onDeleteNote={state.handleDeleteNote}

@@ -1,7 +1,13 @@
 import UserForm from "./bloggUserForm";
 import { BlogSavetypes } from "../../../../types/pageTypes";
 
-const BloggPageContainer = ({ groupId }: { groupId?: string | null }) => {
+const BloggPageContainer = ({
+  stackId,
+  groupId,
+}: {
+  stackId?: string | null;
+  groupId?: string | null;
+}) => {
   //save blogUserForm
   const handleSave = async (blog: BlogSavetypes) => {
     const response = await fetch("http://localhost:3000/blogSaveRequest", {
@@ -11,6 +17,7 @@ const BloggPageContainer = ({ groupId }: { groupId?: string | null }) => {
       },
       body: JSON.stringify({
         ...blog,
+        stackId,
         groupId,
       }),
     });

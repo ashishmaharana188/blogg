@@ -1,15 +1,12 @@
 import { useState, useCallback } from "react";
 
 export default function useBloggSectionState() {
-  const [stacks, setStacks] = useState<any[]>([
-    { stack_id: "demo-1", title: "Local UI Demo Stack" },
-  ]);
-  const [groups, setGroups] = useState<any[]>([]);
+  const [stacks, setStacks] = useState<any[]>([]);
+
   const [positions, setPositions] = useState<
     Record<string, { x: number; y: number }>
-  >({
-    "demo-1": { x: 300, y: 200 },
-  });
+  >({});
+  const [groups, setGroups] = useState<any[]>([]);
   const [zIndexes, setZIndexes] = useState<Record<string, number>>({});
 
   const [canvasScale, setCanvasScale] = useState(1);
@@ -34,7 +31,7 @@ export default function useBloggSectionState() {
 
   const createStack = useCallback((title: string) => {
     if (!title.trim()) return;
-    const newId = `stack-${Date.now()}`;
+    const newId = crypto.randomUUID();
     setStacks((prev) => [...prev, { stack_id: newId, title }]);
     setPositions((prev) => ({ ...prev, [newId]: { x: 400, y: 300 } }));
   }, []);
@@ -52,9 +49,14 @@ export default function useBloggSectionState() {
 
   const createGroup = useCallback((title: string, stackId: string) => {
     if (!title.trim()) return;
+
     setGroups((prev) => [
       ...prev,
-      { group_id: `group-${Date.now()}`, stack_id: stackId, title },
+      {
+        stack_id: stackId,
+        group_id: crypto.randomUUID(),
+        title,
+      },
     ]);
   }, []);
 
