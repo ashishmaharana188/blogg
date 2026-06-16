@@ -37,8 +37,6 @@ const PagePane = ({ page, side, className = "" }: PagePaneProps) => {
         <div className="flipbook-page-blank" />
       )}
 
-      <div className="flipbook-page-vignette" />
-      <div className="flipbook-page-fold" />
       {!isBlank && <span className="flipbook-page-number">{page.id}</span>}
     </div>
   );
@@ -162,8 +160,23 @@ const BlogFlipBookUI = ({ pages }: BlogFlipBookUIProps) => {
       ? bookPages[turn.to + 1]
       : bookPages[displaySpread + 1];
 
+  // Build the caption label to match reference: "Cover · spread 1 of N"
+  // or "Artworks 1–2 · spread 2 of N"
+  const captionLabel = (() => {
+    if (pendingSpread === 0) {
+      return `Cover\u00a0· spread 1\u00a0of\u00a0${totalSpreads}`;
+    }
+    const isEnd = pendingSpread >= maxSpread;
+    const leftNum = pendingSpread + 1;
+    const rightNum = pendingSpread + 2;
+    const prefix = isEnd ? "End" : `Artworks\u00a0${leftNum}\u2013${rightNum}`;
+    return `${prefix}\u00a0\u00b7 spread\u00a0${spreadNumber}\u00a0of\u00a0${totalSpreads}`;
+  })();
+
   return (
     <div className="flipbook-profile">
+      {/* NO header — reference design has none */}
+
       <main className="flipbook-stage" aria-live="polite">
         <div className="flipbook-book" aria-label="Artwork flipbook">
           <div className="flipbook-stack flipbook-stack-left" />
@@ -191,12 +204,7 @@ const BlogFlipBookUI = ({ pages }: BlogFlipBookUIProps) => {
             &larr; Prev
           </button>
 
-          <div className="flipbook-caption">
-            {pendingSpread === 0
-              ? "Cover"
-              : `Artworks ${pendingSpread + 1}-${pendingSpread + 2}`}
-            <span> · spread {spreadNumber} of {totalSpreads}</span>
-          </div>
+          <div className="flipbook-caption">{captionLabel}</div>
 
           <button
             type="button"
@@ -216,7 +224,8 @@ const BlogFlipBookUI = ({ pages }: BlogFlipBookUIProps) => {
         </div>
 
         <p className="flipbook-help">
-          Click any page half to upload artwork <span>·</span> arrow keys to flip
+          Click any page half to upload artwork <span>&middot;</span> Arrow keys
+          to flip
         </p>
         <p className="flipbook-signature">Artwork by Hachimi</p>
       </footer>

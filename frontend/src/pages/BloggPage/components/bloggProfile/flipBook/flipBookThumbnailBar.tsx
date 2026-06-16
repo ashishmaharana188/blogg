@@ -11,12 +11,12 @@ const FlipBookThumbnailBar = ({
         flex
         items-center
         justify-center
-        gap-3
+        gap-2
 
         overflow-x-auto
 
         px-4
-        py-3
+        py-2
 
         scrollbar-none
       "
@@ -38,7 +38,6 @@ const FlipBookThumbnailBar = ({
               shrink-0
 
               overflow-hidden
-              rounded-xl
 
               transition-all
               duration-300
@@ -49,13 +48,10 @@ const FlipBookThumbnailBar = ({
                   : "opacity-60 hover:opacity-100"
               }
             `}
-            style={{
-              width: 112,
-              height: 70,
-            }}
+            // No inline width/height — controlled entirely by CSS
           >
             {isCover ? (
-              <div className="flex h-full w-full items-center justify-center bg-[#111827] font-serif text-base text-[#d9c8a6]">
+              <div className="flex h-full w-full items-center justify-center bg-[#111827] font-serif text-[10px] text-[#d9c8a6]">
                 Cover
               </div>
             ) : !isBlank ? (
@@ -70,13 +66,7 @@ const FlipBookThumbnailBar = ({
                 "
               />
             ) : (
-              <div
-                className="
-                  h-full
-                  w-full
-                bg-black
-                "
-              />
+              <div className="h-full w-full bg-black" />
             )}
           </button>
         );
