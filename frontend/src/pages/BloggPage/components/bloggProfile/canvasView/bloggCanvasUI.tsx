@@ -170,7 +170,7 @@ export default function BloggCanvasUI({
                         onCreateGroup={state.createGroup}
                         onDeleteStack={state.handleDeleteStack}
                         onOpenGroup={state.handleOpenGroup}
-                        onInitiateCreateNote={(
+                        onInitiateCreateBlog={(
                           stackId: string,
                           groupId: string,
                         ) => {
@@ -180,7 +180,9 @@ export default function BloggCanvasUI({
                           if (onOpenForm)
                             onOpenForm(
                               blog.stack_id,
+
                               blog.group_id,
+
                               blog.blog_id,
                             );
                         }}
@@ -225,9 +227,9 @@ export default function BloggCanvasUI({
         )}
       </TransformWrapper>
 
-      <div className="absolute right-6 top-6 z-[2000] pointer-events-auto flex gap-4 items-start">
+      <div className="absolute right-6 top-6 z-[2000] pointer-events-auto flex gap-2 items-start">
         {state.isCreatingStack ? (
-          <div className="bg-white/95 p-4 rounded-lg shadow-xl border border-slate-400 flex flex-col gap-2">
+          <div className="bg-white/95 p-1 rounded-lg shadow-xl border border-slate-400 flex flex-row gap-2">
             <input
               autoFocus
               type="text"

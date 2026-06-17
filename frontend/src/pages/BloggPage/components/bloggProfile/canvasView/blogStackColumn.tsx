@@ -4,47 +4,7 @@ import { addOutline, createOutline } from "ionicons/icons";
 import GroupDivider from "./bloggGroupDivider";
 import GroupCard from "./bloggGroupCard";
 import useIsTouchDevice from "../../../hooks/canvasView/useIsTouchDevice";
-
-// 1. Local Type Definitions (Replaces old useNotes import)
-export interface NoteStack {
-  stack_id: string;
-  title: string;
-}
-export interface NoteGroup {
-  group_id: string;
-  stack_id: string;
-  title: string;
-}
-export interface NoteItem {
-  note_id: string;
-  group_id: string;
-  title: string;
-  content: string;
-}
-
-interface NoteStackColumnProps {
-  stack: NoteStack;
-  groups: NoteGroup[];
-  activeGroupId: string | null;
-  currentNotes: NoteItem[];
-  initialPos: { x: number; y: number };
-  zIndex: number;
-  scale: number;
-  bringToFront: (id: string) => void;
-  onDragEnd: (id: string, pos: { x: number; y: number }) => void;
-  onCreateGroup: (title: string, stackId: string) => void;
-  onDeleteStack: (stackId: string) => void;
-  onOpenGroup: (groupId: string) => void;
-  onInitiateCreateNote: (stackId: string, groupId: string) => void;
-  onOpenNote: (note: NoteItem) => void;
-  onDeleteGroup: (groupId: string) => void;
-  onDeleteNote: (noteId: string) => void;
-  onRenameStack: (stackId: string, newTitle: string) => void;
-  onRenameGroup: (groupId: string, newTitle: string) => void;
-  isHighlighted?: boolean;
-  highlightedGroupId?: string | null;
-  interactionReduced?: boolean;
-}
+import { BloggGroup, BloggStackColumnProps } from "./bloggCanvasType";
 
 const NoteStackColumn = React.memo(
   ({
@@ -60,7 +20,7 @@ const NoteStackColumn = React.memo(
     onCreateGroup,
     onDeleteStack,
     onOpenGroup,
-    onInitiateCreateNote,
+    onInitiateCreateBlog,
     onOpenNote,
     onDeleteGroup,
     onDeleteNote,
@@ -69,7 +29,7 @@ const NoteStackColumn = React.memo(
     isHighlighted,
     highlightedGroupId,
     interactionReduced,
-  }: NoteStackColumnProps) => {
+  }: BloggStackColumnProps) => {
     const isTouchDevice = useIsTouchDevice();
     const [isCreatingGroup, setIsCreatingGroup] = useState(false);
     const [draftTitle, setDraftTitle] = useState("");
@@ -82,7 +42,7 @@ const NoteStackColumn = React.memo(
     const currentPos = useRef(initialPos || { x: 0, y: 0 });
 
     const [isRenamingStack, setIsRenamingStack] = useState(false);
-    const [editStackTitle, setEditStackTitle] = useState(stack.title);
+    const [editStackTitle, setEditStackTitle] = useState(stack.stack_name);
 
     const applyPosition = React.useCallback(
       (nextPos: { x: number; y: number }) => {
@@ -164,11 +124,11 @@ const NoteStackColumn = React.memo(
       ? "opacity-100"
       : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100";
 
-    const groupMap = new Map<string, NoteGroup[]>();
+    const groupMap = new Map<string, BloggGroup[]>();
     [...groups]
-      .sort((a, b) => a.title.localeCompare(b.title))
+      .sort((a, b) => a.group_name.localeCompare(b.group_name))
       .forEach((g) => {
-        const c = (g.title.charAt(0) || "#").toUpperCase();
+        const c = (g.group_name.charAt(0) || "#").toUpperCase();
         if (!groupMap.has(c)) groupMap.set(c, []);
         groupMap.get(c)!.push(g);
       });
@@ -199,8 +159,12 @@ const NoteStackColumn = React.memo(
             isActive={activeGroupId === g.group_id}
             notes={activeGroupId === g.group_id ? currentNotes : []}
             onOpen={() => onOpenGroup(g.group_id)}
-            onInitiateCreateNote={() =>
-              onInitiateCreateNote(g.stack_id, g.group_id)
+            onInitiateCreateBlog={() =>
+              onInitiateCreateBlog(
+                g.stack_id,
+
+                g.group_id,
+              )
             }
             onOpenNote={onOpenNote}
             onDeleteGroup={onDeleteGroup}
@@ -296,7 +260,7 @@ const NoteStackColumn = React.memo(
                     }
                     if (e.key === "Escape") {
                       setIsRenamingStack(false);
-                      setEditStackTitle(stack.title);
+                      setEditStackTitle(stack.stack_name);
                     }
                   }}
                   className="w-full p-1 text-lg font-bold border border-gray-400 rounded focus:outline-none pointer-events-auto bg-white"
@@ -306,7 +270,7 @@ const NoteStackColumn = React.memo(
                 <button
                   onClick={() => {
                     setIsRenamingStack(false);
-                    setEditStackTitle(stack.title);
+                    setEditStackTitle(stack.stack_name);
                   }}
                   className="text-xs text-muted pointer-events-auto"
                 >
@@ -320,18 +284,18 @@ const NoteStackColumn = React.memo(
                   onClick={(e) => {
                     e.stopPropagation();
                     setIsRenamingStack(true);
-                    setEditStackTitle(stack.title);
+                    setEditStackTitle(stack.stack_name);
                   }}
                   onPointerDown={(e) => e.stopPropagation()}
                   title="Click to rename"
                 >
-                  {stack.title}
+                  {stack.stack_name}
                 </h3>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     setIsRenamingStack(true);
-                    setEditStackTitle(stack.title);
+                    setEditStackTitle(stack.stack_name);
                   }}
                   onPointerDown={(e) => e.stopPropagation()}
                   className="text-gray-400 hover:text-black opacity-0 group-hover/stack:opacity-100 transition-opacity"

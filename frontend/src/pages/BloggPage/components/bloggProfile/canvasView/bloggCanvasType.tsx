@@ -1,0 +1,61 @@
+export interface BloggGroup {
+  group_id: string;
+  group_name: string;
+  stack_id: string;
+  stack_name: string;
+}
+export interface BloggItem {
+  note_id: string;
+  group_id: string;
+  title: string;
+  content: string;
+}
+
+export interface BloggStack {
+  stack_id: string;
+  stack_name: string;
+}
+
+export interface BloggGroupCardProps {
+  group: BloggGroup;
+  zIndex: number;
+  stagger: number;
+  isActive: boolean;
+  notes: BloggItem[];
+  onOpen: () => void;
+  onInitiateCreateBlog: () => void;
+  onOpenNote: (note: BloggItem) => void;
+  onDeleteGroup: (groupId: string) => void;
+  onDeleteNote: (noteId: string) => void;
+  onRenameGroup: (groupId: string, newTitle: string) => void;
+  isHighlighted?: boolean;
+  interactionReduced?: boolean;
+}
+
+export interface BloggStackColumnProps {
+  stack: BloggStack;
+  groups: BloggGroup[];
+  activeGroupId: string | null;
+  currentNotes: BloggItem[];
+  initialPos: { x: number; y: number };
+  zIndex: number;
+  scale: number;
+  bringToFront: (id: string) => void;
+  onDragEnd: (id: string, pos: { x: number; y: number }) => void;
+  onCreateGroup: (title: string, stackId: string) => void;
+  onDeleteStack: (stackId: string) => void;
+  onOpenGroup: (groupId: string) => void;
+  onInitiateCreateBlog: (
+    stackId: string,
+
+    groupId: string,
+  ) => void;
+  onOpenNote: (note: BloggItem) => void;
+  onDeleteGroup: (groupId: string) => void;
+  onDeleteNote: (noteId: string) => void;
+  onRenameStack: (stackId: string, newTitle: string) => void;
+  onRenameGroup: (groupId: string, newTitle: string) => void;
+  isHighlighted?: boolean;
+  highlightedGroupId?: string | null;
+  interactionReduced?: boolean;
+}

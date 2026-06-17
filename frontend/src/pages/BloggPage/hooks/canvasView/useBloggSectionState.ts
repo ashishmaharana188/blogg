@@ -14,7 +14,6 @@ export default function useBloggSectionState() {
   const [draftStackTitle, setDraftStackTitle] = useState("");
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
 
-  // FIX: Matches the (id, object) signature fired by the column drag end
   const updatePosition = useCallback(
     (id: string, pos: { x: number; y: number }) => {
       setPositions((prev) => ({ ...prev, [id]: pos }));

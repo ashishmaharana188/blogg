@@ -6,19 +6,7 @@ import {
   useAnimation,
 } from "framer-motion";
 import type { PanInfo } from "framer-motion";
-
-// 1. LOCAL TYPE DEFINITIONS: Replaces the old backend useNotes import
-export interface NoteGroup {
-  group_id: string;
-  stack_id: string;
-  title: string;
-}
-export interface NoteItem {
-  note_id: string;
-  group_id: string;
-  title: string;
-  content: string;
-}
+import { BloggGroupCardProps } from "./bloggCanvasType";
 
 const TAB_WIDTH = 600;
 const TAB_HEIGHT = 65;
@@ -39,22 +27,6 @@ const CLOSE_TRANSITION = {
   mass: 0.8,
 } as const;
 
-interface GroupCardProps {
-  group: NoteGroup;
-  zIndex: number;
-  stagger: number;
-  isActive: boolean;
-  notes: NoteItem[];
-  onOpen: () => void;
-  onInitiateCreateNote: () => void;
-  onOpenNote: (note: NoteItem) => void;
-  onDeleteGroup: (groupId: string) => void;
-  onDeleteNote: (noteId: string) => void;
-  onRenameGroup: (groupId: string, newTitle: string) => void;
-  isHighlighted?: boolean;
-  interactionReduced?: boolean;
-}
-
 const GroupCard = React.memo(
   ({
     group,
@@ -63,20 +35,20 @@ const GroupCard = React.memo(
     isActive,
     notes,
     onOpen,
-    onInitiateCreateNote,
+    onInitiateCreateBlog,
     onOpenNote,
     onDeleteGroup,
     onDeleteNote,
     onRenameGroup,
     isHighlighted,
     interactionReduced,
-  }: GroupCardProps) => {
+  }: BloggGroupCardProps) => {
     const controls = useAnimation();
     const y = useMotionValue(0);
     const [isDragging, setIsDragging] = useState(false);
     // NEW EDIT STATES
     const [isRenaming, setIsRenaming] = useState(false);
-    const [editTitle, setEditTitle] = useState(group.title);
+    const [editTitle, setEditTitle] = useState(group.group_name);
 
     const cardHeight = useTransform(y, (latestY) => Math.max(0, -latestY));
     const contentOpacity = useTransform(y, [-30, -150], [0, 1]);
@@ -164,9 +136,9 @@ const GroupCard = React.memo(
                 textAnchor="end"
                 className="fill-gray-900 font-sans font-bold text-xs uppercase"
               >
-                {group.title.length > 20
-                  ? group.title.substring(0, 17) + "..."
-                  : group.title}
+                {group.group_name.length > 20
+                  ? group.group_name.substring(0, 17) + "..."
+                  : group.group_name}
               </text>
             </svg>
             <button
@@ -224,7 +196,7 @@ const GroupCard = React.memo(
                         }
                         if (e.key === "Escape") {
                           setIsRenaming(false);
-                          setEditTitle(group.title);
+                          setEditTitle(group.group_name);
                         }
                       }}
                       className="flex-1 p-1 text-lg font-bold border border-gray-400 rounded bg-white text-slate-800"
@@ -232,7 +204,7 @@ const GroupCard = React.memo(
                     <button
                       onClick={() => {
                         setIsRenaming(false);
-                        setEditTitle(group.title);
+                        setEditTitle(group.group_name);
                       }}
                       className="text-xs text-slate-500"
                     >
@@ -245,16 +217,16 @@ const GroupCard = React.memo(
                       className="text-xl font-bold text-slate-800 truncate cursor-pointer hover:text-black transition-colors"
                       onClick={() => {
                         setIsRenaming(true);
-                        setEditTitle(group.title);
+                        setEditTitle(group.group_name);
                       }}
                       title="Click to rename"
                     >
-                      {group.title}
+                      {group.group_name}
                     </h2>
                     <button
                       onClick={() => {
                         setIsRenaming(true);
-                        setEditTitle(group.title);
+                        setEditTitle(group.group_name);
                       }}
                       className="text-gray-400 opacity-100 transition-opacity hover:text-black sm:opacity-0 sm:group-hover/title:opacity-100"
                     >
@@ -276,7 +248,7 @@ const GroupCard = React.memo(
                 )}
 
                 <button
-                  onClick={onInitiateCreateNote}
+                  onClick={onInitiateCreateBlog}
                   className="px-3 py-1.5 bg-black text-white text-xs font-bold rounded-md hover:bg-black transition shadow-sm whitespace-nowrap"
                 >
                   + New Note
