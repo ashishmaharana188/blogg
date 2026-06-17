@@ -4,7 +4,7 @@ import logger from "../logs/logger.ts";
 import { trace } from "../middleware/trace.ts";
 import { middleware } from "../middleware/middleWare.ts";
 import { mongoConnectDB } from "../db/mongoDBConnect.ts";
-import blogInterceptRouter from "../routes/blogIntercept.ts";
+import blogInterceptRouter from "../routes/bloggDocument/bloggDocumentUtil.ts";
 
 const app = express();
 

@@ -6,7 +6,7 @@ import GroupCard from "./bloggGroupCard";
 import useIsTouchDevice from "../../../hooks/canvasView/useIsTouchDevice";
 import { BloggGroup, BloggStackColumnProps } from "./bloggCanvasType";
 
-const NoteStackColumn = React.memo(
+const BloggStackColumn = React.memo(
   ({
     stack,
     groups,
@@ -32,7 +32,7 @@ const NoteStackColumn = React.memo(
   }: BloggStackColumnProps) => {
     const isTouchDevice = useIsTouchDevice();
     const [isCreatingGroup, setIsCreatingGroup] = useState(false);
-    const [draftTitle, setDraftTitle] = useState("");
+    const [groupName, setGroupName] = useState("");
     const [localPos, setLocalPos] = useState(initialPos || { x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
     const dragRef = useRef({ startX: 0, startY: 0, x: 0, y: 0 });
@@ -42,7 +42,7 @@ const NoteStackColumn = React.memo(
     const currentPos = useRef(initialPos || { x: 0, y: 0 });
 
     const [isRenamingStack, setIsRenamingStack] = useState(false);
-    const [editStackTitle, setEditStackTitle] = useState(stack.stack_name);
+    const [editStackName, setEditStackName] = useState(stack.stack_name);
 
     const applyPosition = React.useCallback(
       (nextPos: { x: number; y: number }) => {
@@ -251,16 +251,16 @@ const NoteStackColumn = React.memo(
               <div className="absolute left-10 flex gap-2 items-center pointer-events-auto z-10 w-3/4">
                 <input
                   type="text"
-                  value={editStackTitle}
-                  onChange={(e) => setEditStackTitle(e.target.value)}
+                  value={editStackName}
+                  onChange={(e) => setEditStackName(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      onRenameStack(stack.stack_id, editStackTitle);
+                      onRenameStack(stack.stack_id, editStackName);
                       setIsRenamingStack(false);
                     }
                     if (e.key === "Escape") {
                       setIsRenamingStack(false);
-                      setEditStackTitle(stack.stack_name);
+                      setEditStackName(stack.stack_name);
                     }
                   }}
                   className="w-full p-1 text-lg font-bold border border-gray-400 rounded focus:outline-none pointer-events-auto bg-white"
@@ -270,7 +270,7 @@ const NoteStackColumn = React.memo(
                 <button
                   onClick={() => {
                     setIsRenamingStack(false);
-                    setEditStackTitle(stack.stack_name);
+                    setEditStackName(stack.stack_name);
                   }}
                   className="text-xs text-muted pointer-events-auto"
                 >
@@ -284,7 +284,7 @@ const NoteStackColumn = React.memo(
                   onClick={(e) => {
                     e.stopPropagation();
                     setIsRenamingStack(true);
-                    setEditStackTitle(stack.stack_name);
+                    setEditStackName(stack.stack_name);
                   }}
                   onPointerDown={(e) => e.stopPropagation()}
                   title="Click to rename"
@@ -295,7 +295,7 @@ const NoteStackColumn = React.memo(
                   onClick={(e) => {
                     e.stopPropagation();
                     setIsRenamingStack(true);
-                    setEditStackTitle(stack.stack_name);
+                    setEditStackName(stack.stack_name);
                   }}
                   onPointerDown={(e) => e.stopPropagation()}
                   className="text-gray-400 hover:text-black opacity-0 group-hover/stack:opacity-100 transition-opacity"
@@ -343,13 +343,13 @@ const NoteStackColumn = React.memo(
                 autoFocus
                 type="text"
                 placeholder="Folder Name..."
-                value={draftTitle}
-                onChange={(e) => setDraftTitle(e.target.value)}
+                value={groupName}
+                onChange={(e) => setGroupName(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
-                    onCreateGroup(draftTitle, stack.stack_id);
+                    onCreateGroup(groupName, stack.stack_id);
                     setIsCreatingGroup(false);
-                    setDraftTitle("");
+                    setGroupName("");
                   }
                 }}
                 className="flex-1 p-2 text-sm border border-gray-300 rounded focus:outline-none focus:border-gray-900 font-bold"
@@ -362,9 +362,9 @@ const NoteStackColumn = React.memo(
               </button>
               <button
                 onClick={() => {
-                  onCreateGroup(draftTitle, stack.stack_id);
+                  onCreateGroup(groupName, stack.stack_id);
                   setIsCreatingGroup(false);
-                  setDraftTitle("");
+                  setGroupName("");
                 }}
                 className="px-3 text-xs font-bold bg-black text-accent-text rounded hover:bg-black"
               >
@@ -400,4 +400,4 @@ const NoteStackColumn = React.memo(
   },
 );
 
-export default NoteStackColumn;
+export default BloggStackColumn;

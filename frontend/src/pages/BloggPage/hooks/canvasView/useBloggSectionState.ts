@@ -1,5 +1,7 @@
 import { useState, useCallback } from "react";
 
+import { createGroup, createStack } from "../../services/canvasViewSave";
+
 export default function useBloggSectionState() {
   const [stacks, setStacks] = useState<any[]>([]);
 
@@ -11,7 +13,7 @@ export default function useBloggSectionState() {
 
   const [canvasScale, setCanvasScale] = useState(1);
   const [isCreatingStack, setIsCreatingStack] = useState(false);
-  const [draftStackTitle, setDraftStackTitle] = useState("");
+  const [draftStackName, setDraftStackName] = useState("");
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
 
   const updatePosition = useCallback(
@@ -28,11 +30,21 @@ export default function useBloggSectionState() {
     });
   }, []);
 
-  const createStack = useCallback((title: string) => {
-    if (!title.trim()) return;
-    const newId = crypto.randomUUID();
-    setStacks((prev) => [...prev, { stack_id: newId, title }]);
-    setPositions((prev) => ({ ...prev, [newId]: { x: 400, y: 300 } }));
+  const createStackHandler = useCallback(async (stack_name: string) => {
+    if (!stack_name.trim()) return;
+
+    const stack = {
+      stack_id: crypto.randomUUID(),
+      stack_name,
+    };
+
+    const savedStack = await createStack(stack);
+    setStacks((prev) => [...prev, savedStack]);
+
+    setPositions((prev) => ({
+      ...prev,
+      [savedStack.stack_id]: { x: 400, y: 300 },
+    }));
   }, []);
 
   const handleDeleteStack = useCallback((stackId: string) => {
@@ -40,32 +52,38 @@ export default function useBloggSectionState() {
     setGroups((prev) => prev.filter((g) => g.stack_id !== stackId));
   }, []);
 
-  const renameStack = useCallback((stackId: string, newTitle: string) => {
+  const renameStack = useCallback((stackId: string, newStackName: string) => {
     setStacks((prev) =>
-      prev.map((s) => (s.stack_id === stackId ? { ...s, title: newTitle } : s)),
+      prev.map((s) =>
+        s.stack_id === stackId ? { ...s, stack_name: newStackName } : s,
+      ),
     );
   }, []);
 
-  const createGroup = useCallback((title: string, stackId: string) => {
-    if (!title.trim()) return;
-
-    setGroups((prev) => [
-      ...prev,
-      {
-        stack_id: stackId,
+  const createGroupHandler = useCallback(
+    async (groupName: string, stackId: string) => {
+      const group = {
         group_id: crypto.randomUUID(),
-        title,
-      },
-    ]);
-  }, []);
+        stack_id: stackId,
+        group_name: groupName,
+      };
+
+      await createGroup(group);
+
+      setGroups((prev) => [...prev, group]);
+    },
+    [],
+  );
 
   const handleDeleteGroup = useCallback((groupId: string) => {
     setGroups((prev) => prev.filter((g) => g.group_id !== groupId));
   }, []);
 
-  const renameGroup = useCallback((groupId: string, newTitle: string) => {
+  const renameGroup = useCallback((groupId: string, newGroupName: string) => {
     setGroups((prev) =>
-      prev.map((g) => (g.group_id === groupId ? { ...g, title: newTitle } : g)),
+      prev.map((g) =>
+        g.group_id === groupId ? { ...g, group_name: newGroupName } : g,
+      ),
     );
   }, []);
 
@@ -86,19 +104,19 @@ export default function useBloggSectionState() {
     setCanvasScale,
     isCreatingStack,
     setIsCreatingStack,
-    draftStackTitle,
-    setDraftStackTitle,
+    draftStackName,
+    setDraftStackName,
     activeGroupId,
     updatePosition,
     bringToFront,
-    createStack,
+    createStackHandler,
     handleDeleteStack,
     handleOpenGroup,
     handleDeleteGroup,
     handleDeleteNote,
     renameStack,
     renameGroup,
-    createGroup,
+    createGroupHandler,
     currentNotes: [],
   };
 }

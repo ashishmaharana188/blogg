@@ -1,9 +1,9 @@
 import multer from "multer";
-import { getDB } from "../db/mongoDBConnect.ts";
-import type { BlogInput, BlogDocument } from "../types/blogTypes.ts";
+import { getDB } from "../../db/mongoDBConnect.ts";
+import type { BlogInput, BlogDocument } from "../../types/blogTypes.ts";
 import { Readable } from "stream";
-import cloudinary from "../cloudinary/cloudinary.ts";
-import logger from "../logs/logger.ts";
+import cloudinary from "../../cloudinary/cloudinary.ts";
+import logger from "../../logs/logger.ts";
 
 export const upload = multer({
   storage: multer.memoryStorage(),

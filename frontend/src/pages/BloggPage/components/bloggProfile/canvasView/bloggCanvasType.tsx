@@ -42,7 +42,7 @@ export interface BloggStackColumnProps {
   scale: number;
   bringToFront: (id: string) => void;
   onDragEnd: (id: string, pos: { x: number; y: number }) => void;
-  onCreateGroup: (title: string, stackId: string) => void;
+  onCreateGroup: (groupName: string, stackId: string) => void;
   onDeleteStack: (stackId: string) => void;
   onOpenGroup: (groupId: string) => void;
   onInitiateCreateBlog: (

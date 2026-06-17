@@ -1,6 +1,6 @@
 import express from "express";
-import { trace } from "../middleware/trace.ts";
-import { upload, saveBlogMedia, saveBlog } from "./bloggDocument.ts";
+import { trace } from "../../middleware/trace.ts";
+import { upload, saveBlogMedia, saveBlog } from "./bloggDocumentIndex.ts";
 
 const blogInterceptRouter = express.Router();
 

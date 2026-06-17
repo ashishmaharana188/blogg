@@ -11,7 +11,7 @@ import {
 } from "ionicons/icons";
 
 import AutoZoomTrigger from "./autoZoomTrigger";
-import NoteStackColumn from "./blogStackColumn";
+import BloggStackColumn from "./blogStackColumn";
 import useBloggSectionState from "../../../hooks/canvasView/useBloggSectionState";
 import useCanvasViewport from "../../../hooks/canvasView/useCanvasViewport";
 import useCanvasInteractionMode from "../../../hooks/canvasView/useCanvasInteractionMode";
@@ -152,7 +152,7 @@ export default function BloggCanvasUI({
                     </div>
                   ) : (
                     visibleStacks.map((stack: any) => (
-                      <NoteStackColumn
+                      <BloggStackColumn
                         key={stack.stack_id}
                         stack={stack}
                         groups={
@@ -167,7 +167,7 @@ export default function BloggCanvasUI({
                         scale={canvasScale}
                         bringToFront={state.bringToFront}
                         onDragEnd={state.updatePosition}
-                        onCreateGroup={state.createGroup}
+                        onCreateGroup={state.createGroupHandler}
                         onDeleteStack={state.handleDeleteStack}
                         onOpenGroup={state.handleOpenGroup}
                         onInitiateCreateBlog={(
@@ -234,13 +234,13 @@ export default function BloggCanvasUI({
               autoFocus
               type="text"
               placeholder="Stack Name..."
-              value={state.draftStackTitle}
-              onChange={(e) => state.setDraftStackTitle(e.target.value)}
+              value={state.draftStackName}
+              onChange={(e) => state.setDraftStackName(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
-                  state.createStack(state.draftStackTitle);
+                  state.createStackHandler(state.draftStackName);
                   state.setIsCreatingStack(false);
-                  state.setDraftStackTitle("");
+                  state.setDraftStackName("");
                 }
               }}
               className="p-2 border border-slate-300 rounded focus:outline-none focus:border-slate-900 text-sm font-bold bg-transparent"
@@ -254,9 +254,9 @@ export default function BloggCanvasUI({
               </button>
               <button
                 onClick={() => {
-                  state.createStack(state.draftStackTitle);
+                  state.createStackHandler(state.draftStackName);
                   state.setIsCreatingStack(false);
-                  state.setDraftStackTitle("");
+                  state.setDraftStackName("");
                 }}
                 className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-black text-white transition-colors hover:bg-black"
               >
