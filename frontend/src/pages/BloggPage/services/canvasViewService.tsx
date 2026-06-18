@@ -15,7 +15,8 @@ export async function createStack(payload: {
   const text = await response.text();
   console.log("response body:", text);
 
-  return text ? JSON.parse(text) : payload;
+  const result = JSON.parse(text);
+  return result.stack;
 }
 
 export async function createGroup(payload: {
@@ -35,5 +36,6 @@ export async function createGroup(payload: {
   const text = await response.text();
   console.log("response body:", text);
 
-  return text ? JSON.parse(text) : payload;
+  const result = JSON.parse(text);
+  return result.stack;
 }
