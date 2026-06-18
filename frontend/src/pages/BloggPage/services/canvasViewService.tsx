@@ -39,3 +39,9 @@ export async function createGroup(payload: {
   const result = JSON.parse(text);
   return result.stack;
 }
+
+export async function fetchStackAndGroup() {
+  const response = await fetch("http://localhost:3000/stackAndGroup");
+
+  return response.json();
+}

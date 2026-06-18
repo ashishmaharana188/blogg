@@ -1,6 +1,6 @@
-import { useState, useCallback } from "react";
-
+import { useState, useCallback, useEffect } from "react";
 import { createGroup, createStack } from "../../services/canvasViewService";
+import { fetchStackAndGroup } from "../../services/canvasViewService";
 
 export default function useBloggSectionState() {
   const [stacks, setStacks] = useState<any[]>([]);
@@ -44,6 +44,25 @@ export default function useBloggSectionState() {
       ...prev,
       [savedStack.stack_id]: { x: 400, y: 300 },
     }));
+  }, []);
+
+  //useEffect to load group and stack data from mongo
+
+  useEffect(() => {
+    const loadCanvas = async () => {
+      try {
+        const data = await fetchStackAndGroup();
+        console.log("FETCHED DATA", data);
+        console.log("STACKS", data.stacks);
+        console.log("GROUPS", data.groups);
+        setStacks(data.stacks);
+        setGroups(data.groups);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    loadCanvas();
   }, []);
 
   const handleDeleteStack = useCallback((stackId: string) => {

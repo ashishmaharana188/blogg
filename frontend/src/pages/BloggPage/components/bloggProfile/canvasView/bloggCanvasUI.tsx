@@ -33,7 +33,8 @@ export default function BloggCanvasUI({
     initialPositionY: 0,
     buffer: 1800,
   });
-
+  console.log(state.stacks);
+  console.log(Array.isArray(state.stacks));
   const visibleStacks = React.useMemo(
     () =>
       (state.stacks || []).filter((stack: any) => {
