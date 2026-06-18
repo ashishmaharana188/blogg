@@ -5,7 +5,7 @@ import { saveStack, saveGroup } from "./canvasViewIndex.ts";
 const canvasViewInterceptor = express.Router();
 
 canvasViewInterceptor.post(
-  "/stack/create",
+  "/stack/stackCreate",
 
   trace("STACK_SAVE", async (req) => {
     const savedBlog = await saveStack(req.body);
@@ -19,7 +19,7 @@ canvasViewInterceptor.post(
 );
 
 canvasViewInterceptor.post(
-  "/group/create",
+  "/group/groupCreate",
 
   trace("GROUP_SAVE", async (req) => {
     const savedBlog = await saveGroup(req.body);

@@ -1,8 +1,6 @@
-import multer from "multer";
+// backend/src/routes/canvasView/canvasViewIndex.ts
+
 import { getDB } from "../../db/mongoDBConnect.ts";
-import { Readable } from "stream";
-import cloudinary from "../../cloudinary/cloudinary.ts";
-import logger from "../../logs/logger.ts";
 import { StackDocument, GroupDocument } from "./../../types/canvasViewTypes.ts";
 
 export const saveStack = async (
@@ -10,11 +8,9 @@ export const saveStack = async (
 ): Promise<StackDocument> => {
   const result = await getDB().collection("stacks").insertOne(stack);
 
-  const savedStack = await getDB()
-    .collection<StackDocument>("stackGroupCanvas")
-    .findOne({
-      _id: result.insertedId,
-    });
+  const savedStack = await getDB().collection<StackDocument>("stacks").findOne({
+    _id: result.insertedId,
+  });
 
   if (!savedStack) {
     throw new Error("Failed to save stack");
@@ -26,16 +22,14 @@ export const saveStack = async (
 export const saveGroup = async (
   group: GroupDocument,
 ): Promise<GroupDocument> => {
-  const result = await getDB().collection("stacks").insertOne(group);
+  const result = await getDB().collection("groups").insertOne(group);
 
-  const savedGroup = await getDB()
-    .collection<GroupDocument>("stackGroupCanvas")
-    .findOne({
-      _id: result.insertedId,
-    });
+  const savedGroup = await getDB().collection<GroupDocument>("groups").findOne({
+    _id: result.insertedId,
+  });
 
   if (!savedGroup) {
-    throw new Error("Failed to save stack");
+    throw new Error("Failed to save group");
   }
 
   return savedGroup;

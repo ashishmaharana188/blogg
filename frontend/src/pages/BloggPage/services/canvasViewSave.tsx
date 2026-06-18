@@ -4,7 +4,7 @@ export async function createStack(payload: {
   stack_name: string;
   stack_id: string;
 }) {
-  const response = await fetch("/stack/create", {
+  const response = await fetch("/stack/stackCreate", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -19,7 +19,7 @@ export async function createGroup(payload: {
   group_name: string;
   stack_id: string;
 }) {
-  const response = await fetch("/group/create", {
+  const response = await fetch("/group/groupCreate", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
