@@ -5,6 +5,7 @@ import { trace } from "../middleware/trace.ts";
 import { middleware } from "../middleware/middleWare.ts";
 import { mongoConnectDB } from "../db/mongoDBConnect.ts";
 import blogInterceptRouter from "../routes/bloggDocument/bloggDocumentUtil.ts";
+import canvasViewInterceptor from "../routes/canvasView/canvasViewUtil.ts";
 
 const app = express();
 
@@ -15,7 +16,7 @@ app.use(express.json());
 app.use(middleware);
 
 await mongoConnectDB();
-
+app.use(canvasViewInterceptor);
 app.use(blogInterceptRouter);
 
 app.listen(3000, () => {

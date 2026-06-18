@@ -40,7 +40,6 @@ export default function useBloggSectionState() {
 
     const savedStack = await createStack(stack);
     setStacks((prev) => [...prev, savedStack]);
-
     setPositions((prev) => ({
       ...prev,
       [savedStack.stack_id]: { x: 400, y: 300 },
