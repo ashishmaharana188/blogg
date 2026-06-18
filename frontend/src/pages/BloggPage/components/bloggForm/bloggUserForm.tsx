@@ -1,6 +1,7 @@
 import { userFormtypes } from "../../../../types/pageTypes";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
+import { uploadFile } from "../../services/bloggService";
 
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
@@ -28,23 +29,6 @@ const UserForm = ({ onContentChange }: userFormtypes) => {
   const [tags, setTags] = useState<{ text: string; colorClass: string }[]>([]);
   const [isAddingTag, setIsAddingTag] = useState(false);
   const [tagInput, setTagInput] = useState("");
-
-  async function uploadFile(file: File) {
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const response = await fetch("http://localhost:3000/blogMediaUpload", {
-      method: "POST",
-      body: formData,
-    });
-
-    if (!response.ok) {
-      throw new Error("Media upload failed");
-    }
-
-    const data = await response.json();
-    return data.media.url;
-  }
 
   const editor = useCreateBlockNote({
     uploadFile,

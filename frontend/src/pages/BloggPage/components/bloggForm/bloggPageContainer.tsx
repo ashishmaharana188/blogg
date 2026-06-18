@@ -1,4 +1,5 @@
 import UserForm from "./bloggUserForm";
+import { saveBlog } from "../../services/bloggService";
 import { BlogSavetypes } from "../../../../types/pageTypes";
 
 const BloggPageContainer = ({
@@ -8,21 +9,8 @@ const BloggPageContainer = ({
   stackId?: string | null;
   groupId?: string | null;
 }) => {
-  //save blogUserForm
   const handleSave = async (blog: BlogSavetypes) => {
-    const response = await fetch("http://localhost:3000/blogSaveRequest", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        ...blog,
-        stackId,
-        groupId,
-      }),
-    });
-
-    const data = await response.json();
+    const data = await saveBlog(blog, stackId, groupId);
 
     console.log(data);
   };

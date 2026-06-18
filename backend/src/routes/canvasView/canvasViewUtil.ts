@@ -8,12 +8,12 @@ canvasViewInterceptor.post(
   "/stack/stackCreate",
 
   trace("STACK_SAVE", async (req) => {
-    const savedBlog = await saveStack(req.body);
+    const savedStack = await saveStack(req.body);
 
     return {
       success: true,
       message: "STACK_SAVE",
-      blog: savedBlog,
+      stack: savedStack,
     };
   }),
 );
@@ -22,12 +22,12 @@ canvasViewInterceptor.post(
   "/group/groupCreate",
 
   trace("GROUP_SAVE", async (req) => {
-    const savedBlog = await saveGroup(req.body);
+    const savedGroup = await saveGroup(req.body);
 
     return {
       success: true,
       message: "GROUP_SAVE",
-      blog: savedBlog,
+      group: savedGroup,
     };
   }),
 );
