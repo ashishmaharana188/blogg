@@ -57,6 +57,16 @@ export default function useBloggSectionState() {
         console.log("GROUPS", data.groups);
         setStacks(data.stacks);
         setGroups(data.groups);
+        const generatedPositions: Record<string, { x: number; y: number }> = {};
+
+        data.stacks.forEach((stack: any, index: any) => {
+          generatedPositions[stack.stack_id] = {
+            x: 20 + index * 650,
+            y: 50,
+          };
+        });
+
+        setPositions(generatedPositions);
       } catch (err) {
         console.error(err);
       }
