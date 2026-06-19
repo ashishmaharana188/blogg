@@ -9,3 +9,11 @@ export interface BlogSavetypes {
 export interface userFormtypes {
   onContentChange: (blog: BlogSavetypes) => void;
 }
+
+export interface StackPosition {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}

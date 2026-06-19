@@ -48,6 +48,59 @@ export default function useBloggSectionState() {
 
   //useEffect to load group and stack data from mongo
 
+  function estimateStackHeight(stackId: string, groups: any[]): number {
+    const STACK_HEADER_HEIGHT = 180;
+    const GROUP_CARD_HEIGHT = 35;
+
+    const stackGroups = groups.filter((group) => group.stack_id === stackId);
+    const stackGroupLength = stackGroups.length;
+
+    return STACK_HEADER_HEIGHT + stackGroupLength * GROUP_CARD_HEIGHT;
+  }
+
+  function canvasStackPosition(stacks: any[], groups: any[]) {
+    //final value
+    const generatePositions: Record<string, { x: number; y: number }> = {};
+
+    const rowHeights: Record<number, number> = {};
+    //row max height-1
+    stacks.forEach((stack, index) => {
+      const row = Math.floor(index / 5);
+
+      const estimatedHeight = estimateStackHeight(stack.stack_id, groups);
+      //phase1
+      rowHeights[row] = Math.max(rowHeights[row] || 0, estimatedHeight);
+    });
+
+    //row start-2
+    const rowStartPositions: Record<number, number> = {};
+
+    let currentY = 50;
+    //rowGap-3
+    const ROW_GAP = 100;
+    //phase2
+    Object.keys(rowHeights).forEach((row) => {
+      const rowNumber = Number(row);
+      rowStartPositions[rowNumber] = currentY;
+      currentY += rowHeights[rowNumber] + ROW_GAP;
+    });
+    //phase3
+    stacks.forEach((stack, index) => {
+      const column = index % 5;
+      const x = 20 + column * 650;
+
+      const row = Math.floor(index / 5);
+      const y = rowStartPositions[row];
+
+      generatePositions[stack.stack_id] = {
+        x,
+        y,
+      };
+    });
+
+    return generatePositions;
+  }
+
   useEffect(() => {
     const loadCanvas = async () => {
       try {
@@ -57,16 +110,7 @@ export default function useBloggSectionState() {
         console.log("GROUPS", data.groups);
         setStacks(data.stacks);
         setGroups(data.groups);
-        const generatedPositions: Record<string, { x: number; y: number }> = {};
-
-        data.stacks.forEach((stack: any, index: any) => {
-          generatedPositions[stack.stack_id] = {
-            x: 20 + index * 650,
-            y: 50,
-          };
-        });
-
-        setPositions(generatedPositions);
+        setPositions(canvasStackPosition(data.stacks, data.groups));
       } catch (err) {
         console.error(err);
       }
