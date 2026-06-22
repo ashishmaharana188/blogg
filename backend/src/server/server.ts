@@ -4,8 +4,8 @@ import logger from "../logs/logger.ts";
 import { trace } from "../middleware/trace.ts";
 import { middleware } from "../middleware/middleWare.ts";
 import { mongoConnectDB } from "../db/mongoDBConnect.ts";
-import blogInterceptRouter from "../routes/bloggDocument/bloggDocumentUtil.ts";
-import canvasViewInterceptor from "../routes/canvasView/canvasViewUtil.ts";
+import blogInterceptRouter from "../routes/bloggDocument/bloggDocumentIndex.ts";
+import canvasViewInterceptor from "../routes/canvasView/canvasViewIndex.ts";
 
 const app = express();
 

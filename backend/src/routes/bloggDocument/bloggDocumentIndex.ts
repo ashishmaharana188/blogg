@@ -1,83 +1,39 @@
-import multer from "multer";
-import { getDB } from "../../db/mongoDBConnect.ts";
-import type { BlogInput, BlogDocument } from "../../types/blogTypes.ts";
-import { Readable } from "stream";
-import cloudinary from "../../cloudinary/cloudinary.ts";
-import logger from "../../logs/logger.ts";
+import express from "express";
+import { trace } from "../../middleware/trace.ts";
+import { upload, saveBlogMedia, saveBlog } from "./bloggDocumentUtil.ts";
 
-export const upload = multer({
-  storage: multer.memoryStorage(),
+const blogInterceptRouter = express.Router();
 
-  limits: {
-    fileSize: 50 * 1024 * 1024,
-  },
+blogInterceptRouter.post(
+  "/blogSaveRequest",
 
-  fileFilter: (req, file, callback) => {
-    const allowedMimeTypes = [
-      "image/jpeg",
-      "image/png",
-      "image/webp",
-      "video/mp4",
-      "video/webm",
-      "video/quicktime",
-    ];
+  trace("BLOG_SAVE", async (req) => {
+    const savedBlog = await saveBlog(req.body);
 
-    if (allowedMimeTypes.includes(file.mimetype)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Unsupported file type"));
+    return {
+      success: true,
+      message: "Blog saved",
+      blog: savedBlog,
+    };
+  }),
+);
+
+blogInterceptRouter.post(
+  "/blogMediaUpload",
+  upload.single("file"),
+  trace("MEDIA UPOAD", async (req) => {
+    if (!req.file) {
+      throw new Error("No file uploaded");
     }
-  },
-});
 
-export const saveBlogMedia = async (file: Express.Multer.File) => {
-  return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        folder: "blogg",
-        resource_type: "auto",
-      },
+    const mediaUploaded = await saveBlogMedia(req.file);
 
-      (error, result) => {
-        if (error) {
-          reject(error);
-          return;
-        }
+    return {
+      success: true,
+      message: "Media saved",
+      media: mediaUploaded,
+    };
+  }),
+);
 
-        logger.info({
-          event: "MEDIA_UPLOAD_SUCCESS",
-          mediaId: result?.public_id,
-          resourceType: result?.resource_type,
-        });
-
-        resolve({
-          id: result?.public_id,
-          url: result?.secure_url,
-          resourceType: result?.resource_type,
-        });
-      },
-    );
-
-    Readable.from(file.buffer).pipe(uploadStream);
-  });
-};
-
-export const saveBlog = async (blog: BlogInput): Promise<BlogDocument> => {
-  const blogDocument = {
-    ...blog,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-
-  const result = await getDB().collection("bloggs").insertOne(blogDocument);
-
-  const savedBlog = await getDB().collection<BlogDocument>("bloggs").findOne({
-    _id: result.insertedId,
-  });
-
-  if (!savedBlog) {
-    throw new Error("Failed to retrieve saved blog");
-  }
-
-  return savedBlog;
-};
+export default blogInterceptRouter;
