@@ -25,7 +25,6 @@ const FlipBookThumbnailBar = ({
         const isActive = index === currentSpread || index === currentSpread + 1;
 
         const isBlank = page.id === "blank";
-        const isCover = page.id === "cover";
 
         return (
           <button
@@ -50,21 +49,10 @@ const FlipBookThumbnailBar = ({
             `}
             // No inline width/height — controlled entirely by CSS
           >
-            {isCover ? (
-              <div className="flex h-full w-full items-center justify-center bg-[#111827] font-serif text-[10px] text-[#d9c8a6]">
-                Cover
+            {!isBlank ? (
+              <div className="flex h-full w-full items-center justify-center bg-white px-1 text-center font-serif text-[9px] text-black">
+                {page.title || `Blog ${index + 1}`}
               </div>
-            ) : !isBlank ? (
-              <img
-                src={page.image}
-                alt={page.title ?? `Page ${index + 1}`}
-                draggable={false}
-                className="
-                  h-full
-                  w-full
-                  object-cover
-                "
-              />
             ) : (
               <div className="h-full w-full bg-black" />
             )}

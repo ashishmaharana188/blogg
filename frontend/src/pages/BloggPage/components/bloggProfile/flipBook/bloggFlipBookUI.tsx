@@ -4,7 +4,7 @@ import { ReadOnlyBloggContent } from "./readOnlyBloggContent";
 import { fetchAllBloggsRequest } from "../../../services/flipBookService";
 import FlipBookThumbnailBar from "./flipBookThumbnailBar";
 import "./flipBook.css";
-import type { BlogFlipBookUIProps, FlipBookPageType } from "./flipBookTypes";
+import type { FlipBookPageType } from "./flipBookTypes";
 
 type TurnDirection = "next" | "previous";
 
@@ -29,17 +29,35 @@ const PagePane = ({ page, side, className = "" }: PagePaneProps) => {
 
   return (
     <div className={`flipbook-page flipbook-page-${side} ${className}`}>
-      {!isBlank ? (
+      {isBlank ? (
+        <div className="flipbook-page-blank" />
+      ) : (
         <div className="flipbook-page-content">
-          <h2 className="flipbook-page-title">{page.title}</h2>
+          <header className="flipbook-blogg-header">
+            {page.author && (
+              <p className="flipbook-blogg-author">{page.author}</p>
+            )}
+
+            <h1 className="flipbook-blogg-title">{page.title}</h1>
+
+            {page.subtitle && (
+              <p className="flipbook-blogg-subtitle">{page.subtitle}</p>
+            )}
+
+            {page.tags.length > 0 && (
+              <div className="flipbook-blogg-tags">
+                {page.tags.map((tag) => (
+                  <span key={tag} className="flipbook-blogg-tag">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </header>
 
           <ReadOnlyBloggContent key={page.id} content={page.content} />
         </div>
-      ) : (
-        <div className="flipbook-page-blank" />
       )}
-
-      {!isBlank && <span className="flipbook-page-number">{page.id}</span>}
     </div>
   );
 };
@@ -91,7 +109,10 @@ const BlogFlipBookUI = () => {
 
         const flipBookPages: FlipBookPageType[] = bloggs.map((blogg: any) => ({
           id: blogg._id,
-          title: blogg.title,
+          author: blogg.author ?? "",
+          title: blogg.title ?? "",
+          subtitle: blogg.subtitle ?? "",
+          tags: blogg.tags ?? [],
           content: blogg.content ?? [],
         }));
 
@@ -117,7 +138,10 @@ const BlogFlipBookUI = () => {
       ...sourcePages,
       {
         id: "blank",
+        author: "",
         title: "",
+        subtitle: "",
+        tags: [],
         content: [],
       },
     ];

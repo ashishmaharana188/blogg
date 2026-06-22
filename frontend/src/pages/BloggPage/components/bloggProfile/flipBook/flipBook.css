@@ -78,11 +78,30 @@
   width: var(--page-w);
   height: var(--page-h);
   overflow: hidden;
-  background: #090909;
+  background: #ffffff;
   backface-visibility: hidden;
   transform-style: preserve-3d;
   -webkit-mask-image: -webkit-radial-gradient(white, black);
   mask-image: radial-gradient(white, black);
+}
+
+.flipbook-page-content {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  background: #ffffff;
+  color: #111111;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.flipbook-page-content .bn-container {
+  height: auto;
+  min-height: 100%;
+}
+
+.flipbook-page-content .bn-editor {
+  padding: 0;
 }
 
 .flipbook-page-left {
@@ -109,7 +128,48 @@
 }
 
 .flipbook-page-blank {
-  background: #070707;
+  background: #ffffff;
+}
+
+.flipbook-blogg-header {
+  margin-bottom: 1.25rem;
+  text-align: center;
+}
+
+.flipbook-blogg-author {
+  margin: 0 0 0.5rem;
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.flipbook-blogg-title {
+  margin: 0;
+  color: #111827;
+  font-size: 1.35rem;
+  line-height: 1.15;
+}
+
+.flipbook-blogg-subtitle {
+  margin: 0.75rem 0 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+.flipbook-blogg-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-top: 0.9rem;
+}
+
+.flipbook-blogg-tag {
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  color: #374151;
+  font-size: 0.7rem;
 }
 
 /* ── Vignette ────────────────────────────────────────────────── */
@@ -470,4 +530,68 @@
 .flipbook-rapid {
   animation-duration: 500ms !important;
   animation-timing-function: linear !important;
+}
+
+/* Whole flipbook: clean typewriter / editorial document look */
+.flipbook-profile,
+.flipbook-profile button,
+.flipbook-profile input,
+.flipbook-profile textarea,
+.flipbook-profile .bn-container,
+.flipbook-profile .bn-editor,
+.flipbook-profile .bn-editor *,
+.flipbook-profile .bn-block-content {
+  font-family: "Courier Prime", "Courier New", Courier, monospace;
+}
+
+/* Blog metadata */
+.flipbook-blogg-author,
+.flipbook-blogg-title,
+.flipbook-blogg-subtitle,
+.flipbook-blogg-tag {
+  font-family: "Courier Prime", "Courier New", Courier, monospace;
+}
+
+.flipbook-blogg-author {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.flipbook-blogg-title {
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.25;
+}
+
+.flipbook-blogg-subtitle {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  font-style: normal;
+}
+
+.flipbook-blogg-tag {
+  font-size: 0.68rem;
+  letter-spacing: 0.03em;
+}
+
+/* BlockNote document text */
+.flipbook-page-content .bn-editor {
+  font-size: 0.9rem;
+  line-height: 1.75;
+}
+
+.flipbook-page-content .bn-editor h1,
+.flipbook-page-content .bn-editor h2,
+.flipbook-page-content .bn-editor h3 {
+  font-family: "Courier Prime", "Courier New", Courier, monospace;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.flipbook-page-content .bn-editor p,
+.flipbook-page-content .bn-editor li,
+.flipbook-page-content .bn-editor blockquote {
+  font-family: "Courier Prime", "Courier New", Courier, monospace;
 }

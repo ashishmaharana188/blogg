@@ -1,6 +1,9 @@
 export type FlipBookPageType = {
   id: string;
+  author: string;
   title: string;
+  subtitle: string;
+  tags: string[];
   content: any[];
 };
 
