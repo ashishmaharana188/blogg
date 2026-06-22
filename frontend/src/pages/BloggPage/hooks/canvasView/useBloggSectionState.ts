@@ -6,6 +6,7 @@ import {
   renameGroupRequest,
   deleteStackRequest,
   deleteGroupRequest,
+  fetchBloggByGroupRequest,
 } from "../../services/canvasViewService";
 import { fetchStackAndGroup } from "../../services/canvasViewService";
 
@@ -17,6 +18,8 @@ export default function useBloggSectionState() {
   >({});
   const [groups, setGroups] = useState<any[]>([]);
   const [zIndexes, setZIndexes] = useState<Record<string, number>>({});
+
+  const [currentBlogg, setCurrentBlogg] = useState<any[]>([]);
 
   const [canvasScale, setCanvasScale] = useState(1);
   const [isCreatingStack, setIsCreatingStack] = useState(false);
@@ -193,9 +196,26 @@ export default function useBloggSectionState() {
     [],
   );
 
-  const handleOpenGroup = useCallback((groupId: string) => {
-    setActiveGroupId((prev) => (prev === groupId ? null : groupId));
-  }, []);
+  const handleOpenGroup = useCallback(
+    async (groupId: string) => {
+      const isClosing = activeGroupId === groupId;
+
+      if (isClosing) {
+        setActiveGroupId(null);
+        setCurrentBlogg([]);
+        return;
+      }
+
+      setActiveGroupId(groupId);
+
+      const bloggs = await fetchBloggByGroupRequest({
+        group_id: groupId,
+      });
+
+      setCurrentBlogg(bloggs);
+    },
+    [activeGroupId],
+  );
 
   const handleDeleteNote = useCallback(() => {
     console.log("Delete Note Logic Pending DB Implementation");
@@ -223,6 +243,6 @@ export default function useBloggSectionState() {
     renameStack,
     renameGroup,
     createGroupHandler,
-    currentNotes: [],
+    currentBlogg,
   };
 }

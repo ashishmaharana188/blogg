@@ -160,7 +160,7 @@ export default function BloggCanvasUI({
                           groupsByStackId.get(String(stack.stack_id)) || []
                         }
                         activeGroupId={state.activeGroupId}
-                        currentNotes={state.currentNotes}
+                        currentNotes={state.currentBlogg}
                         initialPos={
                           state.positions[stack.stack_id] || { x: 100, y: 150 }
                         }

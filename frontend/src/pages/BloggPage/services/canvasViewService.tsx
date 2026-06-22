@@ -123,3 +123,24 @@ export async function deleteGroupRequest(payload: { group_id: string }) {
     throw new Error("Could not delete group");
   }
 }
+
+export async function fetchBloggByGroupRequest(payload: { group_id: string }) {
+  const response = await fetch(
+    "http://localhost:3000/canvas/blogg/fetchBloggByGroup",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error("Could get bloggs");
+  }
+
+  const result = await response.json();
+
+  return result.bloggs;
+}

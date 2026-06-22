@@ -1,6 +1,11 @@
 import express from "express";
 import { trace } from "../../middleware/trace.ts";
-import { upload, saveBlogMedia, saveBlog } from "./bloggDocumentUtil.ts";
+import {
+  upload,
+  saveBlogMedia,
+  saveBlog,
+  getBlogsByGroup,
+} from "./bloggDocumentUtil.ts";
 
 const blogInterceptRouter = express.Router();
 
@@ -32,6 +37,19 @@ blogInterceptRouter.post(
       success: true,
       message: "Media saved",
       media: mediaUploaded,
+    };
+  }),
+);
+
+blogInterceptRouter.post(
+  "/group/groupBlogs",
+  trace("GROUP_BLOGS_FETCH", async (req) => {
+    const blogs = await getBlogsByGroup(req.body);
+
+    return {
+      success: true,
+      message: "GROUP_BLOGS_FETCH",
+      blogs,
     };
   }),
 );

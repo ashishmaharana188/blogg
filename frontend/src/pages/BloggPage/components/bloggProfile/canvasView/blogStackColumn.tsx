@@ -11,7 +11,7 @@ const BloggStackColumn = React.memo(
     stack,
     groups,
     activeGroupId,
-    currentNotes,
+    currentBlogg,
     initialPos,
     zIndex,
     scale,
@@ -23,7 +23,7 @@ const BloggStackColumn = React.memo(
     onInitiateCreateBlog,
     onOpenNote,
     onDeleteGroup,
-    onDeleteNote,
+    onDeleteBlogg,
     onRenameStack,
     onRenameGroup,
     isHighlighted,
@@ -157,7 +157,7 @@ const BloggStackColumn = React.memo(
             zIndex={z}
             stagger={i % 2 === 0 ? -10 : 10}
             isActive={activeGroupId === g.group_id}
-            notes={activeGroupId === g.group_id ? currentNotes : []}
+            blogg={activeGroupId === g.group_id ? currentBlogg : []}
             onOpen={() => onOpenGroup(g.group_id)}
             onInitiateCreateBlog={() =>
               onInitiateCreateBlog(
@@ -168,7 +168,7 @@ const BloggStackColumn = React.memo(
             }
             onOpenNote={onOpenNote}
             onDeleteGroup={onDeleteGroup}
-            onDeleteNote={onDeleteNote}
+            onDeleteBlogg={onDeleteBlogg}
             onRenameGroup={onRenameGroup}
             isHighlighted={highlightedGroupId === g.group_id}
             interactionReduced={reducedVisuals}

@@ -21,10 +21,10 @@ export interface BloggGroupCardProps {
   zIndex: number;
   stagger: number;
   isActive: boolean;
-  bloggs: BloggItem[];
+  blogg: BloggItem[];
   onOpen: () => void;
   onInitiateCreateBlog: () => void;
-  onOpenNote: (note: BloggItem) => void;
+  onOpenNote: (blogg: BloggItem) => void;
   onDeleteGroup: (groupId: string) => void;
   onDeleteBlogg: (noteId: string) => void;
   onRenameGroup: (groupId: string, newTitle: string) => void;
@@ -36,7 +36,7 @@ export interface BloggStackColumnProps {
   stack: BloggStack;
   groups: BloggGroup[];
   activeGroupId: string | null;
-  currentNotes: BloggItem[];
+  currentBlogg: BloggItem[];
   initialPos: { x: number; y: number };
   zIndex: number;
   scale: number;
@@ -44,15 +44,16 @@ export interface BloggStackColumnProps {
   onDragEnd: (id: string, pos: { x: number; y: number }) => void;
   onCreateGroup: (groupName: string, stackId: string) => void;
   onDeleteStack: (stackId: string) => void;
+
   onOpenGroup: (groupId: string) => void;
   onInitiateCreateBlog: (
     stackId: string,
 
     groupId: string,
   ) => void;
-  onOpenNote: (note: BloggItem) => void;
+  onOpenNote: (blogg: BloggItem) => void;
   onDeleteGroup: (groupId: string) => void;
-  onDeleteNote: (noteId: string) => void;
+  onDeleteBlogg: (noteId: string) => void;
   onRenameStack: (stackId: string, newTitle: string) => void;
   onRenameGroup: (groupId: string, newTitle: string) => void;
   isHighlighted?: boolean;
