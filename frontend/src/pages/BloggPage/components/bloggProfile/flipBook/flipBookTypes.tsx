@@ -1,13 +1,10 @@
 export type FlipBookPageType = {
   id: string;
-  image: string;
-  title?: string;
-  subtitle?: string;
+  title: string;
+  content: any[];
 };
 
-export type BlogFlipBookUIProps = {
-  pages?: FlipBookPageType[];
-};
+export type BlogFlipBookUIProps = {};
 
 export type FlipBookPageProps = {
   page: FlipBookPageType;

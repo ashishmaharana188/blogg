@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { ReadOnlyBloggContent } from "./readOnlyBloggContent";
+import { fetchAllBloggsRequest } from "../../../services/flipBookService";
 import FlipBookThumbnailBar from "./flipBookThumbnailBar";
 import "./flipBook.css";
-import { dummyPages } from "./flipBookDummyData";
 import type { BlogFlipBookUIProps, FlipBookPageType } from "./flipBookTypes";
 
 type TurnDirection = "next" | "previous";
@@ -29,13 +30,11 @@ const PagePane = ({ page, side, className = "" }: PagePaneProps) => {
   return (
     <div className={`flipbook-page flipbook-page-${side} ${className}`}>
       {!isBlank ? (
-        <img
-          key={page.id}
-          src={page.image}
-          alt={page.title ?? `Artwork ${page.id}`}
-          draggable={false}
-          className="flipbook-page-image"
-        />
+        <div className="flipbook-page-content">
+          <h2 className="flipbook-page-title">{page.title}</h2>
+
+          <ReadOnlyBloggContent key={page.id} content={page.content} />
+        </div>
       ) : (
         <div className="flipbook-page-blank" />
       )}
@@ -80,19 +79,48 @@ const TurningSheet = ({
   );
 };
 
-const BlogFlipBookUI = ({ pages }: BlogFlipBookUIProps) => {
+const BlogFlipBookUI = () => {
+  const [pages, setPages] = useState<FlipBookPageType[]>([]);
   const [settledSpread, setSettledSpread] = useState(0);
   const [activeTurns, setActiveTurns] = useState<ActiveTurn[]>([]);
+
+  useEffect(() => {
+    const loadFlipBookPages = async () => {
+      try {
+        const bloggs = await fetchAllBloggsRequest();
+
+        const flipBookPages: FlipBookPageType[] = bloggs.map((blogg: any) => ({
+          id: blogg._id,
+          title: blogg.title,
+          content: blogg.content ?? [],
+        }));
+
+        setPages(flipBookPages);
+      } catch (error) {
+        console.error("Could not load flipbook pages:", error);
+        setPages([]);
+      }
+    };
+
+    loadFlipBookPages();
+  }, []);
 
   const turnIdRef = useRef(0);
   const holdTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rapidIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const sourcePages = pages?.length ? pages : dummyPages;
+  const sourcePages = pages;
 
   const bookPages = useMemo<FlipBookPageType[]>(() => {
     if (sourcePages.length % 2 === 0) return sourcePages;
-    return [...sourcePages, { id: "blank", image: "", title: "" }];
+    return [
+      ...sourcePages,
+      {
+        id: "blank",
+        title: "",
+        content: [],
+      },
+    ];
   }, [sourcePages]);
 
   const maxSpread = Math.max(0, bookPages.length - 2);

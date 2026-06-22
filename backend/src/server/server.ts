@@ -6,6 +6,7 @@ import { middleware } from "../middleware/middleWare.ts";
 import { mongoConnectDB } from "../db/mongoDBConnect.ts";
 import blogInterceptRouter from "../routes/bloggDocument/bloggDocumentIndex.ts";
 import canvasViewInterceptor from "../routes/canvasView/canvasViewIndex.ts";
+import flipBookInterceptor from "../routes/flipBook/flipBookIndex.ts";
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use(middleware);
 await mongoConnectDB();
 app.use(canvasViewInterceptor);
 app.use(blogInterceptRouter);
+app.use(flipBookInterceptor);
 
 app.listen(3000, () => {
   logger.info("Server running on port 3000");
