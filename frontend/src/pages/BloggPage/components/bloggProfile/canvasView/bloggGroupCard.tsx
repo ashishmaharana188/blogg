@@ -33,12 +33,12 @@ const GroupCard = React.memo(
     zIndex,
     stagger,
     isActive,
-    notes,
+    bloggs,
     onOpen,
     onInitiateCreateBlog,
     onOpenNote,
     onDeleteGroup,
-    onDeleteNote,
+    onDeleteBlogg,
     onRenameGroup,
     isHighlighted,
     interactionReduced,
@@ -256,25 +256,25 @@ const GroupCard = React.memo(
               </div>
 
               <div className="flex-1 overflow-y-auto pr-2 pb-4 hide-scrollbar">
-                {isActive && notes.length === 0 && (
+                {isActive && bloggs.length === 0 && (
                   <div className="flex flex-col items-center justify-center h-32 text-gray-400 italic text-sm font-mono border-2 border-dashed border-slate-300 rounded-lg">
                     [ NO NOTES SAVED YET ]
                   </div>
                 )}
-                {isActive && notes.length > 0 && (
+                {isActive && bloggs.length > 0 && (
                   <div className="flex flex-col shrink-0 border-t-2 border-b-2 border-gray-900">
-                    {notes.map((note, index) => (
+                    {bloggs.map((blog, index) => (
                       <div
-                        key={note.note_id}
-                        onClick={() => onOpenNote(note)}
+                        key={blog.blogg_id}
+                        onClick={() => onOpenNote(blog)}
                         className={`group flex items-center justify-between py-3 px-2 hover:bg-gray-200/50 transition-colors cursor-pointer ${
-                          index !== notes.length - 1
+                          index !== bloggs.length - 1
                             ? "border-b border-gray-300"
                             : ""
                         }`}
                       >
                         <h4 className="font-bold text-slate-800 leading-tight truncate pr-4">
-                          {note.title}
+                          {blog.title}
                         </h4>
                         <div className="flex items-center gap-4 shrink-0">
                           <span className="text-[10px] text-slate-500 font-mono">
@@ -283,7 +283,7 @@ const GroupCard = React.memo(
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              onDeleteNote(note.note_id);
+                              onDeleteBlogg(blog.blogg_id);
                             }}
                             className="text-gray-400 opacity-100 transition-opacity hover:text-red-500 sm:opacity-0 sm:group-hover:opacity-100"
                           >

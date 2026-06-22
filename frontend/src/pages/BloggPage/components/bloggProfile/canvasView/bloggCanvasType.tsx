@@ -5,7 +5,7 @@ export interface BloggGroup {
   stack_name: string;
 }
 export interface BloggItem {
-  note_id: string;
+  blogg_id: string;
   group_id: string;
   title: string;
   content: string;
@@ -21,12 +21,12 @@ export interface BloggGroupCardProps {
   zIndex: number;
   stagger: number;
   isActive: boolean;
-  notes: BloggItem[];
+  bloggs: BloggItem[];
   onOpen: () => void;
   onInitiateCreateBlog: () => void;
   onOpenNote: (note: BloggItem) => void;
   onDeleteGroup: (groupId: string) => void;
-  onDeleteNote: (noteId: string) => void;
+  onDeleteBlogg: (noteId: string) => void;
   onRenameGroup: (groupId: string, newTitle: string) => void;
   isHighlighted?: boolean;
   interactionReduced?: boolean;
