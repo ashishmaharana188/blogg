@@ -75,7 +75,7 @@ export async function renameGroupRequest(payload: {
   const response = await fetch(
     `http://localhost:3000/canvas/group/groupRename`,
     {
-      method: "PATCH",
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
@@ -92,9 +92,12 @@ export async function renameGroupRequest(payload: {
 
 export async function deleteStackRequest(payload: { stack_id: string }) {
   const response = await fetch(
-    `http://localhost:3000/canvas/stack/deleteStack`,
+    `http://localhost:3000/canvas/stack/stackDelete`,
     {
-      method: "DELETE",
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify(payload),
     },
   );
@@ -106,9 +109,12 @@ export async function deleteStackRequest(payload: { stack_id: string }) {
 
 export async function deleteGroupRequest(payload: { group_id: string }) {
   const response = await fetch(
-    `http://localhost:3000/canvas/group/deleteGroup`,
+    "http://localhost:3000/canvas/group/groupDelete",
     {
-      method: "DELETE",
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify(payload),
     },
   );
