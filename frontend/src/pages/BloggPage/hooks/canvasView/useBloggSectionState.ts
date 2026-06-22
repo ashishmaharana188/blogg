@@ -211,11 +211,14 @@ export default function useBloggSectionState() {
       const bloggs = await fetchBloggByGroupRequest({
         group_id: groupId,
       });
-
+      console.log("HANDLER RECEIVED:", bloggs);
       setCurrentBlogg(bloggs);
     },
     [activeGroupId],
   );
+  useEffect(() => {
+    console.log("STATE AFTER RERENDER:", currentBlogg);
+  }, [currentBlogg]);
 
   const handleDeleteNote = useCallback(() => {
     console.log("Delete Note Logic Pending DB Implementation");

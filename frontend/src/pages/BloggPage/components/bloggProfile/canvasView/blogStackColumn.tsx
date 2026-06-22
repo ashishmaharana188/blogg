@@ -149,7 +149,14 @@ const BloggStackColumn = React.memo(
     Array.from(groupMap.entries()).forEach(([char, charGroups]) => {
       els.push(<GroupDivider key={char} char={char} zIndex={z} />);
       z++;
+
       charGroups.forEach((g, i) => {
+        console.log("GROUP CHECK", {
+          activeGroupId,
+          groupId: g.group_id,
+          currentBlogg,
+          passedBloggs: activeGroupId === g.group_id ? currentBlogg : [],
+        });
         els.push(
           <GroupCard
             key={g.group_id}
@@ -157,7 +164,7 @@ const BloggStackColumn = React.memo(
             zIndex={z}
             stagger={i % 2 === 0 ? -10 : 10}
             isActive={activeGroupId === g.group_id}
-            blogg={activeGroupId === g.group_id ? currentBlogg : []}
+            bloggs={activeGroupId === g.group_id ? currentBlogg : []}
             onOpen={() => onOpenGroup(g.group_id)}
             onInitiateCreateBlog={() =>
               onInitiateCreateBlog(

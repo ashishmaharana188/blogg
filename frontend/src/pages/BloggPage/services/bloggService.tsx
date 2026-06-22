@@ -2,8 +2,8 @@ import { BlogSavetypes } from "../../../types/pageTypes";
 
 export async function saveBlog(
   blog: BlogSavetypes,
-  stackId?: string | null,
-  groupId?: string | null,
+  stack_id?: string | null,
+  group_id?: string | null,
 ) {
   const response = await fetch("http://localhost:3000/blogSaveRequest", {
     method: "POST",
@@ -12,8 +12,8 @@ export async function saveBlog(
     },
     body: JSON.stringify({
       ...blog,
-      stackId,
-      groupId,
+      stack_id,
+      group_id,
     }),
   });
 

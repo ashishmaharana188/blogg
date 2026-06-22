@@ -142,5 +142,8 @@ export async function fetchBloggByGroupRequest(payload: { group_id: string }) {
 
   const result = await response.json();
 
-  return result.bloggs;
+  console.log("SERVICE RESULT:", result);
+  console.log("SERVICE BLOGGS:", result.bloggs);
+
+  return result.bloggs ?? [];
 }

@@ -83,8 +83,8 @@ export const saveBlog = async (blog: BlogInput): Promise<BlogDocument> => {
 };
 
 export async function getBlogsByGroup(payload: { group_id: string }) {
-  const blogs = await getDB()
-    .collection("blogs")
+  const bloggs = await getDB()
+    .collection("bloggs")
     .find({
       group_id: payload.group_id,
     })
@@ -93,5 +93,5 @@ export async function getBlogsByGroup(payload: { group_id: string }) {
     })
     .toArray();
 
-  return blogs;
+  return bloggs;
 }

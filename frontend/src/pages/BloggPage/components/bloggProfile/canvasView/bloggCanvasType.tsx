@@ -21,7 +21,7 @@ export interface BloggGroupCardProps {
   zIndex: number;
   stagger: number;
   isActive: boolean;
-  blogg: BloggItem[];
+  bloggs: BloggItem[];
   onOpen: () => void;
   onInitiateCreateBlog: () => void;
   onOpenNote: (blogg: BloggItem) => void;

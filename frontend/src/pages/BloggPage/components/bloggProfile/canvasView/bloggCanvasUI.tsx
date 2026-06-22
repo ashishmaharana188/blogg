@@ -160,7 +160,7 @@ export default function BloggCanvasUI({
                           groupsByStackId.get(String(stack.stack_id)) || []
                         }
                         activeGroupId={state.activeGroupId}
-                        currentNotes={state.currentBlogg}
+                        currentBlogg={state.currentBlogg}
                         initialPos={
                           state.positions[stack.stack_id] || { x: 100, y: 150 }
                         }
@@ -188,7 +188,7 @@ export default function BloggCanvasUI({
                             );
                         }}
                         onDeleteGroup={state.handleDeleteGroup}
-                        onDeleteNote={state.handleDeleteNote}
+                        onDeleteBlogg={state.handleDeleteNote}
                         onRenameStack={state.renameStack}
                         onRenameGroup={state.renameGroup}
                         isHighlighted={false}

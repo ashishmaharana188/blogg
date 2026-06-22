@@ -42,14 +42,14 @@ blogInterceptRouter.post(
 );
 
 blogInterceptRouter.post(
-  "/group/groupBlogs",
+  "/canvas/blogg/fetchBloggByGroup",
   trace("GROUP_BLOGS_FETCH", async (req) => {
-    const blogs = await getBlogsByGroup(req.body);
+    const bloggs = await getBlogsByGroup(req.body);
 
     return {
       success: true,
       message: "GROUP_BLOGS_FETCH",
-      blogs,
+      bloggs,
     };
   }),
 );

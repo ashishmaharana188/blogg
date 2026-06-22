@@ -33,7 +33,7 @@ const GroupCard = React.memo(
     zIndex,
     stagger,
     isActive,
-    blogg,
+    bloggs = [],
     onOpen,
     onInitiateCreateBlog,
     onOpenNote,
@@ -256,19 +256,19 @@ const GroupCard = React.memo(
               </div>
 
               <div className="flex-1 overflow-y-auto pr-2 pb-4 hide-scrollbar">
-                {isActive && blogg.length === 0 && (
+                {isActive && bloggs.length === 0 && (
                   <div className="flex flex-col items-center justify-center h-32 text-gray-400 italic text-sm font-mono border-2 border-dashed border-slate-300 rounded-lg">
                     [ NO NOTES SAVED YET ]
                   </div>
                 )}
-                {isActive && blogg.length > 0 && (
+                {isActive && bloggs.length > 0 && (
                   <div className="flex flex-col shrink-0 border-t-2 border-b-2 border-gray-900">
-                    {blogg.map((blog, index) => (
+                    {bloggs.map((blog, index) => (
                       <div
                         key={blog.blogg_id}
                         onClick={() => onOpenNote(blog)}
                         className={`group flex items-center justify-between py-3 px-2 hover:bg-gray-200/50 transition-colors cursor-pointer ${
-                          index !== blogg.length - 1
+                          index !== bloggs.length - 1
                             ? "border-b border-gray-300"
                             : ""
                         }`}
