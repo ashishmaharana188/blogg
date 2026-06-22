@@ -1,5 +1,12 @@
 import { useState, useCallback, useEffect } from "react";
-import { createGroup, createStack } from "../../services/canvasViewService";
+import {
+  createGroup,
+  createStack,
+  renameStackRequest,
+  renameGroupRequest,
+  deleteStackRequest,
+  deleteGroupRequest,
+} from "../../services/canvasViewService";
 import { fetchStackAndGroup } from "../../services/canvasViewService";
 
 export default function useBloggSectionState() {
@@ -119,18 +126,32 @@ export default function useBloggSectionState() {
     loadCanvas();
   }, []);
 
-  const handleDeleteStack = useCallback((stackId: string) => {
+  const handleDeleteStack = useCallback(async (stackId: string) => {
+    await deleteStackRequest({
+      stack_id: stackId,
+    });
+
     setStacks((prev) => prev.filter((s) => s.stack_id !== stackId));
+
     setGroups((prev) => prev.filter((g) => g.stack_id !== stackId));
   }, []);
 
-  const renameStack = useCallback((stackId: string, newStackName: string) => {
-    setStacks((prev) =>
-      prev.map((s) =>
-        s.stack_id === stackId ? { ...s, stack_name: newStackName } : s,
-      ),
-    );
-  }, []);
+  const renameStack = useCallback(
+    async (stackId: string, newStackName: string) => {
+      await renameStackRequest({
+        stack_id: stackId,
+        stack_name: newStackName,
+      });
+      setStacks((prev) =>
+        prev.map((stack) =>
+          stack.stack_id === stackId
+            ? { ...stack, stack_name: newStackName }
+            : stack,
+        ),
+      );
+    },
+    [],
+  );
 
   const createGroupHandler = useCallback(
     async (groupName: string, stackId: string) => {
@@ -147,17 +168,30 @@ export default function useBloggSectionState() {
     [],
   );
 
-  const handleDeleteGroup = useCallback((groupId: string) => {
+  const handleDeleteGroup = useCallback(async (groupId: string) => {
+    await deleteGroupRequest({
+      group_id: groupId,
+    });
     setGroups((prev) => prev.filter((g) => g.group_id !== groupId));
   }, []);
 
-  const renameGroup = useCallback((groupId: string, newGroupName: string) => {
-    setGroups((prev) =>
-      prev.map((g) =>
-        g.group_id === groupId ? { ...g, group_name: newGroupName } : g,
-      ),
-    );
-  }, []);
+  const renameGroup = useCallback(
+    async (groupId: string, newGroupName: string) => {
+      await renameGroupRequest({
+        group_id: groupId,
+        group_name: newGroupName,
+      });
+
+      setGroups((prev) =>
+        prev.map((group) =>
+          group.group_id === groupId
+            ? { ...group, group_name: newGroupName }
+            : group,
+        ),
+      );
+    },
+    [],
+  );
 
   const handleOpenGroup = useCallback((groupId: string) => {
     setActiveGroupId((prev) => (prev === groupId ? null : groupId));

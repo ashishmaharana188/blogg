@@ -50,13 +50,16 @@ export async function renameStackRequest(payload: {
   stack_id: string;
   stack_name: string;
 }) {
-  const response = await fetch("http://localhost:3000/stack/stackRename", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+  const response = await fetch(
+    "http://localhost:3000/canvas/stack/stackRename",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
     },
-    body: JSON.stringify(payload),
-  });
+  );
 
   if (!response.ok) {
     throw new Error("Could not rename stack");
@@ -70,7 +73,7 @@ export async function renameGroupRequest(payload: {
   group_name: string;
 }) {
   const response = await fetch(
-    `http://localhost:3000/canvas/groups/groupRename`,
+    `http://localhost:3000/canvas/group/groupRename`,
     {
       method: "PATCH",
       headers: {
@@ -89,7 +92,7 @@ export async function renameGroupRequest(payload: {
 
 export async function deleteStackRequest(payload: { stack_id: string }) {
   const response = await fetch(
-    `http://localhost:3000/canvas/stacks/deleteStack`,
+    `http://localhost:3000/canvas/stack/deleteStack`,
     {
       method: "DELETE",
       body: JSON.stringify(payload),
@@ -101,9 +104,9 @@ export async function deleteStackRequest(payload: { stack_id: string }) {
   }
 }
 
-export async function deleteGroupRequest(payload: { stack_id: string }) {
+export async function deleteGroupRequest(payload: { group_id: string }) {
   const response = await fetch(
-    `http://localhost:3000/canvas/groups/deleteGroup`,
+    `http://localhost:3000/canvas/group/deleteGroup`,
     {
       method: "DELETE",
       body: JSON.stringify(payload),

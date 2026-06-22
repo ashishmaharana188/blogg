@@ -54,7 +54,7 @@ canvasViewInterceptor.get(
 );
 
 canvasViewInterceptor.post(
-  "/stack/stackRename",
+  "/canvas/stack/stackRename",
 
   trace("STACK_RENAME", async (req) => {
     const renamedStack = await renameStack(req.body);
@@ -68,7 +68,7 @@ canvasViewInterceptor.post(
 );
 
 canvasViewInterceptor.post(
-  "/group/groupRename",
+  "/canvas/group/groupRename",
   trace("GROUP_RENAME", async (req) => {
     const renamedGroup = await renameGroup(req.body);
 
@@ -81,7 +81,7 @@ canvasViewInterceptor.post(
 );
 
 canvasViewInterceptor.post(
-  "/group/groupDelete",
+  "/canvas/group/groupDelete",
   trace("GROUP_DELETE", async (req) => {
     const deletedGroup = await deleteGroup(req.body);
 
@@ -94,7 +94,7 @@ canvasViewInterceptor.post(
 );
 
 canvasViewInterceptor.post(
-  "/stack/stackDelete",
+  "/canvas/stack/stackDelete",
   trace("STACK_DELETE", async (req) => {
     const deletedStack = await deleteStack(req.body);
 
