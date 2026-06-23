@@ -9,6 +9,7 @@ import {
   removeOutline,
   scanOutline,
 } from "ionicons/icons";
+import { BloggItem } from "./bloggCanvasType";
 
 import AutoZoomTrigger from "./autoZoomTrigger";
 import BloggStackColumn from "./blogStackColumn";
@@ -22,7 +23,7 @@ const NOTE_STACK_HEIGHT = 2600;
 export default function BloggCanvasUI({
   onOpenForm,
 }: {
-  onOpenForm?: (stackId: string, groupId: string, bloggId?: string) => void;
+  onOpenForm?: (stackId: string, groupId: string, blogg?: BloggItem) => void;
 }) {
   const state = useBloggSectionState();
   const { isInteracting, startInteraction, settleInteraction } =
@@ -177,14 +178,14 @@ export default function BloggCanvasUI({
                         ) => {
                           if (onOpenForm) onOpenForm(stackId, groupId);
                         }}
-                        onOpenBlogg={(blogg: any) => {
+                        onOpenBlogg={(blogg: BloggItem) => {
                           if (onOpenForm)
                             onOpenForm(
                               blogg.stack_id,
 
                               blogg.group_id,
 
-                              blogg.blogg_id,
+                              blogg,
                             );
                         }}
                         onDeleteGroup={state.handleDeleteGroup}

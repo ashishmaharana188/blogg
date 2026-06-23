@@ -42,19 +42,3 @@ export async function uploadFile(file: File) {
   const data = await response.json();
   return data.media.url;
 }
-
-export async function fetchBloggById(blogg_id: string) {
-  const response = await fetch(
-    `http://localhost:3000/canvas/blogg/fetchBloggByBloggId`,
-    {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    },
-  );
-
-  const result = await response.json();
-
-  return result.blogg;
-}

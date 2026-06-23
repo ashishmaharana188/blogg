@@ -5,7 +5,6 @@ import GroupDivider from "./bloggGroupDivider";
 import GroupCard from "./bloggGroupCard";
 import useIsTouchDevice from "../../../hooks/canvasView/useIsTouchDevice";
 import { BloggGroup, BloggStackColumnProps } from "./bloggCanvasType";
-import { fetchBloggById } from "../../../services/bloggService";
 
 const BloggStackColumn = React.memo(
   ({

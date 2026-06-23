@@ -1,3 +1,4 @@
+import { BloggItem } from "../pages/BloggPage/components/bloggProfile/canvasView/bloggCanvasType";
 export interface BlogSavetypes {
   //**type for parent handleSave(blog) receive structure since blog is an object */
   author: string;
@@ -8,7 +9,7 @@ export interface BlogSavetypes {
 
 export interface userFormtypes {
   onContentChange: (blog: BlogSavetypes) => void;
-  bloggId?: string | null;
+  selectedBlogg?: BloggItem | null;
 }
 
 export interface StackPosition {

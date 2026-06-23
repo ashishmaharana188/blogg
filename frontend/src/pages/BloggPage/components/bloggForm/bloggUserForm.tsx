@@ -17,20 +17,27 @@ const TAG_COLORS = [
   "bg-cyan-100 text-cyan-800 border-cyan-200",
 ];
 
-const UserForm = ({ onContentChange, bloggId }: userFormtypes) => {
+const UserForm = ({ onContentChange, selectedBlogg }: userFormtypes) => {
+  const isReadOnly = selectedBlogg !== null && selectedBlogg !== undefined;
+
   const [formData, setFormData] = useState({
     author: "",
     title: "",
     description: "",
-    content: <object data="" type=""></object>,
   });
 
   // Tag System State
-  const [tags, setTags] = useState<{ text: string; colorClass: string }[]>([]);
+  const [tags, setTags] = useState<{ text: string; colorClass: string }[]>(
+    (selectedBlogg?.tags ?? []).map((text, index) => ({
+      text,
+      colorClass: TAG_COLORS[index % TAG_COLORS.length],
+    })),
+  );
   const [isAddingTag, setIsAddingTag] = useState(false);
   const [tagInput, setTagInput] = useState("");
 
   const editor = useCreateBlockNote({
+    initialContent: selectedBlogg?.content as any,
     uploadFile,
   });
 
@@ -99,6 +106,7 @@ const UserForm = ({ onContentChange, bloggId }: userFormtypes) => {
           <textarea
             ref={authorRef}
             value={formData.author}
+            readOnly={isReadOnly}
             onChange={(e) => {
               handleTitleChange("author", e.target.value);
               autoResize(authorRef);
@@ -110,6 +118,7 @@ const UserForm = ({ onContentChange, bloggId }: userFormtypes) => {
         <textarea
           ref={titleRef}
           value={formData.title}
+          readOnly={isReadOnly}
           onChange={(e) => {
             handleTitleChange("title", e.target.value);
             autoResize(titleRef);
@@ -121,6 +130,7 @@ const UserForm = ({ onContentChange, bloggId }: userFormtypes) => {
           <textarea
             ref={descriptionRef}
             value={formData.description}
+            readOnly={isReadOnly}
             onChange={(e) => {
               handleTitleChange("description", e.target.value);
               autoResize(descriptionRef);
@@ -138,49 +148,59 @@ const UserForm = ({ onContentChange, bloggId }: userFormtypes) => {
               className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border transition-all ${tag.colorClass}`}
             >
               <span>{tag.text}</span>
-              <button
-                onClick={() => removeTag(index)}
-                className="hover:text-black opacity-50 hover:opacity-100 transition-opacity focus:outline-none"
-                title="Remove tag"
-              >
-                ×
-              </button>
+
+              {!isReadOnly && (
+                <button
+                  onClick={() => removeTag(index)}
+                  className="hover:text-black opacity-50 hover:opacity-100 transition-opacity focus:outline-none"
+                  title="Remove tag"
+                >
+                  ×
+                </button>
+              )}
             </div>
           ))}
 
-          {isAddingTag ? (
-            <input
-              autoFocus
-              type="text"
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              onKeyDown={handleTagKeyDown}
-              onBlur={confirmTag}
-              placeholder="Type & Enter..."
-              className="w-32 px-3 py-1 text-xs font-bold border border-gray-300 rounded-full focus:outline-none focus:border-slate-800 text-center bg-white shadow-sm"
-            />
-          ) : (
-            <button
-              onClick={() => setIsAddingTag(true)}
-              className="px-4 py-1 text-xs border border-gray-300 rounded-full font-bold text-gray-600 hover:bg-gray-100 transition-colors shadow-sm"
-            >
-              + Add Tag
-            </button>
-          )}
+          {!isReadOnly &&
+            (isAddingTag ? (
+              <input
+                autoFocus
+                type="text"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={handleTagKeyDown}
+                onBlur={confirmTag}
+                placeholder="Type & Enter..."
+                className="w-32 px-3 py-1 text-xs font-bold border border-gray-300 rounded-full focus:outline-none focus:border-slate-800 text-center bg-white shadow-sm"
+              />
+            ) : (
+              <button
+                onClick={() => setIsAddingTag(true)}
+                className="px-4 py-1 text-xs border border-gray-300 rounded-full font-bold text-gray-600 hover:bg-gray-100 transition-colors shadow-sm"
+              >
+                + Add Tag
+              </button>
+            ))}
         </div>
 
         <div className="mt-10">
-          <BlockNoteView editor={editor} theme="dark" filePanel={true} />
+          <BlockNoteView
+            editor={editor}
+            theme="dark"
+            filePanel={!selectedBlogg}
+            editable={!selectedBlogg}
+          />
         </div>
-
-        <div className="flex justify-end mt-4">
-          <button
-            className="px-5 py-1 text-l bg-white border border-gray-300 text-black rounded font-bold hover:bg-black hover:text-white transition-colors"
-            onClick={saveForm}
-          >
-            SAVE
-          </button>
-        </div>
+        {!isReadOnly && (
+          <div className="flex justify-end mt-4">
+            <button
+              className="px-5 py-1 text-l bg-white border border-gray-300 text-black rounded font-bold hover:bg-black hover:text-white transition-colors"
+              onClick={saveForm}
+            >
+              SAVE
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

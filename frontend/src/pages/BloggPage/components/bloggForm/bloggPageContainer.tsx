@@ -1,23 +1,31 @@
 import UserForm from "./bloggUserForm";
 import { saveBlog } from "../../services/bloggService";
 import { BlogSavetypes } from "../../../../types/pageTypes";
+import type { BloggItem } from "../bloggProfile/canvasView/bloggCanvasType";
 
 const BloggPageContainer = ({
   stackId,
   groupId,
-  bloggId,
+  selectedBlogg,
 }: {
   stackId?: string | null;
   groupId?: string | null;
-  bloggId?: string | null;
+  selectedBlogg?: BloggItem | null;
 }) => {
   const handleSave = async (blog: BlogSavetypes) => {
-    const data = await saveBlog(blog, stackId, groupId, bloggId);
+    const data = await saveBlog(
+      blog,
+      stackId,
+      groupId,
+      selectedBlogg?.blogg_id,
+    );
 
     console.log(data);
   };
 
-  return <UserForm onContentChange={handleSave} bloggId={bloggId} />;
+  return (
+    <UserForm onContentChange={handleSave} selectedBlogg={selectedBlogg} />
+  );
 };
 
 export default BloggPageContainer;

@@ -97,17 +97,3 @@ export async function getBlogsByGroup(payload: { group_id: string }) {
 
   return bloggs;
 }
-
-export async function getBlogsByBloggId(payload: { blogg_id: string }) {
-  const bloggs = await getDB()
-    .collection("bloggs")
-    .find({
-      group_id: payload.blogg_id,
-    })
-    .sort({
-      created_at: -1,
-    })
-    .toArray();
-
-  return bloggs;
-}

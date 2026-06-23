@@ -5,10 +5,22 @@ export interface BloggGroup {
   stack_name: string;
 }
 export interface BloggItem {
+  _id: string;
   blogg_id: string;
+
+  stack_id: string;
   group_id: string;
+
+  author: string;
   title: string;
-  content: string;
+  subtitle: string;
+
+  tags: string[];
+
+  content: unknown[];
+
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface BloggStack {

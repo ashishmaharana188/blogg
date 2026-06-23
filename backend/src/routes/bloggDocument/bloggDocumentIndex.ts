@@ -5,7 +5,6 @@ import {
   saveBlogMedia,
   saveBlog,
   getBlogsByGroup,
-  getBlogsByBloggId,
 } from "./bloggDocumentUtil.ts";
 
 const blogInterceptRouter = express.Router();
@@ -46,19 +45,6 @@ blogInterceptRouter.post(
   "/canvas/blogg/fetchBloggByGroup",
   trace("GROUP_BLOGS_FETCH", async (req) => {
     const bloggs = await getBlogsByGroup(req.body);
-
-    return {
-      success: true,
-      message: "GROUP_BLOGS_FETCH",
-      bloggs,
-    };
-  }),
-);
-
-blogInterceptRouter.post(
-  "/canvas/blogg/fetchBloggByBloggId",
-  trace("GROUP_BLOGS_FETCH", async (req) => {
-    const bloggs = await getBlogsByBloggId(req.body);
 
     return {
       success: true,
