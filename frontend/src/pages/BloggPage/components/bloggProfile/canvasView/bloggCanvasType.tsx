@@ -24,7 +24,7 @@ export interface BloggGroupCardProps {
   bloggs: BloggItem[];
   onOpen: () => void;
   onInitiateCreateBlog: () => void;
-  onOpenNote: (blogg: BloggItem) => void;
+  onOpenBlogg: (blogg: BloggItem) => void;
   onDeleteGroup: (groupId: string) => void;
   onDeleteBlogg: (noteId: string) => void;
   onRenameGroup: (groupId: string, newTitle: string) => void;
@@ -51,7 +51,7 @@ export interface BloggStackColumnProps {
 
     groupId: string,
   ) => void;
-  onOpenNote: (blogg: BloggItem) => void;
+  onOpenBlogg: (blogg: BloggItem) => void;
   onDeleteGroup: (groupId: string) => void;
   onDeleteBlogg: (noteId: string) => void;
   onRenameStack: (stackId: string, newTitle: string) => void;

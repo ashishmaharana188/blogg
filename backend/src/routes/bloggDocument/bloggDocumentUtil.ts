@@ -4,6 +4,7 @@ import type { BlogInput, BlogDocument } from "../../types/blogTypes.ts";
 import { Readable } from "stream";
 import cloudinary from "../../cloudinary/cloudinary.ts";
 import logger from "../../logs/logger.ts";
+import { randomUUID } from "crypto";
 
 export const upload = multer({
   storage: multer.memoryStorage(),
@@ -65,6 +66,7 @@ export const saveBlogMedia = async (file: Express.Multer.File) => {
 export const saveBlog = async (blog: BlogInput): Promise<BlogDocument> => {
   const blogDocument = {
     ...blog,
+    blogg_id: randomUUID(),
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -87,6 +89,20 @@ export async function getBlogsByGroup(payload: { group_id: string }) {
     .collection("bloggs")
     .find({
       group_id: payload.group_id,
+    })
+    .sort({
+      created_at: -1,
+    })
+    .toArray();
+
+  return bloggs;
+}
+
+export async function getBlogsByBloggId(payload: { blogg_id: string }) {
+  const bloggs = await getDB()
+    .collection("bloggs")
+    .find({
+      group_id: payload.blogg_id,
     })
     .sort({
       created_at: -1,

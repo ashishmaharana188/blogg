@@ -17,7 +17,7 @@ const TAG_COLORS = [
   "bg-cyan-100 text-cyan-800 border-cyan-200",
 ];
 
-const UserForm = ({ onContentChange }: userFormtypes) => {
+const UserForm = ({ onContentChange, bloggId }: userFormtypes) => {
   const [formData, setFormData] = useState({
     author: "",
     title: "",

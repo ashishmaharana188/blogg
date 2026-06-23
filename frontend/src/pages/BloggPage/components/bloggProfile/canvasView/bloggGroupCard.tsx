@@ -36,7 +36,7 @@ const GroupCard = React.memo(
     bloggs = [],
     onOpen,
     onInitiateCreateBlog,
-    onOpenNote,
+    onOpenBlogg,
     onDeleteGroup,
     onDeleteBlogg,
     onRenameGroup,
@@ -266,7 +266,7 @@ const GroupCard = React.memo(
                     {bloggs.map((blog, index) => (
                       <div
                         key={blog.blogg_id}
-                        onClick={() => onOpenNote(blog)}
+                        onClick={() => onOpenBlogg(blog)}
                         className={`group flex items-center justify-between py-3 px-2 hover:bg-gray-200/50 transition-colors cursor-pointer ${
                           index !== bloggs.length - 1
                             ? "border-b border-gray-300"

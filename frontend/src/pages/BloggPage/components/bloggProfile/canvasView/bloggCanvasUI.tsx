@@ -177,14 +177,14 @@ export default function BloggCanvasUI({
                         ) => {
                           if (onOpenForm) onOpenForm(stackId, groupId);
                         }}
-                        onOpenNote={(blog: any) => {
+                        onOpenBlogg={(blogg: any) => {
                           if (onOpenForm)
                             onOpenForm(
-                              blog.stack_id,
+                              blogg.stack_id,
 
-                              blog.group_id,
+                              blogg.group_id,
 
-                              blog.blog_id,
+                              blogg.blogg_id,
                             );
                         }}
                         onDeleteGroup={state.handleDeleteGroup}

@@ -6,6 +6,8 @@ export type BlogInput = {
   subtitle: string;
   content: unknown[]; // refine later using BlockNote types
   groupId: string | null;
+  stackId: string | null;
+  blogId: string | null;
 };
 
 export type BlogDocument = BlogInput & {

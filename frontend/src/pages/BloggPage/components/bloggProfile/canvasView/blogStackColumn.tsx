@@ -5,6 +5,7 @@ import GroupDivider from "./bloggGroupDivider";
 import GroupCard from "./bloggGroupCard";
 import useIsTouchDevice from "../../../hooks/canvasView/useIsTouchDevice";
 import { BloggGroup, BloggStackColumnProps } from "./bloggCanvasType";
+import { fetchBloggById } from "../../../services/bloggService";
 
 const BloggStackColumn = React.memo(
   ({
@@ -21,7 +22,7 @@ const BloggStackColumn = React.memo(
     onDeleteStack,
     onOpenGroup,
     onInitiateCreateBlog,
-    onOpenNote,
+    onOpenBlogg,
     onDeleteGroup,
     onDeleteBlogg,
     onRenameStack,
@@ -173,7 +174,7 @@ const BloggStackColumn = React.memo(
                 g.group_id,
               )
             }
-            onOpenNote={onOpenNote}
+            onOpenBlogg={onOpenBlogg}
             onDeleteGroup={onDeleteGroup}
             onDeleteBlogg={onDeleteBlogg}
             onRenameGroup={onRenameGroup}

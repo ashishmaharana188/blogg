@@ -10,10 +10,12 @@ const BloggPage = () => {
     isOpen: boolean;
     stackId: string | null;
     groupId: string | null;
+    bloggId: string | null;
   }>({
     isOpen: false,
     stackId: null,
     groupId: null,
+    bloggId: null,
   });
   const [viewMode, setViewMode] = useState<ViewMode>("canvas");
 
@@ -22,6 +24,7 @@ const BloggPage = () => {
       isOpen: !prev.isOpen,
       stackId: null,
       groupId: null,
+      bloggId: null,
     }));
   };
 
@@ -29,8 +32,17 @@ const BloggPage = () => {
     setViewMode((prev) => (prev === "canvas" ? "flipbook" : "canvas"));
   }, []);
 
-  const handleOpenFormFromCanvas = (stackId: string, groupId: string) => {
-    setActiveForm({ isOpen: true, stackId, groupId });
+  const handleOpenFormFromCanvas = (
+    stackId: string,
+    groupId: string,
+    bloggId?: string,
+  ) => {
+    setActiveForm({
+      isOpen: true,
+      stackId,
+      groupId,
+      bloggId: bloggId ?? null,
+    });
   };
 
   return (
@@ -73,6 +85,7 @@ const BloggPage = () => {
           <BloggPageContainer
             groupId={activeForm.groupId}
             stackId={activeForm.stackId}
+            bloggId={activeForm.bloggId}
           />
         ) : viewMode === "canvas" ? (
           <BloggCanvasUI onOpenForm={handleOpenFormFromCanvas} />

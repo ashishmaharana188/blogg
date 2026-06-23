@@ -8,6 +8,7 @@ export interface BlogSavetypes {
 
 export interface userFormtypes {
   onContentChange: (blog: BlogSavetypes) => void;
+  bloggId?: string | null;
 }
 
 export interface StackPosition {
