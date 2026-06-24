@@ -18,12 +18,14 @@ const TAG_COLORS = [
 ];
 
 const UserForm = ({ onContentChange, selectedBlogg }: userFormtypes) => {
-  const isReadOnly = selectedBlogg !== null && selectedBlogg !== undefined;
+  const [isReadOnly, setIsReadOnly] = useState(
+    selectedBlogg !== null && selectedBlogg !== undefined,
+  );
 
   const [formData, setFormData] = useState({
-    author: "",
-    title: "",
-    description: "",
+    author: selectedBlogg?.author ?? "",
+    title: selectedBlogg?.title ?? "",
+    description: selectedBlogg?.subtitle ?? "",
   });
 
   // Tag System State
@@ -187,10 +189,11 @@ const UserForm = ({ onContentChange, selectedBlogg }: userFormtypes) => {
           <BlockNoteView
             editor={editor}
             theme="dark"
-            filePanel={!selectedBlogg}
-            editable={!selectedBlogg}
+            filePanel={!isReadOnly}
+            editable={!isReadOnly}
           />
         </div>
+        <button onClick={() => setIsReadOnly(false)}>EDIT</button>
         {!isReadOnly && (
           <div className="flex justify-end mt-4">
             <button

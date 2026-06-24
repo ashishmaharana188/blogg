@@ -64,6 +64,31 @@ export const saveBlogMedia = async (file: Express.Multer.File) => {
 };
 
 export const saveBlog = async (blog: BlogInput): Promise<BlogDocument> => {
+  if (blog.blogg_id) {
+    const result = await getDB()
+      .collection<BlogDocument>("bloggs")
+      .findOneAndUpdate(
+        { blogg_id: blog.blogg_id },
+        {
+          $set: {
+            author: blog.author,
+            title: blog.title,
+            subtitle: blog.subtitle,
+            tags: blog.tags,
+            content: blog.content,
+            updatedAt: new Date(),
+          },
+        },
+        { returnDocument: "after" },
+      );
+
+    if (!result) {
+      throw new Error("Blog not found");
+    }
+
+    return result;
+  }
+
   const blogDocument = {
     ...blog,
     blogg_id: randomUUID(),
@@ -73,9 +98,9 @@ export const saveBlog = async (blog: BlogInput): Promise<BlogDocument> => {
 
   const result = await getDB().collection("bloggs").insertOne(blogDocument);
 
-  const savedBlog = await getDB().collection<BlogDocument>("bloggs").findOne({
-    _id: result.insertedId,
-  });
+  const savedBlog = await getDB()
+    .collection<BlogDocument>("bloggs")
+    .findOne({ _id: result.insertedId });
 
   if (!savedBlog) {
     throw new Error("Failed to retrieve saved blog");

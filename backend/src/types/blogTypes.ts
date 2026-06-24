@@ -1,13 +1,14 @@
 import { ObjectId } from "mongodb";
 
 export type BlogInput = {
+  blogg_id?: string | null;
   author: string;
   title: string;
   subtitle: string;
-  content: unknown[]; // refine later using BlockNote types
-  groupId: string | null;
-  stackId: string | null;
-  blogId: string | null;
+  tags: string[];
+  content: unknown[];
+  stack_id?: string | null;
+  group_id?: string | null;
 };
 
 export type BlogDocument = BlogInput & {
