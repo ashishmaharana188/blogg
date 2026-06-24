@@ -4,6 +4,18 @@ export interface BloggGroup {
   stack_id: string;
   stack_name: string;
 }
+
+export type BloggSummary = {
+  blogg_id: string;
+  stack_id: string;
+  group_id: string;
+  author: string;
+  title: string;
+  subtitle: string;
+  tags: string[];
+  updatedAt: string;
+};
+
 export interface BloggItem {
   _id: string;
   blogg_id: string;
@@ -33,10 +45,10 @@ export interface BloggGroupCardProps {
   zIndex: number;
   stagger: number;
   isActive: boolean;
-  bloggs: BloggItem[];
+  bloggs: BloggSummary[];
   onOpen: () => void;
   onInitiateCreateBlog: () => void;
-  onOpenBlogg: (blogg: BloggItem) => void;
+  onOpenBlogg: (blogg: BloggSummary) => void;
   onDeleteGroup: (groupId: string) => void;
   onDeleteBlogg: (noteId: string) => void;
   onRenameGroup: (groupId: string, newTitle: string) => void;
@@ -48,7 +60,7 @@ export interface BloggStackColumnProps {
   stack: BloggStack;
   groups: BloggGroup[];
   activeGroupId: string | null;
-  currentBlogg: BloggItem[];
+  currentBlogg: BloggSummary[];
   initialPos: { x: number; y: number };
   zIndex: number;
   scale: number;
@@ -63,7 +75,7 @@ export interface BloggStackColumnProps {
 
     groupId: string,
   ) => void;
-  onOpenBlogg: (blogg: BloggItem) => void;
+  onOpenBlogg: (blogg: BloggSummary) => void;
   onDeleteGroup: (groupId: string) => void;
   onDeleteBlogg: (noteId: string) => void;
   onRenameStack: (stackId: string, newTitle: string) => void;

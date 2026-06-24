@@ -4,13 +4,17 @@ import BloggPageContainer from "../BloggPage/components/bloggForm/bloggPageConta
 import BlogFlipBookUI from "./components/bloggProfile/flipBook/bloggFlipBookUI";
 import BloggCanvasUI from "./components/bloggProfile/canvasView/bloggCanvasUI";
 type ViewMode = "canvas" | "flipbook";
-import { BloggItem } from "./components/bloggProfile/canvasView/bloggCanvasType";
+import {
+  BloggItem,
+  BloggSummary,
+} from "./components/bloggProfile/canvasView/bloggCanvasType";
+import { fetchBloggByIdRequest } from "./services/canvasViewService";
 
 const BloggPage = () => {
   const [activeForm, setActiveForm] = useState<{
-    isOpen: boolean;
-    stackId: string | null;
-    groupId: string | null;
+    isOpen?: boolean;
+    stackId?: string | null;
+    groupId?: string | null;
     selectedBlogg: BloggItem | null;
   }>({
     isOpen: false,
@@ -33,16 +37,31 @@ const BloggPage = () => {
     setViewMode((prev) => (prev === "canvas" ? "flipbook" : "canvas"));
   }, []);
 
-  const handleOpenFormFromCanvas = (
+  const handleOpenFormFromCanvas = async (
     stackId: string,
     groupId: string,
-    selectedBlogg?: BloggItem,
+    blogg?: BloggSummary,
   ) => {
+    // New Note button path: no summary was passed.
+    if (!blogg) {
+      setActiveForm({
+        isOpen: true,
+        stackId,
+        groupId,
+        selectedBlogg: null,
+      });
+      return;
+    }
+
+    const fullBlogg = await fetchBloggByIdRequest({
+      blogg_id: blogg.blogg_id,
+    });
+
     setActiveForm({
       isOpen: true,
-      stackId,
-      groupId,
-      selectedBlogg: selectedBlogg ?? null,
+      stackId: fullBlogg.stack_id,
+      groupId: fullBlogg.group_id,
+      selectedBlogg: fullBlogg,
     });
   };
 

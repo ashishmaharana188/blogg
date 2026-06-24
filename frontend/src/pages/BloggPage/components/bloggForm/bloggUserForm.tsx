@@ -26,6 +26,7 @@ const UserForm = ({ onContentChange, selectedBlogg }: userFormtypes) => {
     author: selectedBlogg?.author ?? "",
     title: selectedBlogg?.title ?? "",
     description: selectedBlogg?.subtitle ?? "",
+    content: selectedBlogg?.content ?? [],
   });
 
   // Tag System State

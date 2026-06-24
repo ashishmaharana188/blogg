@@ -9,7 +9,7 @@ import {
   removeOutline,
   scanOutline,
 } from "ionicons/icons";
-import { BloggItem } from "./bloggCanvasType";
+import { BloggSummary } from "./bloggCanvasType";
 
 import AutoZoomTrigger from "./autoZoomTrigger";
 import BloggStackColumn from "./blogStackColumn";
@@ -23,11 +23,12 @@ const NOTE_STACK_HEIGHT = 2600;
 export default function BloggCanvasUI({
   onOpenForm,
 }: {
-  onOpenForm?: (stackId: string, groupId: string, blogg?: BloggItem) => void;
+  onOpenForm?: (stackId: string, groupId: string, blogg?: BloggSummary) => void;
 }) {
   const state = useBloggSectionState();
   const { isInteracting, startInteraction, settleInteraction } =
     useCanvasInteractionMode(140);
+
   const { canvasScale, syncViewport, isRectVisible } = useCanvasViewport({
     initialScale: 1,
     initialPositionX: 0,
@@ -172,21 +173,11 @@ export default function BloggCanvasUI({
                         onCreateGroup={state.createGroupHandler}
                         onDeleteStack={state.handleDeleteStack}
                         onOpenGroup={state.handleOpenGroup}
-                        onInitiateCreateBlog={(
-                          stackId: string,
-                          groupId: string,
-                        ) => {
-                          if (onOpenForm) onOpenForm(stackId, groupId);
+                        onInitiateCreateBlog={(stackId, groupId) => {
+                          onOpenForm?.(stackId, groupId);
                         }}
-                        onOpenBlogg={(blogg: BloggItem) => {
-                          if (onOpenForm)
-                            onOpenForm(
-                              blogg.stack_id,
-
-                              blogg.group_id,
-
-                              blogg,
-                            );
+                        onOpenBlogg={(blogg: BloggSummary) => {
+                          onOpenForm?.(blogg.stack_id, blogg.group_id, blogg);
                         }}
                         onDeleteGroup={state.handleDeleteGroup}
                         onDeleteBlogg={state.handleDeleteNote}

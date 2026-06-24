@@ -147,3 +147,24 @@ export async function fetchBloggByGroupRequest(payload: { group_id: string }) {
 
   return result.bloggs ?? [];
 }
+
+export async function fetchBloggByIdRequest(payload: { blogg_id: string }) {
+  const response = await fetch(
+    "http://localhost:3000/canvas/blogg/fetchBloggById",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error("Could not fetch blogg");
+  }
+
+  const result = await response.json();
+
+  return result.bloggs;
+}

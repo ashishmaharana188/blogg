@@ -112,13 +112,37 @@ export const saveBlog = async (blog: BlogInput): Promise<BlogDocument> => {
 export async function getBlogsByGroup(payload: { group_id: string }) {
   const bloggs = await getDB()
     .collection("bloggs")
-    .find({
-      group_id: payload.group_id,
-    })
-    .sort({
-      created_at: -1,
-    })
+    .find(
+      { group_id: payload.group_id },
+      {
+        projection: {
+          _id: 1,
+          blogg_id: 1,
+          stack_id: 1,
+          group_id: 1,
+          author: 1,
+          title: 1,
+          subtitle: 1,
+          tags: 1,
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      },
+    )
+    .sort({ createdAt: -1 })
+    .limit(9)
     .toArray();
+
+  return bloggs;
+}
+
+export async function getBloggContent(payload: { blogg_id: string }) {
+  const bloggs = await getDB()
+    .collection("bloggs")
+
+    .findOne({
+      blogg_id: payload.blogg_id,
+    });
 
   return bloggs;
 }
