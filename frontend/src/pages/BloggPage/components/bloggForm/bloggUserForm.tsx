@@ -194,7 +194,17 @@ const UserForm = ({ onContentChange, selectedBlogg }: userFormtypes) => {
             editable={!isReadOnly}
           />
         </div>
-        <button onClick={() => setIsReadOnly(false)}>EDIT</button>
+
+        {isReadOnly && (
+          <div className="flex justify-end mt-4">
+            <button
+              className="px-5 py-1 text-l bg-white border border-gray-300 text-black rounded font-bold hover:bg-black hover:text-white transition-colors"
+              onClick={() => setIsReadOnly(!isReadOnly)}
+            >
+              EDIT
+            </button>
+          </div>
+        )}
         {!isReadOnly && (
           <div className="flex justify-end mt-4">
             <button
