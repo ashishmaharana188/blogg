@@ -25,7 +25,7 @@
  */
 .flipbook-stage {
   --page-w: clamp(300px, 30vw, 500px);
-  --page-h: calc(var(--page-w) * 0.9);
+  --page-h: calc(var(--page-w) * 1.2);
   --spread-w: calc(var(--page-w) * 2);
   --book-radius: clamp(18px, 1vw, 36px);
 

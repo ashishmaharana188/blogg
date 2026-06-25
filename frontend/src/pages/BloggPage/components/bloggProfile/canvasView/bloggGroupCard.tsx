@@ -134,7 +134,7 @@ const GroupCard = React.memo(
                 x="400"
                 y="14"
                 textAnchor="end"
-                className="fill-gray-900 font-sans font-bold text-xs uppercase"
+                className="typewriter-font fill-gray-900 font-sans font-bold text-xs uppercase"
               >
                 {group.group_name.length > 20
                   ? group.group_name.substring(0, 17) + "..."
@@ -214,7 +214,7 @@ const GroupCard = React.memo(
                 ) : (
                   <div className="flex items-center gap-2 w-full pr-4 overflow-hidden group/title">
                     <h2
-                      className="text-xl font-bold text-slate-800 truncate cursor-pointer hover:text-black transition-colors"
+                      className="typewriter-font text-xl font-bold text-slate-800 truncate cursor-pointer hover:text-black transition-colors"
                       onClick={() => {
                         setIsRenaming(true);
                         setEditTitle(group.group_name);
@@ -273,7 +273,7 @@ const GroupCard = React.memo(
                             : ""
                         }`}
                       >
-                        <h4 className="font-bold text-slate-800 leading-tight truncate pr-4">
+                        <h4 className="typewriter-font font-bold text-slate-800 leading-tight truncate pr-4">
                           {blog.title}
                         </h4>
                         <div className="flex items-center gap-4 shrink-0">

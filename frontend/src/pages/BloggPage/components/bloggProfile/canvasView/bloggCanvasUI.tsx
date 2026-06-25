@@ -76,7 +76,7 @@ export default function BloggCanvasUI({
   return (
     <div className="absolute inset-0 bg-[#f8f9fa] overflow-hidden font-sans">
       <TransformWrapper
-        initialScale={1}
+        initialScale={0.6}
         initialPositionX={0}
         initialPositionY={0}
         minScale={0.1}

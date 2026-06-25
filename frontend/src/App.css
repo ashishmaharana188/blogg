@@ -33,3 +33,7 @@ body {
   display: flex;
   flex-direction: column;
 }
+
+.typewriter-font {
+  font-family: "Special Elite", "Courier New", monospace;
+}

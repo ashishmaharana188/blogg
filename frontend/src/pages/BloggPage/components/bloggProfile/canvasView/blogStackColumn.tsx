@@ -287,7 +287,8 @@ const BloggStackColumn = React.memo(
             ) : (
               <div className="absolute left-10 flex items-center gap-2 group/stack pointer-events-auto">
                 <h3
-                  className="font-extrabold text-xl text-primary tracking-tight cursor-pointer hover:text-black transition-colors"
+                  className="typewriter-font
+                  font-extrabold text-xl text-primary tracking-tight cursor-pointer hover:text-black transition-colors"
                   onClick={(e) => {
                     e.stopPropagation();
                     setIsRenamingStack(true);
@@ -383,7 +384,7 @@ const BloggStackColumn = React.memo(
               onMouseDown={(e) => e.stopPropagation()}
               onPointerDown={(e) => e.stopPropagation()}
               onClick={() => setIsCreatingGroup(true)}
-              className="w-full py-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 text-sm font-bold rounded transition border-dashed"
+              className="typewriter-font w-full py-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 text-sm font-bold rounded transition border-dashed"
             >
               + New Folder
             </button>
