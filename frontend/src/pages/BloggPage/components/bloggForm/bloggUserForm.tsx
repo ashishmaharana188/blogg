@@ -186,7 +186,7 @@ const UserForm = ({ onContentChange, selectedBlogg }: userFormtypes) => {
             ))}
         </div>
 
-        <div className="mt-10">
+        <div className="mt-10 [&_.bn-editor]:pt-6 [&_.bn-editor]:pb-12">
           <BlockNoteView
             editor={editor}
             theme="dark"
