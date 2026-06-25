@@ -78,6 +78,7 @@
   width: var(--page-w);
   height: var(--page-h);
   overflow: hidden;
+  border: 2px solid #000000;
   background: #ffffff;
   backface-visibility: hidden;
   transform-style: preserve-3d;
@@ -93,6 +94,12 @@
   color: #111111;
   padding: 20px;
   box-sizing: border-box;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* old Edge / IE */
+}
+
+.flipbook-page-content::-webkit-scrollbar {
+  display: none; /* Chrome, Edge, Safari */
 }
 
 .flipbook-page-content .bn-container {
@@ -243,14 +250,14 @@
   top: 0;
   bottom: 0;
   left: 50%;
-  width: 38px;
+  width: 18px;
   transform: translateX(-50%);
   pointer-events: none;
   z-index: 4;
   opacity: 0;
   transition: opacity 250ms ease;
   background:
-    linear-gradient(to right, transparent, rgba(0, 0, 0, 0.38), transparent),
+    linear-gradient(to right, transparent, rgba(0, 0, 0, 0.18), transparent),
     linear-gradient(
       to right,
       rgba(255, 255, 255, 0.04),
@@ -301,15 +308,32 @@
   backface-visibility: hidden;
   transform-style: preserve-3d;
 }
-
-.flipbook-turn-next .flipbook-sheet-face,
-.flipbook-turn-next .flipbook-page {
-  border-radius: 0 var(--book-radius) var(--book-radius) 0;
+/* visible front: left is outer, right touches spine */
+.flipbook-turn-next .flipbook-sheet-face:not(.flipbook-sheet-back),
+.flipbook-turn-next
+  .flipbook-sheet-face:not(.flipbook-sheet-back)
+  .flipbook-page {
+  border-radius: 0 var(--book-radius) var(--book-radius) 0 !important;
 }
 
-.flipbook-turn-previous .flipbook-sheet-face,
-.flipbook-turn-previous .flipbook-page {
-  border-radius: var(--book-radius) 0 0 var(--book-radius);
+/* NEXT back: after rotation, LEFT is outer */
+.flipbook-turn-next .flipbook-sheet-back,
+.flipbook-turn-next .flipbook-sheet-back .flipbook-page {
+  border-radius: var(--book-radius) 0 0 var(--book-radius) !important;
+}
+
+/* PREVIOUS: page starts on LEFT, so LEFT is outer before the flip */
+.flipbook-turn-previous .flipbook-sheet-face:not(.flipbook-sheet-back),
+.flipbook-turn-previous
+  .flipbook-sheet-face:not(.flipbook-sheet-back)
+  .flipbook-page {
+  border-radius: var(--book-radius) 0 0 var(--book-radius) !important;
+}
+
+/* PREVIOUS back: after rotation, RIGHT is outer */
+.flipbook-turn-previous .flipbook-sheet-back,
+.flipbook-turn-previous .flipbook-sheet-back .flipbook-page {
+  border-radius: 0 var(--book-radius) var(--book-radius) 0 !important;
 }
 
 .flipbook-sheet-back {
@@ -491,8 +515,8 @@
 /* ── Responsive ──────────────────────────────────────────────── */
 @media (max-width: 980px) {
   .flipbook-stage {
-    --page-w: clamp(150px, 44vw, 280px);
-    --page-h: calc(var(--page-w) * 0.68);
+    --page-w: clamp(150px, 44vw, 400px);
+    --page-h: calc(var(--page-w) * 1.5);
     padding-top: 16px;
   }
 
