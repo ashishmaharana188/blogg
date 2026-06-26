@@ -1,3 +1,5 @@
+import { BloggDocumentType, BloggItem } from "../../../../../types/pageTypes";
+
 export interface BloggGroup {
   group_id: string;
   group_name: string;
@@ -9,31 +11,15 @@ export type BloggSummary = {
   blogg_id: string;
   stack_id: string;
   group_id: string;
+
+  document_type: BloggDocumentType;
+
   author: string;
   title: string;
   subtitle: string;
   tags: string[];
   updatedAt: string;
 };
-
-export interface BloggItem {
-  _id: string;
-  blogg_id: string;
-
-  stack_id: string;
-  group_id: string;
-
-  author: string;
-  title: string;
-  subtitle: string;
-
-  tags: string[];
-
-  content: unknown[];
-
-  createdAt: string;
-  updatedAt: string;
-}
 
 export interface BloggStack {
   stack_id: string;

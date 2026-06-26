@@ -322,7 +322,8 @@ const BlogFlipBookUI = () => {
     const isEnd = currentLogicalSpread >= maxSpread;
     const leftNum = currentLogicalSpread + 1;
     const rightNum = currentLogicalSpread + 2;
-    const prefix = isEnd ? "End" : `Artworks\u00a0${leftNum}\u2013${rightNum}`;
+    //const prefix = isEnd ? "End" : `Bloggs\u00a0${leftNum}\u2013${rightNum}`;
+    const prefix = isEnd ? "End" : `Bloggs`;
     return `${prefix}\u00a0\u00b7 spread\u00a0${spreadNumber}\u00a0of\u00a0${totalSpreads}`;
   })();
 
@@ -390,11 +391,6 @@ const BlogFlipBookUI = () => {
             onSelect={goToPage}
           />
         </div>
-
-        <p className="flipbook-help">
-          Click any page half to upload artwork <span>&middot;</span> Arrow keys
-          to flip
-        </p>
       </footer>
     </div>
   );

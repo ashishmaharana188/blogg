@@ -4,10 +4,8 @@ import BloggPageContainer from "../BloggPage/components/bloggForm/bloggPageConta
 import BlogFlipBookUI from "./components/bloggProfile/flipBook/bloggFlipBookUI";
 import BloggCanvasUI from "./components/bloggProfile/canvasView/bloggCanvasUI";
 type ViewMode = "canvas" | "flipbook";
-import {
-  BloggItem,
-  BloggSummary,
-} from "./components/bloggProfile/canvasView/bloggCanvasType";
+import { BloggSummary } from "./components/bloggProfile/canvasView/bloggCanvasType";
+import { BloggItem } from "../../types/pageTypes";
 import { fetchBloggByIdRequest } from "./services/canvasViewService";
 
 const BloggPage = () => {

@@ -75,7 +75,7 @@ export default function useBloggSectionState() {
     const rowHeights: Record<number, number> = {};
     //row max height-1
     stacks.forEach((stack, index) => {
-      const row = Math.floor(index / 4);
+      const row = Math.floor(index / 3);
 
       const estimatedHeight = estimateStackHeight(stack.stack_id, groups);
       //phase1
@@ -96,10 +96,10 @@ export default function useBloggSectionState() {
     });
     //phase3
     stacks.forEach((stack, index) => {
-      const column = index % 4;
+      const column = index % 3;
       const x = 20 + column * 650;
 
-      const row = Math.floor(index / 4);
+      const row = Math.floor(index / 3);
       const y = rowStartPositions[row];
 
       generatePositions[stack.stack_id] = {

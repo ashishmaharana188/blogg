@@ -1,7 +1,7 @@
 import UserForm from "./bloggUserForm";
 import { saveBlog } from "../../services/bloggService";
 import { BlogSavetypes } from "../../../../types/pageTypes";
-import type { BloggItem } from "../bloggProfile/canvasView/bloggCanvasType";
+import type { BloggItem } from "../../../../types/pageTypes";
 
 const BloggPageContainer = ({
   stackId,
