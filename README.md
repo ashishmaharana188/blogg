@@ -12,7 +12,7 @@ CHANGELOGS:
 
 ## Overview
 
-Add user authentication and profile functionality similar to Instagram so that every user has their own personal workspace for creating, editing, and publishing blogs.
+Add user authentication and profile functionality so that every user has their own personal workspace for creating, editing, and publishing blogs.
 
 Each user should have access only to their own saved blogs, drafts, and published blogs while being able to discover public blogs through a global feed.
 
