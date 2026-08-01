@@ -7,6 +7,7 @@ declare global {
         user_id: string;
         username: string;
         displayName: string;
+        email: string;
       };
     }
   }
