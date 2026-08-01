@@ -7,6 +7,25 @@ export interface BlogSavetypes {
   content: unknown;
 }
 
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface RegisterRequest {
+  username: string;
+  email: string;
+  password: string;
+}
+
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  displayName?: string;
+  avatar?: string;
+}
+
 export interface userFormtypes {
   onContentChange: (blog: BlogSavetypes) => void;
   selectedBlogg?: BloggItem | null;
