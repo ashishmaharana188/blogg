@@ -1,6 +1,7 @@
 import { useState } from "react";
 import AuthLayout from "../components/authLayout";
 import AuthInput from "../components/authInput";
+import { Link } from "react-router-dom";
 
 const Login = () => {
   const [form, setForm] = useState({
@@ -47,6 +48,12 @@ const Login = () => {
         >
           Login
         </button>
+        <p className="text-center text-sm">
+          Don't have an account?{" "}
+          <Link to="/register" className="text-blue-600 hover:underline">
+            Create one
+          </Link>
+        </p>
       </form>
     </AuthLayout>
   );
