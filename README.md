@@ -289,21 +289,3 @@ private
 
 ---
 
-# Recommended Implementation Order
-
-1. Authentication
-2. User model and profiles
-3. Blog ownership
-4. Draft and publishing workflow
-5. Public and private visibility
-6. User dashboard (My Blogs)
-7. Public feed filtering
-8. BlockNote read and edit modes
-9. Feed layout toggle
-Users can sign in and access only their own content.
-Private posts never appear in the public feed.
-Public published posts appear in the feed.
-BlockNote supports edit and read-only modes.
-Feed layout can switch between flipbook and vertical view.
-
-
