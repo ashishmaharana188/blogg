@@ -3,12 +3,14 @@ export interface BlogSavetypes {
   author: string;
   title: string;
   subtitle: string;
+  tags?: string[];
   content: unknown;
 }
 
 export interface userFormtypes {
   onContentChange: (blog: BlogSavetypes) => void;
   selectedBlogg?: BloggItem | null;
+  initialEditMode?: boolean;
 }
 
 export interface StackPosition {

@@ -89,17 +89,27 @@
 .flipbook-page-content {
   width: 100%;
   height: 100%;
-  overflow-y: auto;
+  overflow: hidden;
   background: #ffffff;
   color: #111111;
   padding: 20px;
   box-sizing: border-box;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* old Edge / IE */
 }
 
-.flipbook-page-content::-webkit-scrollbar {
-  display: none; /* Chrome, Edge, Safari */
+.flipbook-page-clickable {
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.flipbook-page-clickable:hover {
+  box-shadow: inset 0 0 0 3px rgba(17, 24, 39, 0.12);
+}
+
+.flipbook-page-clickable:focus-visible {
+  outline: 3px solid rgba(17, 24, 39, 0.55);
+  outline-offset: -8px;
 }
 
 .flipbook-page-content .bn-container {
@@ -109,6 +119,52 @@
 
 .flipbook-page-content .bn-editor {
   padding: 0;
+}
+
+.flipbook-overview-page,
+.flipbook-detail-cover {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+.flipbook-detail-page {
+  position: relative;
+  overflow-y: auto;
+  padding-bottom: 42px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(17, 24, 39, 0.35) transparent;
+}
+
+.flipbook-detail-page::-webkit-scrollbar {
+  width: 6px;
+}
+
+.flipbook-detail-page::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.flipbook-detail-page::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.28);
+}
+
+.flipbook-open-hint {
+  margin: 1.5rem 0 0;
+  color: #111111;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.flipbook-page-count {
+  position: absolute;
+  right: 18px;
+  bottom: 14px;
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.72rem;
 }
 
 .flipbook-page-left {
@@ -371,6 +427,33 @@
   align-items: center;
   padding: 14px 16px clamp(14px, 3vh, 36px);
   color: #111111;
+}
+
+.flipbook-mode-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-bottom: 8px;
+}
+
+.flipbook-mode-actions button {
+  border: 1px solid #111111;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #111111;
+  padding: 6px 16px;
+  font-family: "Courier Prime", "Courier New", Courier, monospace;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+.flipbook-mode-actions button:hover {
+  background: #111111;
+  color: #ffffff;
 }
 
 /* ── Controls row ────────────────────────────────────────────── */

@@ -17,9 +17,13 @@ const TAG_COLORS = [
   "bg-cyan-100 text-cyan-800 border-cyan-200",
 ];
 
-const UserForm = ({ onContentChange, selectedBlogg }: userFormtypes) => {
+const UserForm = ({
+  onContentChange,
+  selectedBlogg,
+  initialEditMode = false,
+}: userFormtypes) => {
   const [isReadOnly, setIsReadOnly] = useState(
-    selectedBlogg !== null && selectedBlogg !== undefined,
+    selectedBlogg !== null && selectedBlogg !== undefined && !initialEditMode,
   );
 
   const [formData, setFormData] = useState({

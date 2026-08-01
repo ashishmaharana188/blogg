@@ -3,10 +3,11 @@ import { Link } from "react-router-dom";
 import BloggPageContainer from "../BloggPage/components/bloggForm/bloggPageContainer";
 import BlogFlipBookUI from "./components/bloggProfile/flipBook/bloggFlipBookUI";
 import BloggCanvasUI from "./components/bloggProfile/canvasView/bloggCanvasUI";
-type ViewMode = "canvas" | "flipbook";
 import { BloggSummary } from "./components/bloggProfile/canvasView/bloggCanvasType";
 import { BloggItem } from "../../types/pageTypes";
 import { fetchBloggByIdRequest } from "./services/canvasViewService";
+
+type ViewMode = "canvas" | "flipbook";
 
 const BloggPage = () => {
   const [activeForm, setActiveForm] = useState<{
@@ -14,11 +15,13 @@ const BloggPage = () => {
     stackId?: string | null;
     groupId?: string | null;
     selectedBlogg: BloggItem | null;
+    initialEditMode?: boolean;
   }>({
     isOpen: false,
     stackId: null,
     groupId: null,
     selectedBlogg: null,
+    initialEditMode: false,
   });
   const [viewMode, setViewMode] = useState<ViewMode>("canvas");
 
@@ -28,6 +31,7 @@ const BloggPage = () => {
       stackId: null,
       groupId: null,
       selectedBlogg: null,
+      initialEditMode: false,
     }));
   };
 
@@ -47,6 +51,7 @@ const BloggPage = () => {
         stackId,
         groupId,
         selectedBlogg: null,
+        initialEditMode: false,
       });
       return;
     }
@@ -60,8 +65,19 @@ const BloggPage = () => {
       stackId: fullBlogg.stack_id,
       groupId: fullBlogg.group_id,
       selectedBlogg: fullBlogg,
+      initialEditMode: false,
     });
   };
+
+  const handleEditFromFlipBook = useCallback((blogg: BloggItem) => {
+    setActiveForm({
+      isOpen: true,
+      stackId: blogg.stack_id,
+      groupId: blogg.group_id,
+      selectedBlogg: blogg,
+      initialEditMode: true,
+    });
+  }, []);
 
   return (
     <div className="w-full h-full flex flex-col bg-white">
@@ -104,11 +120,12 @@ const BloggPage = () => {
             groupId={activeForm.groupId}
             stackId={activeForm.stackId}
             selectedBlogg={activeForm.selectedBlogg}
+            initialEditMode={activeForm.initialEditMode}
           />
         ) : viewMode === "canvas" ? (
           <BloggCanvasUI onOpenForm={handleOpenFormFromCanvas} />
         ) : (
-          <BlogFlipBookUI />
+          <BlogFlipBookUI onEditBlogg={handleEditFromFlipBook} />
         )}
       </div>
     </div>

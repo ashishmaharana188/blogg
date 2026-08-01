@@ -7,10 +7,12 @@ const BloggPageContainer = ({
   stackId,
   groupId,
   selectedBlogg,
+  initialEditMode,
 }: {
   stackId?: string | null;
   groupId?: string | null;
   selectedBlogg?: BloggItem | null;
+  initialEditMode?: boolean;
 }) => {
   const handleSave = async (blog: BlogSavetypes) => {
     const data = await saveBlog(
@@ -24,7 +26,11 @@ const BloggPageContainer = ({
   };
 
   return (
-    <UserForm onContentChange={handleSave} selectedBlogg={selectedBlogg} />
+    <UserForm
+      onContentChange={handleSave}
+      selectedBlogg={selectedBlogg}
+      initialEditMode={initialEditMode}
+    />
   );
 };
 

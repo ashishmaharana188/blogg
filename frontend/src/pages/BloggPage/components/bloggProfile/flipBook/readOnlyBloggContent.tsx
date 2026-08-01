@@ -7,7 +7,8 @@ type ReadOnlyBloggContentProps = {
 
 export function ReadOnlyBloggContent({ content }: ReadOnlyBloggContentProps) {
   const editor = useCreateBlockNote({
-    initialContent: content,
+    initialContent:
+      content.length > 0 ? content : [{ type: "paragraph", content: "" }],
   });
 
   return <BlockNoteView editor={editor} editable={false} theme="light" />;

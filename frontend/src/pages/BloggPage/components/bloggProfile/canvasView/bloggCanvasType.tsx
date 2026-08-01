@@ -1,4 +1,4 @@
-import { BloggDocumentType, BloggItem } from "../../../../../types/pageTypes";
+import { BloggDocumentType } from "../../../../../types/pageTypes";
 
 export interface BloggGroup {
   group_id: string;
