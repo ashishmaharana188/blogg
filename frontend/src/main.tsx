@@ -1,6 +1,15 @@
 import { createRoot } from "react-dom/client";
-import App from "./App.tsx";
+import { BrowserRouter } from "react-router-dom";
 
-// 1. Tailwind global resets MUST load first
-import "./App.css"; // or "./App.css" depending on your setup
-createRoot(document.getElementById("root")!).render(<App />);
+import App from "./App.tsx";
+import { AuthProvider } from "../../frontend/src/context/authContext.tsx";
+
+import "./App.css";
+
+createRoot(document.getElementById("root")!).render(
+  <BrowserRouter>
+    <AuthProvider>
+      <App />
+    </AuthProvider>
+  </BrowserRouter>,
+);

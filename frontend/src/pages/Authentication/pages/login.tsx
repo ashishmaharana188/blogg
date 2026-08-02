@@ -1,9 +1,16 @@
 import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+
 import AuthLayout from "../components/authLayout";
 import AuthInput from "../components/authInput";
-import { Link } from "react-router-dom";
+
+import authenticationService from "../services/authenticationService";
+import { useAuth } from "../../../context/authContext";
 
 const Login = () => {
+  const navigate = useNavigate();
+  const { refreshUser } = useAuth();
+
   const [form, setForm] = useState({
     email: "",
     password: "",
@@ -16,12 +23,18 @@ const Login = () => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    console.log(form);
+    try {
+      await authenticationService.login(form);
 
-    // authenticationService.login(form)
+      await refreshUser();
+
+      navigate("/feed", { replace: true });
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   return (
@@ -48,6 +61,7 @@ const Login = () => {
         >
           Login
         </button>
+
         <p className="text-center text-sm">
           Don't have an account?{" "}
           <Link to="/register" className="text-blue-600 hover:underline">

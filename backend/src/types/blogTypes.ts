@@ -5,7 +5,7 @@ type BlogDocumentType = "note" | "external_article";
 export type BlogInput = {
   stack_id: string;
   group_id: string;
-
+  blogg_id?: string;
   document_type: BlogDocumentType;
 
   author?: string;

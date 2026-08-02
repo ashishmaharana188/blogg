@@ -6,12 +6,31 @@ import Register from "../pages/Authentication/pages/register";
 import HomePage from "../pages/BloggFeed/BlogFeed";
 import BloggPage from "../pages/BloggPage/BloggPage";
 
-const isAuthenticated = false; // Replace with auth state later
+import { useAuth } from "../context/authContext";
 
 const Router = () => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return null;
+  }
+
+  const isAuthenticated = !!user;
+
   return (
     <Routes>
       {/* Public Routes */}
+
+      <Route
+        path="/"
+        element={
+          isAuthenticated ? (
+            <Navigate to="/feed" replace />
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        }
+      />
 
       <Route
         path="/login"
@@ -29,12 +48,16 @@ const Router = () => {
 
       <Route
         path="/feed"
-        element={isAuthenticated ? <HomePage /> : <Navigate to="/" replace />}
+        element={
+          isAuthenticated ? <HomePage /> : <Navigate to="/login" replace />
+        }
       />
 
       <Route
         path="/blog"
-        element={isAuthenticated ? <BloggPage /> : <Navigate to="/" replace />}
+        element={
+          isAuthenticated ? <BloggPage /> : <Navigate to="/login" replace />
+        }
       />
 
       <Route path="*" element={<Navigate to="/" replace />} />

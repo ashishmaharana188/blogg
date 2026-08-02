@@ -1,30 +1,32 @@
-import { Request, Response, NextFunction } from "express";
+import type { Request, Response, NextFunction } from "express";
+
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret";
+import HttpError from "../server/httpError.ts";
+
+const JWT_SECRET = process.env.JWT_SECRET!;
 
 export const authenticationMiddleware = (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
+  const token = req.cookies?.authToken;
+
+  if (!token) {
+    return next(new HttpError(401, "Authentication required."));
+  }
+
   try {
-    const token = req.cookies?.authToken;
-
-    if (!token) {
-      return res.status(401).json({ message: "Not authenticated." });
-    }
-
-    const decoded = jwt.verify(token, JWT_SECRET) as {
+    req.user = jwt.verify(token, JWT_SECRET) as {
       user_id: string;
       username: string;
       displayName: string;
       email: string;
     };
 
-    req.user = decoded;
-    return next();
-  } catch (error) {
-    return res.status(401).json({ message: "Invalid or expired token." });
+    next();
+  } catch {
+    next(new HttpError(401, "Invalid authentication token."));
   }
 };
