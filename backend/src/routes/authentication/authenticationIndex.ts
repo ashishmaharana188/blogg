@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { trace } from "../../middleware/trace.ts";
-
+import { authenticationMiddleware } from "../../middleware/authenticationMiddleware.ts";
 import {
   loginUser,
   registerUser,
@@ -40,6 +40,7 @@ authenticationRouter.post(
 
 authenticationRouter.post(
   "/logout",
+  authenticationMiddleware,
   trace("AUTH_LOGOUT", async (req, res) => {
     return await logoutUser(req, res);
   }),
@@ -47,6 +48,7 @@ authenticationRouter.post(
 
 authenticationRouter.get(
   "/me",
+  authenticationMiddleware,
   trace("AUTH_ME", async (req) => {
     return await getCurrentUser(req);
   }),

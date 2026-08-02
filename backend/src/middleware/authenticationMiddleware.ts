@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 
 import HttpError from "../server/httpError.ts";
 
-const JWT_SECRET = process.env.JWT_SECRET!;
+const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret";
 
 export const authenticationMiddleware = (
   req: Request,
@@ -26,7 +26,9 @@ export const authenticationMiddleware = (
     };
 
     next();
-  } catch {
+  } catch (error) {
+    console.error(error);
+
     next(new HttpError(401, "Invalid authentication token."));
   }
 };

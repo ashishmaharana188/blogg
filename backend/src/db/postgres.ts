@@ -1,6 +1,7 @@
 import { Pool } from "pg";
 import type { PoolClient } from "pg";
 import logger from "../logs/logger.ts";
+import "dotenv/config";
 
 let pgPool: Pool | null = null;
 

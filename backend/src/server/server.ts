@@ -4,6 +4,8 @@ import logger from "../logs/logger.ts";
 import { trace } from "../middleware/trace.ts";
 import { middleware } from "../middleware/middleWare.ts";
 import { mongoConnectDB } from "../db/mongoDBConnect.ts";
+import { warmupPgPool } from "../db/postgres.ts";
+import { initializePostgresSchema } from "../db/postgresSchema.ts";
 import blogInterceptRouter from "../routes/bloggDocument/bloggDocumentIndex.ts";
 import canvasViewInterceptor from "../routes/canvasView/canvasViewIndex.ts";
 import flipBookInterceptor from "../routes/flipBook/flipBookIndex.ts";
@@ -26,6 +28,8 @@ app.use(express.json());
 app.use(middleware);
 
 await mongoConnectDB();
+await warmupPgPool();
+await initializePostgresSchema();
 
 app.use(cookieParser());
 
