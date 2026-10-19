@@ -4,6 +4,13 @@ import { API_BASE_URL } from "../../../services/apiBase";
 
 const BASE_URL = `${API_BASE_URL}/api/auth`;
 
+const registrationStatus = async (): Promise<{ registrationEnabled: boolean }> => {
+  const { data } = await axios.get(`${BASE_URL}/registration-status`, {
+    withCredentials: true,
+  });
+  return data;
+};
+
 const login = async (payload: LoginRequest) => {
   const { data } = await axios.post(`${BASE_URL}/login`, payload, { withCredentials: true });
   return data;
@@ -24,4 +31,4 @@ const me = async () => {
   return data;
 };
 
-export default { login, register, logout, me };
+export default { registrationStatus, login, register, logout, me };

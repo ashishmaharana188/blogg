@@ -24,13 +24,21 @@ const buildToken = (payload: {
   email: string;
 }) => jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 
+const authCookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production" || COOKIE_SAME_SITE === "none",
+  sameSite: COOKIE_SAME_SITE,
+};
+
 const setAuthCookie = (res: Response, token: string) => {
   res.cookie("authToken", token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production" || COOKIE_SAME_SITE === "none",
-    sameSite: COOKIE_SAME_SITE,
+    ...authCookieOptions,
     maxAge: COOKIE_MAX_AGE_MS,
   });
+};
+
+const clearAuthCookie = (res: Response) => {
+  res.clearCookie("authToken", authCookieOptions);
 };
 
 export const registerUser = async (
@@ -88,18 +96,28 @@ export const loginUser = async (
 };
 
 export const logoutUser = async (_req: Request, res: Response) => {
-  res.clearCookie("authToken", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production" || COOKIE_SAME_SITE === "none",
-    sameSite: COOKIE_SAME_SITE,
-  });
+  clearAuthCookie(res);
   return { success: true, message: "Logout successful." };
 };
 
-export const getCurrentUser = async (req: Request) => {
-  if (!req.user) throw new Error("User not authenticated.");
+/**
+ * Resolve the optional signed-in user. A JWT can outlive its database row
+ * (for example, after the admin row is recreated or the app switches to a
+ * different PostgreSQL database). That situation means "anonymous", not a
+ * server failure. Clear the stale cookie and let public read routes continue.
+ */
+export const getCurrentUser = async (req: Request, res: Response) => {
+  if (!req.user) {
+    clearAuthCookie(res);
+    return { success: true, user: null, isAdmin: false };
+  }
+
   const user = await findUserById(req.user.user_id);
-  if (!user) throw new Error("User not found.");
+  if (!user) {
+    clearAuthCookie(res);
+    return { success: true, user: null, isAdmin: false };
+  }
+
   const isAdmin = Boolean(configuredAdminEmail()) && user.email.trim().toLowerCase() === configuredAdminEmail();
   return { success: true, user: { ...user, isAdmin }, isAdmin };
 };
