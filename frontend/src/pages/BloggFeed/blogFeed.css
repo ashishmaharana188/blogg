@@ -29,7 +29,7 @@
 .blog-feed-post-card {
   min-width: 0;
   padding: 22px 24px 17px;
-  border: 2px solid #d5e2e3;
+  border: 2px solid #383b33;
   border-radius: 16px;
   background: #fff;
   box-shadow: 0 2px 5px rgb(15 23 42 / 3%);
@@ -117,12 +117,31 @@
   overflow-wrap: anywhere;
 }
 
+.blog-feed-note-preview {
+  position: relative;
+  max-height: 325px;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* The outer preview crops long text and tall images; the BlockNote body itself
+   must not become a nested scroll container. */
+.blog-feed-note-preview .blog-feed-note-body,
+.blog-feed-note-preview .bn-container,
+.blog-feed-note-preview .bn-editor {
+  height: auto !important;
+  max-height: none !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+}
+
 .blog-feed-note-body {
   min-width: 0;
   max-width: 100%;
   color: #273444;
   overflow-wrap: anywhere;
   scrollbar-width: none;
+  overflow: visible;
   font-family: inherit;
 }
 
@@ -284,5 +303,11 @@
 
   .blog-feed-time {
     padding: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .blog-feed-note-preview {
+    max-height: 273px;
   }
 }

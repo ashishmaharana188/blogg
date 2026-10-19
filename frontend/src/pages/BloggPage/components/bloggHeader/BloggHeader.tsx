@@ -24,7 +24,9 @@ export default function BloggHeader({
 
   useEffect(() => {
     if (!isAdmin) return;
-    const heartbeat = () => { void sendAdminHeartbeat().catch(() => refreshUser()); };
+    const heartbeat = () => {
+      void sendAdminHeartbeat().catch(() => refreshUser());
+    };
     heartbeat();
     const interval = window.setInterval(heartbeat, 30_000);
     return () => window.clearInterval(interval);
@@ -62,9 +64,13 @@ export default function BloggHeader({
             </button>
           )}
           <Link
-            className="text-xs text-slate-500 hover:text-black whitespace-nowrap"
+            className="text-xm text-bold hover:text-black whitespace-nowrap"
             to="/account"
-            title={isAdmin ? "Administrator account and status" : "Administrator sign in and public status"}
+            title={
+              isAdmin
+                ? "Administrator account and status"
+                : "Administrator sign in and public status"
+            }
           >
             {isAdmin ? "Admin" : "Account"}
           </Link>

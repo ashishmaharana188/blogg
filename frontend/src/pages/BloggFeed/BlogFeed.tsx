@@ -39,7 +39,7 @@ function NoteBody({ content }: { content?: unknown[] }) {
   return (
     <div className="blog-feed-note-body">
       {hasContent ? (
-        <BlockNoteView editor={editor} editable={false} theme="light" />
+        <BlockNoteView editor={editor} editable={false} theme="light" formattingToolbar={false} />
       ) : (
         <p className="blog-feed-empty-body">No body content yet.</p>
       )}
@@ -82,7 +82,9 @@ function FeedPost({
         </h2>
       )}
       {blogg.subtitle?.trim() && <p className="blog-feed-post-description">{blogg.subtitle}</p>}
-      <NoteBody content={blogg.content} />
+      <div className="blog-feed-note-preview" aria-label="Note content preview">
+        <NoteBody content={blogg.content} />
+      </div>
 
       {!!blogg.tags?.length && (
         <div className="blog-feed-tags" aria-label="Tags">

@@ -37,3 +37,29 @@ body {
 .typewriter-font {
   font-family: "Special Elite", "Courier New", monospace;
 }
+
+/*
+ * BlockNote's blue selected-node ring is an OUTLINE on the direct child of
+ * the selected image block. It is not painted by ::after, so overriding a
+ * pseudo-element alone leaves the blue ring intact.
+ *
+ * Cover both DOM shapes used by BlockNote's core selection stylesheet:
+ * 1) .bn-block-content.ProseMirror-selectednode > *
+ * 2) .ProseMirror-selectednode > .bn-block-content > *
+ * This removes the ring only for image blocks, leaving text-block selection
+ * styling unchanged in editable notes.
+ */
+.bn-block-content[data-content-type="image"].ProseMirror-selectednode > *,
+.ProseMirror-selectednode > .bn-block-content[data-content-type="image"] > * {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Defensive reset for the image block/media node itself. */
+.bn-block-content[data-content-type="image"],
+.bn-block-content[data-content-type="image"] .bn-visual-media,
+.bn-block-content[data-content-type="image"] img,
+.bn-block-content[data-content-type="image"] video {
+  outline: none !important;
+  box-shadow: none !important;
+}

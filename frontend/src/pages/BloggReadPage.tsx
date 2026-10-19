@@ -25,7 +25,7 @@ function NoteBody({ content }: { content?: unknown[] }) {
   return (
     <div className="blogg-reader-body">
       {Array.isArray(content) && content.length > 0 ? (
-        <BlockNoteView editor={editor} editable={false} theme="light" />
+        <BlockNoteView editor={editor} editable={false} theme="light" formattingToolbar={false} />
       ) : (
         <p className="blogg-reader-empty">This note has no body content yet.</p>
       )}
@@ -129,9 +129,12 @@ export default function BloggReadPage() {
             </div>
             <footer className="blogg-reader-actions">
               <Link to="/feed">Back to feed</Link>
+              <Link to={`/blog?readNote=${encodeURIComponent(blogg.blogg_id || blogg._id)}`}>
+                Open in Note View
+              </Link>
               {isAdmin && (
-                <Link to={`/blog/${encodeURIComponent(blogg.blogg_id || blogg._id)}`}>
-                  Edit in Blog Profile
+                <Link to={`/blog?editNote=${encodeURIComponent(blogg.blogg_id || blogg._id)}`}>
+                  Edit in BlockNote
                 </Link>
               )}
               <ShareBloggButton

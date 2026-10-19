@@ -1,7 +1,8 @@
 import { userFormtypes } from "../../../../types/pageTypes";
-import { useCreateBlockNote } from "@blocknote/react";
+import { useCreateBlockNote, FormattingToolbarController } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 import { uploadFile } from "../../services/bloggService";
+import { BloggFormattingToolbar } from "./bloggFormattingToolbar";
 
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
@@ -196,7 +197,12 @@ const UserForm = ({
             theme="dark"
             filePanel={!isReadOnly}
             editable={!isReadOnly}
-          />
+            formattingToolbar={false}
+          >
+            {!isReadOnly && (
+              <FormattingToolbarController formattingToolbar={BloggFormattingToolbar} />
+            )}
+          </BlockNoteView>
         </div>
 
         {isReadOnly && (

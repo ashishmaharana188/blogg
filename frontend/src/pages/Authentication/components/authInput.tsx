@@ -15,16 +15,19 @@ const AuthInput = ({
   value,
   onChange,
 }: AuthInputProps) => {
-  return (
-    <div className="flex flex-col gap-2">
-      <label className="text-sm font-medium">{label}</label>
+  const id = `auth-field-${name}`;
 
+  return (
+    <div className="auth-field">
+      <label htmlFor={id}>{label}</label>
       <input
-        className="border rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
+        id={id}
         type={type}
         name={name}
         value={value}
         onChange={onChange}
+        autoComplete={name === "email" ? "email" : name.toLowerCase().includes("password") ? (name === "confirmPassword" ? "new-password" : "current-password") : "username"}
+        required
       />
     </div>
   );

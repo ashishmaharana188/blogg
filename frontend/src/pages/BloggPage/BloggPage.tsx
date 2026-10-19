@@ -14,7 +14,7 @@ type ViewMode = "canvas" | "flipbook";
 
 const BloggPage = () => {
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
+  const { isAdmin, loading: authLoading } = useAuth();
   const { bloggId } = useParams<{ bloggId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeForm, setActiveForm] = useState<{
@@ -100,12 +100,18 @@ const BloggPage = () => {
     setSearchParams(next, { replace: true });
   }, [isAdmin, searchParams, setSearchParams]);
 
-  // Open the selected Flipbook note in the same BlockNote note view used by
-  // Folder/Canvas. The editor starts in read mode; admins can use its EDIT button.
+  // Reuse the Folder/Canvas BlockNote form for both readable view and direct
+  // editing. Edit mode is enabled only for an authenticated administrator.
   useEffect(() => {
-    const requestedNoteId = searchParams.get("readNote");
+    const editNoteId = searchParams.get("editNote");
+    const readNoteId = searchParams.get("readNote");
+    // Wait until the persisted session has been resolved before deciding
+    // whether a direct edit link should open in editable mode.
+    if (editNoteId && authLoading) return;
+    const requestedNoteId = editNoteId || readNoteId;
     if (!requestedNoteId) return;
 
+    const openInEditMode = Boolean(editNoteId) && isAdmin;
     let cancelled = false;
     const openNoteInReader = async () => {
       try {
@@ -122,11 +128,12 @@ const BloggPage = () => {
           stackId: note.stack_id ?? null,
           groupId: note.group_id ?? null,
           selectedBlogg: note as BloggItem,
-          initialEditMode: false,
+          initialEditMode: openInEditMode,
         });
 
         const next = new URLSearchParams(searchParams);
         next.delete("readNote");
+        next.delete("editNote");
         setSearchParams(next, { replace: true });
       } catch (error) {
         console.error("Could not open note in BlockNote view:", error);
@@ -136,7 +143,7 @@ const BloggPage = () => {
 
     void openNoteInReader();
     return () => { cancelled = true; };
-  }, [searchParams, setSearchParams]);
+  }, [authLoading, isAdmin, searchParams, setSearchParams]);
 
   const handleOpenFormFromCanvas = async (
     stackId: string,

@@ -20,13 +20,10 @@ const Login = () => {
         if (!cancelled) setRegistrationEnabled(status.registrationEnabled === true);
       })
       .catch((error) => {
-        // Fail closed: don't show account creation if the backend status is unknown.
         console.error("Could not read admin registration status:", error);
         if (!cancelled) setRegistrationEnabled(false);
       });
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -48,22 +45,17 @@ const Login = () => {
 
   return (
     <AuthLayout title="Administrator Login">
-      <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
+      <form className="auth-form" onSubmit={handleSubmit}>
         <AuthInput label="Email" name="email" value={form.email} onChange={handleChange} />
         <AuthInput label="Password" type="password" name="password" value={form.password} onChange={handleChange} />
-        {errorMessage && <p role="alert" className="text-sm text-red-700">{errorMessage}</p>}
-        <button className="rounded-md bg-blue-600 py-2 text-white" type="submit">Login</button>
+        {errorMessage && <p role="alert" className="auth-error">{errorMessage}</p>}
+        <button className="auth-submit" type="submit">Login</button>
         {registrationEnabled ? (
-          <p className="text-center text-sm">
-            Initial setup?{" "}
-            <Link to="/register" className="font-medium text-blue-600 hover:underline">
-              Create administrator account
-            </Link>
+          <p className="auth-supporting-copy">
+            Initial setup? <Link to="/register" className="auth-text-link">Create administrator account</Link>
           </p>
         ) : (
-          <p className="text-center text-xs text-slate-500">
-            Administrator access only. Account creation is disabled.
-          </p>
+          <p className="auth-supporting-copy auth-muted-copy">Administrator access only. Account creation is disabled.</p>
         )}
       </form>
     </AuthLayout>

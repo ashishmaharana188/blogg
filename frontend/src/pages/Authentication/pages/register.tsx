@@ -34,15 +34,15 @@ const Register = () => {
 
   return (
     <AuthLayout title="Create Administrator Account">
-      <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
+      <form className="auth-form" onSubmit={handleSubmit}>
         <AuthInput label="Username" name="username" value={form.username} onChange={handleChange} />
         <AuthInput label="Administrator email" name="email" value={form.email} onChange={handleChange} />
         <AuthInput label="Password" type="password" name="password" value={form.password} onChange={handleChange} />
         <AuthInput label="Confirm Password" type="password" name="confirmPassword" value={form.confirmPassword} onChange={handleChange} />
-        {errorMessage && <p role="alert" className="text-sm leading-5 text-red-700">{errorMessage}</p>}
-        <button className="rounded-md bg-blue-600 py-2 text-white" type="submit">Create Admin Account</button>
-        <p className="text-center text-xs text-slate-500">One administrator account only. Turn registration off again after the initial account has been created.</p>
-        <p className="text-center text-sm"><Link to="/login" className="text-blue-600 hover:underline">Back to administrator login</Link></p>
+        {errorMessage && <p role="alert" className="auth-error">{errorMessage}</p>}
+        <button className="auth-submit" type="submit">Create Admin Account</button>
+        <p className="auth-supporting-copy auth-muted-copy">One administrator account only. Turn registration off again after the initial account has been created.</p>
+        <p className="auth-supporting-copy"><Link to="/login" className="auth-text-link">Back to administrator login</Link></p>
       </form>
     </AuthLayout>
   );
