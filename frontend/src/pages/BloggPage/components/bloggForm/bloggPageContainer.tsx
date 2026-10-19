@@ -16,8 +16,13 @@ const BloggPageContainer = ({
   onSaved?: () => void;
 }) => {
   const handleSave = async (blog: BlogSavetypes) => {
-    await saveBlog(blog, stackId, groupId, selectedBlogg?.blogg_id);
-    onSaved?.();
+    try {
+      await saveBlog(blog, stackId, groupId, selectedBlogg?.blogg_id);
+      onSaved?.();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not save this note.";
+      window.alert(message);
+    }
   };
 
   return (

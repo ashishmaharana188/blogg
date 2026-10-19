@@ -1,15 +1,22 @@
-import { useState, useCallback } from "react";
-import { Link } from "react-router-dom";
-import BloggPageContainer from "../BloggPage/components/bloggForm/bloggPageContainer";
+import { useState, useCallback, useEffect } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import BloggPageContainer from "./components/bloggForm/bloggPageContainer";
 import BlogFlipBookUI from "./components/bloggProfile/flipBook/bloggFlipBookUI";
 import BloggCanvasUI from "./components/bloggProfile/canvasView/bloggCanvasUI";
-import { BloggSummary } from "./components/bloggProfile/canvasView/bloggCanvasType";
-import { BloggItem } from "../../types/pageTypes";
+import BloggHeader from "./components/bloggHeader/BloggHeader";
+import type { BloggSummary } from "./components/bloggProfile/canvasView/bloggCanvasType";
+import type { BloggItem } from "../../types/pageTypes";
 import { fetchBloggByIdRequest } from "./services/canvasViewService";
+import { useAuth } from "../../context/authContext";
+import "./components/bloggProfile/canvasView/canvasReadOnly.css";
 
 type ViewMode = "canvas" | "flipbook";
 
 const BloggPage = () => {
+  const navigate = useNavigate();
+  const { isAdmin } = useAuth();
+  const { bloggId } = useParams<{ bloggId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeForm, setActiveForm] = useState<{
     isOpen?: boolean;
     stackId?: string | null;
@@ -23,7 +30,9 @@ const BloggPage = () => {
     selectedBlogg: null,
     initialEditMode: false,
   });
-  const [viewMode, setViewMode] = useState<ViewMode>("canvas");
+  const [viewMode, setViewMode] = useState<ViewMode>(
+    bloggId || searchParams.get("view") === "flipbook" ? "flipbook" : "canvas",
+  );
   const [canvasRefreshKey, setCanvasRefreshKey] = useState(0);
 
   const closeFormAfterSave = useCallback(() => {
@@ -37,7 +46,8 @@ const BloggPage = () => {
     setCanvasRefreshKey((key) => key + 1);
   }, []);
 
-  const toggleNote = () => {
+  const toggleNote = useCallback(() => {
+    if (!isAdmin) return;
     if (activeForm.isOpen) {
       setActiveForm((prev) => ({ ...prev, isOpen: false }));
       return;
@@ -50,11 +60,83 @@ const BloggPage = () => {
       selectedBlogg: null,
       initialEditMode: false,
     });
-  };
+  }, [activeForm.isOpen, isAdmin]);
 
   const toggleViewMode = useCallback(() => {
     setViewMode((prev) => (prev === "canvas" ? "flipbook" : "canvas"));
   }, []);
+
+  useEffect(() => {
+    if (bloggId) {
+      setViewMode("flipbook");
+      setActiveForm((prev) => prev.isOpen ? {
+        isOpen: false,
+        stackId: null,
+        groupId: null,
+        selectedBlogg: null,
+        initialEditMode: false,
+      } : prev);
+    }
+  }, [bloggId]);
+
+  // The shared header's New Note button carries this flag from Blog Feed.
+  useEffect(() => {
+    if (searchParams.get("newNote") !== "1") return;
+    if (!isAdmin) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("newNote");
+      setSearchParams(next, { replace: true });
+      return;
+    }
+    setActiveForm({
+      isOpen: true,
+      stackId: null,
+      groupId: null,
+      selectedBlogg: null,
+      initialEditMode: false,
+    });
+    const next = new URLSearchParams(searchParams);
+    next.delete("newNote");
+    setSearchParams(next, { replace: true });
+  }, [isAdmin, searchParams, setSearchParams]);
+
+  // Open the selected Flipbook note in the same BlockNote note view used by
+  // Folder/Canvas. The editor starts in read mode; admins can use its EDIT button.
+  useEffect(() => {
+    const requestedNoteId = searchParams.get("readNote");
+    if (!requestedNoteId) return;
+
+    let cancelled = false;
+    const openNoteInReader = async () => {
+      try {
+        const note = await fetchBloggByIdRequest({ blogg_id: requestedNoteId });
+        if (cancelled) return;
+        if (!note) {
+          window.alert("This note could not be found.");
+          return;
+        }
+
+        setViewMode("canvas");
+        setActiveForm({
+          isOpen: true,
+          stackId: note.stack_id ?? null,
+          groupId: note.group_id ?? null,
+          selectedBlogg: note as BloggItem,
+          initialEditMode: false,
+        });
+
+        const next = new URLSearchParams(searchParams);
+        next.delete("readNote");
+        setSearchParams(next, { replace: true });
+      } catch (error) {
+        console.error("Could not open note in BlockNote view:", error);
+        if (!cancelled) window.alert("Could not open this note. Please try again.");
+      }
+    };
+
+    void openNoteInReader();
+    return () => { cancelled = true; };
+  }, [searchParams, setSearchParams]);
 
   const handleOpenFormFromCanvas = async (
     stackId: string,
@@ -62,6 +144,7 @@ const BloggPage = () => {
     blogg?: BloggSummary,
   ) => {
     if (!blogg) {
+      if (!isAdmin) return;
       setActiveForm({
         isOpen: true,
         stackId,
@@ -94,53 +177,46 @@ const BloggPage = () => {
 
   return (
     <div className="w-full h-full flex flex-col bg-white">
-      <div className="shrink-0 pt-6 px-6 sm:pt-10 sm:px-10 flex justify-between items-end pb-4 border-b border-slate-100 z-50 bg-white">
-        <div className="flex flex-row justify-between items-center w-full mb-2">
-          <div className="flex gap-4 shrink-0 self-start items-center">
-            <Link className="text-black hover:font-bold" to="/">
-              BLOG FEED
-            </Link>
-            {!activeForm.isOpen && (
-              <button
-                className="text-sm text-gray-600 hover:text-black hover:font-bold ml-6"
-                onClick={toggleViewMode}
-              >
-                Switch to {viewMode === "canvas" ? "Flipbook" : "Folder"} View
-              </button>
-            )}
-          </div>
-          <hr className="w-350 border-black border-2 ml-5 mt-2" />
-          <div className="flex gap-4 shrink-0 pl-4 self-end mt-2">
-            <button
-              className="text-black block hover:font-bold truncate"
-              onClick={toggleNote}
-            >
-              {activeForm.isOpen ? "Close Note" : "New Note"}
-            </button>
-          </div>
-        </div>
-      </div>
+      <BloggHeader
+        page="profile"
+        viewMode={viewMode}
+        isFormOpen={Boolean(activeForm.isOpen)}
+        onToggleViewMode={toggleViewMode}
+        onNewNote={toggleNote}
+      />
 
       <div
         className={`flex-1 relative w-full ${
-          activeForm.isOpen ? "overflow-y-auto custom-scrollbar" : "overflow-hidden"
+          activeForm.isOpen
+            ? "overflow-y-auto custom-scrollbar"
+            : "overflow-hidden"
         }`}
       >
         {activeForm.isOpen ? (
-          <BloggPageContainer
-            groupId={activeForm.groupId}
-            stackId={activeForm.stackId}
-            selectedBlogg={activeForm.selectedBlogg}
-            initialEditMode={activeForm.initialEditMode}
-            onSaved={closeFormAfterSave}
-          />
-        ) : viewMode === "canvas" ? (
-          <BloggCanvasUI
-            key={canvasRefreshKey}
-            onOpenForm={handleOpenFormFromCanvas}
-          />
+          <div className={isAdmin ? "h-full" : "h-full public-readonly-note-form"}>
+            <BloggPageContainer
+              groupId={activeForm.groupId}
+              stackId={activeForm.stackId}
+              selectedBlogg={activeForm.selectedBlogg}
+              initialEditMode={activeForm.initialEditMode}
+              onSaved={closeFormAfterSave}
+            />
+          </div>
+        ) : viewMode === "canvas" && !bloggId ? (
+          <div className={isAdmin ? "absolute inset-0" : "absolute inset-0 canvas-readonly-scope"}>
+            <BloggCanvasUI
+              key={canvasRefreshKey}
+              onOpenForm={handleOpenFormFromCanvas}
+            />
+          </div>
         ) : (
-          <BlogFlipBookUI onEditBlogg={handleEditFromFlipBook} />
+          <BlogFlipBookUI
+            initialBloggId={bloggId}
+            onOpenBlogg={(blogg) => navigate(`/blog/${encodeURIComponent(blogg.blogg_id || blogg._id)}`)}
+            onBackFromBlogg={() => navigate("/blog?view=flipbook")}
+            onOpenInReader={(blogg) => navigate(`/blog?readNote=${encodeURIComponent(blogg.blogg_id || blogg._id)}`)}
+            onEditBlogg={isAdmin ? handleEditFromFlipBook : undefined}
+          />
         )}
       </div>
     </div>

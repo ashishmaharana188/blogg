@@ -16,6 +16,10 @@ export type FlipBookPageType = {
 
 export type BlogFlipBookUIProps = {
   onEditBlogg?: (blogg: BloggItem) => void;
+  initialBloggId?: string;
+  onOpenBlogg?: (blogg: BloggItem) => void;
+  onBackFromBlogg?: () => void;
+  onOpenInReader?: (blogg: BloggItem) => void;
 };
 
 export type FlipBookPageProps = {

@@ -1,21 +1,19 @@
 import type { Request, Response, NextFunction } from "express";
-
 import jwt from "jsonwebtoken";
-
 import HttpError from "../server/httpError.ts";
 
-const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret";
+const JWT_SECRET = process.env.JWT_SECRET ?? (process.env.NODE_ENV === "production" ? "" : "dev-secret");
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET must be configured in production.");
+}
 
 export const authenticationMiddleware = (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction,
 ) => {
   const token = req.cookies?.authToken;
-
-  if (!token) {
-    return next(new HttpError(401, "Authentication required."));
-  }
+  if (!token) return next(new HttpError(401, "Authentication required."));
 
   try {
     req.user = jwt.verify(token, JWT_SECRET) as {
@@ -24,11 +22,8 @@ export const authenticationMiddleware = (
       displayName: string;
       email: string;
     };
-
     next();
-  } catch (error) {
-    console.error(error);
-
+  } catch {
     next(new HttpError(401, "Invalid authentication token."));
   }
 };

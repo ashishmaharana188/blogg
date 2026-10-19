@@ -1,0 +1,209 @@
+.blogg-share-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border: 1px solid #d8dee7;
+  border-radius: 999px;
+  background: #fff;
+  color: #334155;
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.blogg-share-trigger:hover {
+  background: #f8fafc;
+  border-color: #aeb8c5;
+}
+
+.blogg-share-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgb(15 23 42 / 42%);
+}
+
+.blogg-share-dialog {
+  width: min(100%, 560px);
+  max-height: min(90vh, 780px);
+  overflow-y: auto;
+  padding: 22px;
+  border: 1px solid #d8dee7;
+  border-radius: 18px;
+  background: #fff;
+  color: #17202a;
+  box-shadow: 0 24px 70px rgb(15 23 42 / 22%);
+}
+
+.blogg-share-dialog-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.blogg-share-eyebrow {
+  margin: 0 0 6px;
+  color: #64748b;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+}
+
+.blogg-share-dialog-heading h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.blogg-share-close {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 50%;
+  background: #fff;
+  color: #334155;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.blogg-share-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 18px;
+  padding: 17px;
+  border: 1px solid #d5dbe3;
+  border-radius: 13px;
+  background: linear-gradient(135deg, #fff 0%, #f8fafc 100%);
+  box-shadow: 0 4px 12px rgb(15 23 42 / 5%);
+}
+
+.blogg-share-preview-topline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 10px;
+  justify-content: space-between;
+  color: #64748b;
+  font-size: 0.72rem;
+}
+
+.blogg-share-preview strong {
+  color: #0f172a;
+  font-size: 1.05rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.blogg-share-preview p {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  margin: 0;
+  color: #475569;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.blogg-share-preview-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.blogg-share-preview-tags span {
+  padding: 3px 7px;
+  border: 1px solid #d8dee7;
+  border-radius: 999px;
+  color: #64748b;
+  font-size: 0.66rem;
+}
+
+.blogg-share-preview small {
+  margin-top: 2px;
+  color: #94a3b8;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.blogg-share-label {
+  display: block;
+  margin: 13px 0 6px;
+  color: #475569;
+  font-size: 0.74rem;
+}
+
+.blogg-share-copy-row {
+  display: flex;
+  gap: 7px;
+  min-width: 0;
+}
+
+.blogg-share-copy-row input,
+.blogg-share-dialog textarea {
+  min-width: 0;
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid #dbe2ea;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #334155;
+  font: inherit;
+  font-size: 0.72rem;
+}
+
+.blogg-share-copy-row button,
+.blogg-share-copy-code {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  background: #1e293b;
+  color: #fff;
+  font: inherit;
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+
+.blogg-share-copy-row button:hover,
+.blogg-share-copy-code:hover {
+  background: #0f172a;
+}
+
+.blogg-share-dialog textarea {
+  display: block;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.blogg-share-copy-code {
+  margin-top: 8px;
+}
+
+.blogg-share-feedback {
+  margin: 10px 0 0;
+  color: #475569;
+  font-size: 0.74rem;
+}
+
+@media (max-width: 520px) {
+  .blogg-share-dialog {
+    padding: 16px;
+  }
+
+  .blogg-share-copy-row {
+    flex-direction: column;
+  }
+}

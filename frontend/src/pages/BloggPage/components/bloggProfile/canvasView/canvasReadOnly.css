@@ -1,0 +1,41 @@
+/* Public Folder/Canvas mode: keep reading and opening folders available, but remove every edit/create/layout affordance. */
+.canvas-readonly-scope button[title="Delete Stack"],
+.canvas-readonly-scope button[title="Delete Folder"],
+.canvas-readonly-scope button[class*="border-dashed"],
+.canvas-readonly-scope button[class*="bg-slate-800"],
+.canvas-readonly-scope button[class*="px-3"][class*="py-1.5"][class*="bg-black"][class*="text-xs"],
+.canvas-readonly-scope button[class*="group-hover/stack"],
+.canvas-readonly-scope [class*="group/title"] button,
+.canvas-readonly-scope button[title*="Remove"],
+.canvas-readonly-scope label[class*="bg-black/50"],
+.canvas-readonly-scope [class*="group flex items-center justify-between"] button {
+  display: none !important;
+}
+
+.canvas-readonly-scope [title="Click to rename"] {
+  pointer-events: none !important;
+  cursor: default !important;
+}
+
+.canvas-readonly-scope .no-pan.absolute.flex.flex-col.items-center > [class*="mb-8"][class*="cursor-grab"] {
+  pointer-events: none !important;
+  cursor: default !important;
+}
+
+.canvas-readonly-scope [class*="group/title"] h2 {
+  pointer-events: none !important;
+  cursor: default !important;
+}
+
+.canvas-readonly-scope [class*="cursor-grab"] {
+  cursor: default !important;
+}
+
+.canvas-readonly-scope .font-mono.text-sm {
+  display: none !important;
+}
+
+/* A public note opened from a Folder card is readable, but it must not expose UserForm's EDIT toggle. */
+.public-readonly-note-form button[class*="px-5"][class*="py-1"][class*="text-l"] {
+  display: none !important;
+}

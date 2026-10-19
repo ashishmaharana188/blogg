@@ -9,10 +9,13 @@ import {
 
 import type { BloggItem } from "../../../../../types/pageTypes";
 import { fetchAllBloggsRequest } from "../../../services/flipBookService";
+import { fetchStackAndGroup } from "../../../services/canvasViewService";
 import FlipBookThumbnailBar from "./flipBookThumbnailBar";
 import "./flipBook.css";
+import "./flipBookSpine.css";
 import { ReadOnlyBloggContent } from "./readOnlyBloggContent";
 import type { BlogFlipBookUIProps, FlipBookPageType } from "./flipBookTypes";
+import ShareBloggButton from "../../ShareBloggButton";
 
 type TurnDirection = "next" | "previous";
 
@@ -285,10 +288,12 @@ const TurningSheet = ({
   pages,
   turn,
   onDone,
+  stackOrder,
 }: {
   pages: FlipBookPageType[];
   turn: ActiveTurn;
   onDone: () => void;
+  stackOrder: number;
 }) => {
   const isNext = turn.direction === "next";
   const frontPage = pages[isNext ? turn.from + 1 : turn.from];
@@ -299,6 +304,7 @@ const TurningSheet = ({
       className={`flipbook-turning-sheet ${
         isNext ? "flipbook-turn-next" : "flipbook-turn-previous"
       } ${turn.isRapid ? "flipbook-rapid" : ""}`}
+      style={{ zIndex: stackOrder }}
       onAnimationEnd={(event) => {
         if (event.target !== event.currentTarget) return;
         onDone();
@@ -310,18 +316,28 @@ const TurningSheet = ({
       <div className="flipbook-sheet-face flipbook-sheet-back">
         <PagePane page={backPage} side={isNext ? "left" : "right"} />
       </div>
-      <div className="flipbook-sheet-gloss" />
     </div>
   );
 };
 
-const BlogFlipBookUI = ({ onEditBlogg }: BlogFlipBookUIProps) => {
+const BlogFlipBookUI = ({
+  onEditBlogg,
+  initialBloggId,
+  onOpenBlogg,
+  onBackFromBlogg,
+  onOpenInReader,
+}: BlogFlipBookUIProps) => {
   const [bloggs, setBloggs] = useState<BloggItem[]>([]);
+  const [canvasStacks, setCanvasStacks] = useState<any[]>([]);
+  const [canvasGroups, setCanvasGroups] = useState<any[]>([]);
   const [selectedBlogg, setSelectedBlogg] = useState<BloggItem | null>(null);
   const [settledSpread, setSettledSpread] = useState(0);
   const [activeTurns, setActiveTurns] = useState<ActiveTurn[]>([]);
 
   const turnIdRef = useRef(0);
+  // A ref keeps held-key page turns in sync even though the interval callback
+  // outlives React renders.
+  const settledSpreadRef = useRef(0);
   const holdTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rapidIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -338,6 +354,32 @@ const BlogFlipBookUI = ({ onEditBlogg }: BlogFlipBookUIProps) => {
 
     loadFlipBookPages();
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchStackAndGroup()
+      .then((data) => {
+        if (cancelled) return;
+        setCanvasStacks(Array.isArray(data?.stacks) ? data.stacks : []);
+        setCanvasGroups(Array.isArray(data?.groups) ? data.groups : []);
+      })
+      .catch((error) => console.error("Could not load folder names for sharing:", error));
+    return () => { cancelled = true; };
+  }, []);
+
+  // A /blog/:bloggId link opens the matching note directly. When the id is
+  // removed (Back), return to the overview spread.
+  useEffect(() => {
+    if (!initialBloggId) {
+      setSelectedBlogg(null);
+      return;
+    }
+    if (bloggs.length === 0) return;
+    const matchedBlogg = bloggs.find(
+      (blogg) => blogg.blogg_id === initialBloggId || blogg._id === initialBloggId,
+    );
+    setSelectedBlogg(matchedBlogg ?? null);
+  }, [bloggs, initialBloggId]);
 
   const sourcePages = useMemo(
     () =>
@@ -363,6 +405,7 @@ const BlogFlipBookUI = ({ onEditBlogg }: BlogFlipBookUIProps) => {
 
   const resetTurns = useCallback(() => {
     stopHold();
+    settledSpreadRef.current = 0;
     setActiveTurns([]);
     setSettledSpread(0);
   }, [stopHold]);
@@ -371,20 +414,28 @@ const BlogFlipBookUI = ({ onEditBlogg }: BlogFlipBookUIProps) => {
     (blogg: BloggItem) => {
       resetTurns();
       setSelectedBlogg(blogg);
+      onOpenBlogg?.(blogg);
     },
-    [resetTurns],
+    [onOpenBlogg, resetTurns],
   );
 
   const handleBack = useCallback(() => {
     resetTurns();
     setSelectedBlogg(null);
-  }, [resetTurns]);
+    onBackFromBlogg?.();
+  }, [onBackFromBlogg, resetTurns]);
 
   const handleEdit = useCallback(() => {
     if (!selectedBlogg) return;
     stopHold();
     onEditBlogg?.(selectedBlogg);
   }, [onEditBlogg, selectedBlogg, stopHold]);
+
+  const handleOpenInReader = useCallback(() => {
+    if (!selectedBlogg) return;
+    stopHold();
+    onOpenInReader?.(selectedBlogg);
+  }, [onOpenInReader, selectedBlogg, stopHold]);
 
   const currentLogicalSpread = useMemo(() => {
     if (activeTurns.length === 0) return settledSpread;
@@ -397,27 +448,39 @@ const BlogFlipBookUI = ({ onEditBlogg }: BlogFlipBookUIProps) => {
 
   const completeTurn = useCallback(
     (id: number, targetSpread: number, direction: TurnDirection) => {
-      setSettledSpread((prev) => {
-        if (direction === "next") return Math.max(prev, targetSpread);
-        return Math.min(prev, targetSpread);
-      });
-      setActiveTurns((prev) => prev.filter((turn) => turn.id !== id));
+      // Multiple leaves may be turning at once. Keep the settled spread
+      // monotonic so an older animation finishing cannot pull the book back.
+      const nextSettled =
+        direction === "next"
+          ? Math.max(settledSpreadRef.current, targetSpread)
+          : Math.min(settledSpreadRef.current, targetSpread);
+      settledSpreadRef.current = nextSettled;
+      setSettledSpread((previous) =>
+        direction === "next"
+          ? Math.max(previous, targetSpread)
+          : Math.min(previous, targetSpread),
+      );
+      setActiveTurns((previous) => previous.filter((turn) => turn.id !== id));
     },
     [],
   );
 
   const startTurn = useCallback(
     (direction: TurnDirection, isRapid = false) => {
-      setActiveTurns((prev) => {
-        if (prev.length > 0 && prev[0].direction !== direction) return prev;
+      setActiveTurns((previous) => {
+        // Keep one direction per overlapping burst, but do not wait for the
+        // current sheet to finish. This restores the original rapid-stack feel.
+        if (previous.length > 0 && previous[0].direction !== direction) {
+          return previous;
+        }
 
-        let lastLogical = settledSpread;
-        if (prev.length > 0) {
-          const targets = prev.map((turn) => turn.to);
+        let lastLogical = settledSpreadRef.current;
+        if (previous.length > 0) {
+          const targets = previous.map((turn) => turn.to);
           lastLogical =
             direction === "next"
-              ? Math.max(settledSpread, ...targets)
-              : Math.min(settledSpread, ...targets);
+              ? Math.max(lastLogical, ...targets)
+              : Math.min(lastLogical, ...targets);
         }
 
         const to =
@@ -425,10 +488,10 @@ const BlogFlipBookUI = ({ onEditBlogg }: BlogFlipBookUIProps) => {
             ? Math.min(lastLogical + 2, maxSpread)
             : Math.max(lastLogical - 2, 0);
 
-        if (to === lastLogical) return prev;
+        if (to === lastLogical) return previous;
 
         return [
-          ...prev,
+          ...previous,
           {
             id: turnIdRef.current++,
             direction,
@@ -439,7 +502,7 @@ const BlogFlipBookUI = ({ onEditBlogg }: BlogFlipBookUIProps) => {
         ];
       });
     },
-    [maxSpread, settledSpread],
+    [maxSpread],
   );
 
   useEffect(() => {
@@ -487,6 +550,7 @@ const BlogFlipBookUI = ({ onEditBlogg }: BlogFlipBookUIProps) => {
         return;
       }
 
+      settledSpreadRef.current = nextSpread;
       setSettledSpread(nextSpread);
       setActiveTurns([]);
     },
@@ -548,10 +612,21 @@ const BlogFlipBookUI = ({ onEditBlogg }: BlogFlipBookUIProps) => {
       )} of ${sourcePages.length}`
     : `Bloggs · spread ${spreadNumber} of ${totalSpreads}`;
 
+  const selectedGroup = selectedBlogg
+    ? canvasGroups.find((group) => group.group_id === selectedBlogg.group_id)
+    : undefined;
+  const selectedStack = selectedBlogg
+    ? canvasStacks.find((stack) => stack.stack_id === selectedBlogg.stack_id) ||
+      canvasStacks.find((stack) => stack.stack_id === selectedGroup?.stack_id)
+    : undefined;
+
   return (
     <div className="flipbook-profile">
       <main className="flipbook-stage" aria-live="polite">
-        <div className="flipbook-book" aria-label="Blog flipbook">
+        <div
+          className={`flipbook-book ${activeTurns.length > 0 ? "flipbook-book-turning" : ""}`}
+          aria-label="Blog flipbook"
+        >
           <div className="flipbook-stack flipbook-stack-left" />
           <div className="flipbook-stack flipbook-stack-right" />
 
@@ -571,13 +646,22 @@ const BlogFlipBookUI = ({ onEditBlogg }: BlogFlipBookUIProps) => {
                 activeTurns.length > 0 ? "flipbook-center-shadow-active" : ""
               }`}
             />
+            {activeTurns.length === 0 && (
+              <div className="flipbook-spiral-spine" aria-hidden="true">
+                {Array.from({ length: 20 }, (_, index) => (
+                  <span key={index} />
+                ))}
+              </div>
+            )}
           </div>
 
-          {activeTurns.map((turn) => (
+          {activeTurns.map((turn, index) => (
             <TurningSheet
               key={turn.id}
               pages={bookPages}
               turn={turn}
+              // Earliest leaf stays in front; newly started leaves turn behind it.
+              stackOrder={100 - index}
               onDone={() => completeTurn(turn.id, turn.to, turn.direction)}
             />
           ))}
@@ -590,9 +674,19 @@ const BlogFlipBookUI = ({ onEditBlogg }: BlogFlipBookUIProps) => {
             <button type="button" onClick={handleBack}>
               Back
             </button>
-            <button type="button" onClick={handleEdit}>
-              Edit
+            <button type="button" onClick={handleOpenInReader}>
+              Open in Note View
             </button>
+            {onEditBlogg && (
+              <button type="button" onClick={handleEdit}>
+                Edit
+              </button>
+            )}
+            <ShareBloggButton
+              blogg={selectedBlogg}
+              stackName={selectedStack?.stack_name || "Unsorted stack"}
+              groupName={selectedGroup?.group_name || "Others"}
+            />
           </div>
         )}
 

@@ -1,21 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { BlockNoteView } from "@blocknote/mantine";
 import { useCreateBlockNote } from "@blocknote/react";
 import type { BloggItem } from "../../types/pageTypes";
 import { fetchAllBloggsRequest } from "../BloggPage/services/flipBookService";
 import { fetchStackAndGroup } from "../BloggPage/services/canvasViewService";
-import "@blocknote/core/fonts/inter.css";
+import BloggHeader from "../BloggPage/components/bloggHeader/BloggHeader";
+import ShareBloggButton from "../BloggPage/components/ShareBloggButton";
 import "@blocknote/mantine/style.css";
 import "./blogFeed.css";
 
 type CanvasStack = { stack_id: string; stack_name: string };
-type CanvasGroup = {
-  group_id: string;
-  group_name: string;
-  stack_id: string;
-};
-
+type CanvasGroup = { group_id: string; group_name: string; stack_id: string };
 const EMPTY_BLOCKS: any[] = [{ type: "paragraph", content: "" }];
 
 function formatDate(value?: string) {
@@ -38,10 +34,15 @@ function NoteBody({ content }: { content?: unknown[] }) {
         ? (content as any[])
         : EMPTY_BLOCKS,
   });
+  const hasContent = Array.isArray(content) && content.length > 0;
 
   return (
     <div className="blog-feed-note-body">
-      <BlockNoteView editor={editor} editable={false} theme="light" />
+      {hasContent ? (
+        <BlockNoteView editor={editor} editable={false} theme="light" />
+      ) : (
+        <p className="blog-feed-empty-body">No body content yet.</p>
+      )}
     </div>
   );
 }
@@ -55,6 +56,9 @@ function FeedPost({
   stackName: string;
   groupName: string;
 }) {
+  const noteId = blogg.blogg_id || blogg._id;
+  const noteUrl = `/read/${encodeURIComponent(noteId)}`;
+
   return (
     <article className="blog-feed-post-card">
       <header className="blog-feed-post-header">
@@ -72,23 +76,30 @@ function FeedPost({
         </time>
       </header>
 
-      {blogg.title?.trim() && <h2 className="blog-feed-post-title">{blogg.title}</h2>}
+      {blogg.title?.trim() && (
+        <h2 className="blog-feed-post-title">
+          <Link to={noteUrl}>{blogg.title}</Link>
+        </h2>
+      )}
       {blogg.subtitle?.trim() && <p className="blog-feed-post-description">{blogg.subtitle}</p>}
-
       <NoteBody content={blogg.content} />
 
       {!!blogg.tags?.length && (
         <div className="blog-feed-tags" aria-label="Tags">
-          {blogg.tags.map((tag) => (
-            <span className="blog-feed-tag" key={tag}>{tag}</span>
-          ))}
+          {blogg.tags.map((tag) => <span className="blog-feed-tag" key={tag}>{tag}</span>)}
         </div>
       )}
+
+      <footer className="blog-feed-post-actions">
+        <Link className="blog-feed-open-link" to={noteUrl}>Open note</Link>
+        <ShareBloggButton blogg={blogg} stackName={stackName} groupName={groupName} />
+      </footer>
     </article>
   );
 }
 
 const HomePage = () => {
+  const navigate = useNavigate();
   const [bloggs, setBloggs] = useState<BloggItem[]>([]);
   const [stacks, setStacks] = useState<CanvasStack[]>([]);
   const [groups, setGroups] = useState<CanvasGroup[]>([]);
@@ -98,19 +109,16 @@ const HomePage = () => {
   const loadFeed = useCallback(async () => {
     setIsLoading(true);
     setLoadError("");
-
     try {
       const [notesResult, canvasResult] = await Promise.all([
         fetchAllBloggsRequest(),
         fetchStackAndGroup(),
       ]);
-
       const notes = (notesResult as BloggItem[]).slice().sort((a, b) => {
         const aTime = new Date(a.createdAt || a.updatedAt || 0).getTime() || 0;
         const bTime = new Date(b.createdAt || b.updatedAt || 0).getTime() || 0;
         return bTime - aTime;
       });
-
       setBloggs(notes);
       setStacks(Array.isArray(canvasResult?.stacks) ? canvasResult.stacks : []);
       setGroups(Array.isArray(canvasResult?.groups) ? canvasResult.groups : []);
@@ -122,18 +130,10 @@ const HomePage = () => {
     }
   }, []);
 
-  useEffect(() => {
-    void loadFeed();
-  }, [loadFeed]);
+  useEffect(() => { void loadFeed(); }, [loadFeed]);
 
-  const stackById = useMemo(
-    () => new Map(stacks.map((stack) => [stack.stack_id, stack])),
-    [stacks],
-  );
-  const groupById = useMemo(
-    () => new Map(groups.map((group) => [group.group_id, group])),
-    [groups],
-  );
+  const stackById = useMemo(() => new Map(stacks.map((stack) => [stack.stack_id, stack])), [stacks]);
+  const groupById = useMemo(() => new Map(groups.map((group) => [group.group_id, group])), [groups]);
 
   const getLocation = (blogg: BloggItem) => {
     const group = groupById.get(blogg.group_id);
@@ -145,24 +145,9 @@ const HomePage = () => {
   };
 
   return (
-    <div className="blog-feed-page">
-      <header className="blog-feed-header">
-        <nav className="blog-feed-header-nav" aria-label="Main navigation">
-          <Link className="blog-feed-header-link is-active" to="/feed" aria-current="page">
-            Blog Feed
-          </Link>
-          <Link className="blog-feed-header-link" to="/blog">
-            Blog Profile
-          </Link>
-        </nav>
-      </header>
-
+    <div className="blog-feed-page typewriter-font">
+      <BloggHeader page="feed" onNewNote={() => navigate("/blog?newNote=1")} />
       <main className="blog-feed-content">
-        <div className="blog-feed-heading">
-          <h1>Blog Feed</h1>
-          <p>Notes from your workspace, newest first.</p>
-        </div>
-
         {isLoading ? (
           <div className="blog-feed-state" role="status">Loading notes…</div>
         ) : loadError ? (
@@ -173,7 +158,7 @@ const HomePage = () => {
         ) : bloggs.length === 0 ? (
           <div className="blog-feed-state">
             <h2>No notes yet</h2>
-            <p>Create a note in your Blog Profile to see it here.</p>
+            <p>Notes published to the site will appear here.</p>
             <Link to="/blog">Open Blog Profile</Link>
           </div>
         ) : (

@@ -1,7 +1,6 @@
 import express from "express";
 import cors from "cors";
 import logger from "../logs/logger.ts";
-import { trace } from "../middleware/trace.ts";
 import { middleware } from "../middleware/middleWare.ts";
 import { mongoConnectDB } from "../db/mongoDBConnect.ts";
 import { warmupPgPool } from "../db/postgres.ts";
@@ -11,10 +10,11 @@ import canvasViewInterceptor from "../routes/canvasView/canvasViewIndex.ts";
 import flipBookInterceptor from "../routes/flipBook/flipBookIndex.ts";
 import authenticationRouter from "../routes/authentication/authenticationIndex.ts";
 import cookieParser from "cookie-parser";
-
 import { errorHandler } from "../middleware/errorHandler.ts";
+import adminStatusRouter from "../routes/adminStatus.ts";
 
 const app = express();
+const port = Number(process.env.PORT ?? 3000);
 
 app.use(
   cors({
@@ -22,9 +22,7 @@ app.use(
     credentials: true,
   }),
 );
-
 app.use(express.json());
-
 app.use(middleware);
 
 await mongoConnectDB();
@@ -32,14 +30,13 @@ await warmupPgPool();
 await initializePostgresSchema();
 
 app.use(cookieParser());
-
 app.use("/api/auth", authenticationRouter);
-
+app.use("/api/admin", adminStatusRouter);
 app.use(canvasViewInterceptor);
 app.use(blogInterceptRouter);
 app.use(flipBookInterceptor);
 app.use(errorHandler);
 
-app.listen(3000, () => {
-  logger.info("Server running on port 3000");
+app.listen(port, "0.0.0.0", () => {
+  logger.info({ event: "SERVER_RUNNING", port });
 });

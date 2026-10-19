@@ -1,68 +1,26 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-
 import Login from "../pages/Authentication/pages/login";
 import Register from "../pages/Authentication/pages/register";
-
 import HomePage from "../pages/BloggFeed/BlogFeed";
 import BloggPage from "../pages/BloggPage/BloggPage";
+import BloggReadPage from "../pages/BloggReadPage";
+import BloggEmbedPage from "../pages/BloggEmbed/BloggEmbedPage";
+import AccountPage from "../pages/Account/AccountPage";
 
-import { useAuth } from "../context/authContext";
-
-const Router = () => {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return null;
-  }
-
-  const isAuthenticated = !!user;
-
-  return (
-    <Routes>
-      {/* Public Routes */}
-
-      <Route
-        path="/"
-        element={
-          isAuthenticated ? (
-            <Navigate to="/feed" replace />
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        }
-      />
-
-      <Route
-        path="/login"
-        element={isAuthenticated ? <Navigate to="/feed" replace /> : <Login />}
-      />
-
-      <Route
-        path="/register"
-        element={
-          isAuthenticated ? <Navigate to="/feed" replace /> : <Register />
-        }
-      />
-
-      {/* Protected Routes */}
-
-      <Route
-        path="/feed"
-        element={
-          isAuthenticated ? <HomePage /> : <Navigate to="/login" replace />
-        }
-      />
-
-      <Route
-        path="/blog"
-        element={
-          isAuthenticated ? <BloggPage /> : <Navigate to="/login" replace />
-        }
-      />
-
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-  );
-};
+/** Reading the feed and opening shared notes are public. Account routes remain optional. */
+const Router = () => (
+  <Routes>
+    <Route path="/" element={<Navigate to="/feed" replace />} />
+    <Route path="/account" element={<AccountPage />} />
+    <Route path="/login" element={<Login />} />
+    <Route path="/register" element={<Register />} />
+    <Route path="/feed" element={<HomePage />} />
+    <Route path="/blog" element={<BloggPage />} />
+    <Route path="/blog/:bloggId" element={<BloggPage />} />
+    <Route path="/read/:bloggId" element={<BloggReadPage />} />
+    <Route path="/embed/:bloggId" element={<BloggEmbedPage />} />
+    <Route path="*" element={<Navigate to="/feed" replace />} />
+  </Routes>
+);
 
 export default Router;

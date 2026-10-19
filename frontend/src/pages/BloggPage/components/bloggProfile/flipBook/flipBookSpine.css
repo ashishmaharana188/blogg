@@ -1,0 +1,172 @@
+/* Page turn rendering: the animated sheet carries two opaque paper faces.
+   Keep the border on each face; nested page panes must not hide themselves with
+   backface-visibility, because that can make the body vanish as the parent turns. */
+.flipbook-turning-sheet {
+  position: absolute;
+  width: var(--page-w);
+  height: var(--page-h);
+  z-index: 20;
+  background: #fff;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+  backface-visibility: visible;
+  -webkit-backface-visibility: visible;
+  will-change: transform;
+  pointer-events: none;
+}
+
+.flipbook-turn-next {
+  animation: flipbook-next-smooth 620ms cubic-bezier(0.45, 0, 0.25, 1) both !important;
+}
+
+.flipbook-turn-previous {
+  animation: flipbook-previous-smooth 620ms cubic-bezier(0.45, 0, 0.25, 1) both !important;
+}
+
+.flipbook-turn-next.flipbook-rapid {
+  animation-duration: 620ms !important;
+  animation-timing-function: cubic-bezier(0.45, 0, 0.25, 1) !important;
+}
+
+.flipbook-turn-previous.flipbook-rapid {
+  animation-duration: 620ms !important;
+  animation-timing-function: cubic-bezier(0.45, 0, 0.25, 1) !important;
+}
+
+.flipbook-sheet-face {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: #fff !important;
+  border: 2px solid #111 !important;
+  border-radius: 0 !important;
+  opacity: 1 !important;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform-style: flat;
+  -webkit-transform-style: flat;
+}
+
+.flipbook-sheet-back {
+  transform: rotateY(180deg);
+  -webkit-transform: rotateY(180deg);
+}
+
+.flipbook-turn-next .flipbook-sheet-face:not(.flipbook-sheet-back) {
+  border-radius: 0 var(--book-radius) var(--book-radius) 0 !important;
+}
+
+.flipbook-turn-next .flipbook-sheet-back {
+  border-radius: var(--book-radius) 0 0 var(--book-radius) !important;
+}
+
+.flipbook-turn-previous .flipbook-sheet-face:not(.flipbook-sheet-back) {
+  border-radius: var(--book-radius) 0 0 var(--book-radius) !important;
+}
+
+.flipbook-turn-previous .flipbook-sheet-back {
+  border-radius: 0 var(--book-radius) var(--book-radius) 0 !important;
+}
+
+/* Each moving face's note surface is flat and opaque. Its inherited legacy
+   backface rule is deliberately overridden so the reverse-side content paints. */
+.flipbook-sheet-face > .flipbook-page {
+  position: relative;
+  display: block;
+  box-sizing: border-box;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  border: 0 !important;
+  outline: none !important;
+  background: #fff !important;
+  opacity: 1 !important;
+  -webkit-mask-image: none !important;
+  mask-image: none !important;
+  backface-visibility: visible !important;
+  -webkit-backface-visibility: visible !important;
+  transform-style: flat !important;
+  -webkit-transform-style: flat !important;
+}
+
+.flipbook-sheet-face > .flipbook-page > .flipbook-page-content {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  background: #fff !important;
+  opacity: 1 !important;
+}
+
+@keyframes flipbook-next-smooth {
+  from { transform: rotateY(0deg) translateZ(1px); }
+  to { transform: rotateY(-180deg) translateZ(-1px); }
+}
+
+@keyframes flipbook-previous-smooth {
+  from { transform: rotateY(0deg) translateZ(1px); }
+  to { transform: rotateY(180deg) translateZ(-1px); }
+}
+
+/* Page-turn animations remain enabled for explicit user navigation, even when
+   the operating system requests reduced motion. Previously this rule reduced
+   normal single-click turns to 1ms while the more-specific rapid-turn class
+   overrode it, making clicks look instant and held navigation animated. */
+
+/* The note's detail pages remain scrollable, but never show a scrollbar. */
+.flipbook-detail-page,
+.flipbook-detail-page * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.flipbook-detail-page::-webkit-scrollbar,
+.flipbook-detail-page *::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Thin, open wire loops at the binding. No filled white rings or shadows. */
+.flipbook-spiral-spine {
+  position: absolute;
+  z-index: 8;
+  top: 8px;
+  bottom: 8px;
+  left: 50%;
+  width: 28px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+  gap: 3px;
+  pointer-events: none;
+}
+
+.flipbook-spiral-spine span {
+  display: block;
+  flex: 0 0 8px;
+  width: 25px;
+  box-sizing: border-box;
+  border: 1px solid #111;
+  border-radius: 50%;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.flipbook-book-turning .flipbook-spiral-spine {
+  visibility: hidden;
+}
+
+/* Keep the shared header aligned with Blog Profile's existing typewriter font. */
+.blogg-shared-header {
+  font-family: "Courier Prime", "Courier New", Courier, monospace;
+}
+
+.blogg-shared-header a,
+.blogg-shared-header button {
+  font-family: inherit;
+}
