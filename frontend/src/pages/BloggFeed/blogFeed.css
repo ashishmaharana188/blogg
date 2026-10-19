@@ -15,7 +15,7 @@
 }
 
 .blog-feed-content {
-  width: min(100% - 32px, 820px);
+  width: min(100% - 32px, 1065px);
   margin: 0 auto;
   padding: 28px 0 56px;
 }
@@ -28,14 +28,12 @@
 
 .blog-feed-post-card {
   min-width: 0;
-  padding: 22px 24px 17px;
-  border: 2px solid #383b33;
+  padding: 26px 28px 20px;
+  border: 1px solid #d5dbe3;
   border-radius: 16px;
   background: #fff;
   box-shadow: 0 2px 5px rgb(15 23 42 / 3%);
-  transition:
-    border-color 160ms ease,
-    box-shadow 160ms ease;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .blog-feed-post-card:hover {
@@ -134,6 +132,7 @@
   min-height: 0 !important;
   overflow: visible !important;
 }
+
 
 .blog-feed-note-body {
   min-width: 0;
@@ -291,7 +290,7 @@
   }
 
   .blog-feed-post-card {
-    padding: 17px 15px 15px;
+    padding: 20px 17px 18px;
     border-radius: 14px;
   }
 
@@ -310,4 +309,23 @@
   .blog-feed-note-preview {
     max-height: 273px;
   }
+}
+
+
+/* Media notes use the same full, uncropped presentation as the opened note. */
+.blog-feed-note-preview.blog-feed-note-preview--media {
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.blog-feed-note-preview--media .blog-feed-note-body img,
+.blog-feed-note-preview--media .blog-feed-note-body video {
+  display: block;
+  width: 100%;
+  max-width: min(100%, 760px);
+  max-height: min(72vh, 620px);
+  height: auto;
+  object-fit: contain;
+  margin: 0 auto;
+  border-radius: 6px;
 }
