@@ -10,7 +10,7 @@ import {
   getBloggContent,
   assignUngroupedBlogsToDefaultFolder,
 } from "./bloggDocumentUtil.ts";
- 
+
 const blogInterceptRouter = express.Router();
 
 blogInterceptRouter.post(
@@ -28,7 +28,7 @@ blogInterceptRouter.post(
   authenticationMiddleware,
   adminMiddleware,
   upload.single("file"),
-  trace("MEDIA UPOAD", async (req) => {
+  trace("MEDIA_UPLOAD", async (req) => {
     if (!req.file) throw new Error("No file uploaded");
     const mediaUploaded = await saveBlogMedia(req.file);
     return { success: true, message: "MEDIA_SAVED", media: mediaUploaded };

@@ -1,50 +1,97 @@
 import multer from "multer";
 import { getDB } from "../../db/mongoDBConnect.ts";
 import type { BlogInput, BlogDocument } from "../../types/blogTypes.ts";
-import { Readable } from "stream";
 import cloudinary from "../../cloudinary/cloudinary.ts";
 import logger from "../../logs/logger.ts";
 import { randomUUID } from "crypto";
 
+const ALLOWED_VIDEO_MIME_TYPES = new Set([
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+]);
+
+const isAllowedMediaType = (mimeType: string) => {
+  // BlockNote commonly sends raster images and phone-originated image formats.
+  // SVG is deliberately excluded because it can contain active content.
+  const isImage = mimeType.startsWith("image/") && mimeType !== "image/svg+xml";
+  return isImage || ALLOWED_VIDEO_MIME_TYPES.has(mimeType);
+};
+
 export const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024 },
-  fileFilter: (req, file, callback) => {
-    const allowedMimeTypes = [
-      "image/jpeg",
-      "image/png",
-      "image/webp",
-      "video/mp4",
-      "video/webm",
-      "video/quicktime",
-    ];
-    if (allowedMimeTypes.includes(file.mimetype)) callback(null, true);
-    else callback(new Error("Unsupported file type"));
+  limits: { fileSize: 50 * 1024 * 1024, files: 1 },
+  fileFilter: (_req, file, callback) => {
+    if (isAllowedMediaType(file.mimetype)) callback(null, true);
+    else callback(new Error(`Unsupported file type: ${file.mimetype || "unknown"}`));
   },
 });
 
 export const saveBlogMedia = async (file: Express.Multer.File) => {
+  const hasBuffer = Boolean(file && Buffer.isBuffer(file.buffer));
+  const bufferBytes = hasBuffer ? file.buffer.length : 0;
+  const fileSizeBytes = Number(file?.size ?? 0);
+
+  // This lets Render logs distinguish an empty incoming multipart upload from
+  // a failure while handing an otherwise valid buffer to Cloudinary.
+  logger.info({
+    event: "MEDIA_UPLOAD_RECEIVED",
+    fileSizeBytes,
+    bufferBytes,
+    mimeType: file?.mimetype || "unknown",
+  });
+
+  if (!hasBuffer || bufferBytes === 0) {
+    throw new Error(
+      `MEDIA_UPLOAD_EMPTY_BUFFER: received ${bufferBytes} bytes (declared file size ${fileSizeBytes})`,
+    );
+  }
+
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       { folder: "blogg", resource_type: "auto" },
       (error, result) => {
         if (error) {
+          const cloudinaryError = error as Error & {
+            http_code?: number;
+            name?: string;
+            message?: string;
+          };
+          logger.error({
+            event: "MEDIA_UPLOAD_CLOUDINARY_FAILED",
+            fileSizeBytes: bufferBytes,
+            errorName: cloudinaryError.name,
+            httpCode: cloudinaryError.http_code,
+            errorMessage: cloudinaryError.message || String(error),
+          });
           reject(error);
           return;
         }
+
+        if (!result?.secure_url) {
+          reject(new Error("Cloudinary upload returned no secure media URL"));
+          return;
+        }
+
         logger.info({
           event: "MEDIA_UPLOAD_SUCCESS",
-          mediaId: result?.public_id,
-          resourceType: result?.resource_type,
+          mediaId: result.public_id,
+          resourceType: result.resource_type,
+          fileSizeBytes: bufferBytes,
         });
+
         resolve({
-          id: result?.public_id,
-          url: result?.secure_url,
-          resourceType: result?.resource_type,
+          id: result.public_id,
+          url: result.secure_url,
+          resourceType: result.resource_type,
         });
       },
     );
-    Readable.from(file.buffer).pipe(uploadStream);
+
+    // End the Cloudinary writable with the actual Multer Buffer. Do not pass
+    // the buffer through an intermediate Readable; no content bytes are lost
+    // or interpreted as iterable elements along the way.
+    uploadStream.end(file.buffer);
   });
 };
 
