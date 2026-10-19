@@ -27,19 +27,6 @@ function formatDate(value?: string) {
   });
 }
 
-function containsVisualMedia(content?: unknown[]): boolean {
-  if (!Array.isArray(content)) return false;
-
-  return content.some((entry) => {
-    if (!entry || typeof entry !== "object") return false;
-    const block = entry as { type?: unknown; children?: unknown[] };
-    const type = typeof block.type === "string" ? block.type.toLowerCase() : "";
-
-    if (type === "image" || type === "video") return true;
-    return containsVisualMedia(block.children);
-  });
-}
-
 function NoteBody({ content }: { content?: unknown[] }) {
   const editor = useCreateBlockNote({
     initialContent:
@@ -52,7 +39,7 @@ function NoteBody({ content }: { content?: unknown[] }) {
   return (
     <div className="blog-feed-note-body">
       {hasContent ? (
-        <BlockNoteView editor={editor} editable={false} theme="light" formattingToolbar={false} />
+        <BlockNoteView editor={editor} editable={false} theme="light" />
       ) : (
         <p className="blog-feed-empty-body">No body content yet.</p>
       )}
@@ -71,7 +58,6 @@ function FeedPost({
 }) {
   const noteId = blogg.blogg_id || blogg._id;
   const noteUrl = `/read/${encodeURIComponent(noteId)}`;
-  const hasVisualMedia = containsVisualMedia(blogg.content);
 
   return (
     <article className="blog-feed-post-card">
@@ -96,10 +82,7 @@ function FeedPost({
         </h2>
       )}
       {blogg.subtitle?.trim() && <p className="blog-feed-post-description">{blogg.subtitle}</p>}
-      <div
-        className={`blog-feed-note-preview${hasVisualMedia ? " blog-feed-note-preview--media" : ""}`}
-        aria-label="Note content preview"
-      >
+      <div className="blog-feed-note-preview" aria-label="Note content preview">
         <NoteBody content={blogg.content} />
       </div>
 
