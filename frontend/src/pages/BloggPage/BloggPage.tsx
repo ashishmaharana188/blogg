@@ -24,15 +24,32 @@ const BloggPage = () => {
     initialEditMode: false,
   });
   const [viewMode, setViewMode] = useState<ViewMode>("canvas");
+  const [canvasRefreshKey, setCanvasRefreshKey] = useState(0);
 
-  const toggleNote = () => {
-    setActiveForm((prev) => ({
-      isOpen: !prev.isOpen,
+  const closeFormAfterSave = useCallback(() => {
+    setActiveForm({
+      isOpen: false,
       stackId: null,
       groupId: null,
       selectedBlogg: null,
       initialEditMode: false,
-    }));
+    });
+    setCanvasRefreshKey((key) => key + 1);
+  }, []);
+
+  const toggleNote = () => {
+    if (activeForm.isOpen) {
+      setActiveForm((prev) => ({ ...prev, isOpen: false }));
+      return;
+    }
+    setActiveForm({
+      isOpen: true,
+      // The backend resolves a missing destination to the default Others folder.
+      stackId: null,
+      groupId: null,
+      selectedBlogg: null,
+      initialEditMode: false,
+    });
   };
 
   const toggleViewMode = useCallback(() => {
@@ -44,7 +61,6 @@ const BloggPage = () => {
     groupId: string,
     blogg?: BloggSummary,
   ) => {
-    // New Note button path: no summary was passed.
     if (!blogg) {
       setActiveForm({
         isOpen: true,
@@ -56,10 +72,7 @@ const BloggPage = () => {
       return;
     }
 
-    const fullBlogg = await fetchBloggByIdRequest({
-      blogg_id: blogg.blogg_id,
-    });
-
+    const fullBlogg = await fetchBloggByIdRequest({ blogg_id: blogg.blogg_id });
     setActiveForm({
       isOpen: true,
       stackId: fullBlogg.stack_id,
@@ -110,9 +123,7 @@ const BloggPage = () => {
 
       <div
         className={`flex-1 relative w-full ${
-          activeForm.isOpen
-            ? "overflow-y-auto custom-scrollbar"
-            : "overflow-hidden"
+          activeForm.isOpen ? "overflow-y-auto custom-scrollbar" : "overflow-hidden"
         }`}
       >
         {activeForm.isOpen ? (
@@ -121,9 +132,13 @@ const BloggPage = () => {
             stackId={activeForm.stackId}
             selectedBlogg={activeForm.selectedBlogg}
             initialEditMode={activeForm.initialEditMode}
+            onSaved={closeFormAfterSave}
           />
         ) : viewMode === "canvas" ? (
-          <BloggCanvasUI onOpenForm={handleOpenFormFromCanvas} />
+          <BloggCanvasUI
+            key={canvasRefreshKey}
+            onOpenForm={handleOpenFormFromCanvas}
+          />
         ) : (
           <BlogFlipBookUI onEditBlogg={handleEditFromFlipBook} />
         )}

@@ -73,24 +73,6 @@ const chunkBlocks = (content: unknown[] = []) => {
   return chunks.length > 0 ? chunks : [[]];
 };
 
-const getBlockText = (value: unknown): string => {
-  if (!value) return "";
-  if (typeof value === "string") return value;
-  if (Array.isArray(value)) return value.map(getBlockText).join(" ");
-  if (typeof value !== "object") return "";
-
-  const record = value as Record<string, unknown>;
-  return [record.text, record.content, record.children]
-    .map(getBlockText)
-    .join(" ")
-    .trim();
-};
-
-const getBloggPreview = (blogg: BloggItem) => {
-  const contentText = getBlockText(blogg.content).replace(/\s+/g, " ").trim();
-  return blogg.subtitle || contentText || "Open this blog to read it.";
-};
-
 const createOverviewPages = (bloggs: BloggItem[]): FlipBookPageType[] => {
   if (bloggs.length === 0) {
     return [
@@ -112,9 +94,11 @@ const createOverviewPages = (bloggs: BloggItem[]): FlipBookPageType[] => {
     pageKind: "overview",
     author: blogg.author,
     title: blogg.title || "Untitled",
-    subtitle: getBloggPreview(blogg),
-    tags: blogg.tags,
-    content: [],
+    // Keep the description in the metadata area and render the actual
+    // BlockNote body separately below, instead of substituting one for another.
+    subtitle: blogg.subtitle || "",
+    tags: blogg.tags ?? [],
+    content: Array.isArray(blogg.content) ? blogg.content : [],
     blogg,
     selectable: true,
   }));
@@ -176,7 +160,7 @@ const PagePane = ({
       className={`flipbook-page flipbook-page-${side} ${
         canSelect ? "flipbook-page-clickable" : ""
       } ${className}`}
-      role={canSelect ? "button" : undefined}
+      role={canSelect ? "group" : undefined}
       tabIndex={canSelect ? 0 : undefined}
       onClick={openBlogg}
       onKeyDown={(event) => {
@@ -190,12 +174,17 @@ const PagePane = ({
       {isBlank ? (
         <div className="flipbook-page-blank" />
       ) : page.pageKind === "overview" ? (
-        <article className="flipbook-page-content flipbook-overview-page">
+        <article
+          className="flipbook-page-content flipbook-overview-page"
+          style={{ justifyContent: "flex-start" }}
+        >
           <p className="flipbook-blogg-author">
             {page.author || "Unknown author"}
           </p>
           <h1 className="flipbook-blogg-title">{page.title}</h1>
-          <p className="flipbook-blogg-subtitle">{page.subtitle}</p>
+          {page.subtitle && (
+            <p className="flipbook-blogg-subtitle">{page.subtitle}</p>
+          )}
           {page.tags.length > 0 && (
             <div className="flipbook-blogg-tags">
               {page.tags.slice(0, 4).map((tag) => (
@@ -205,7 +194,58 @@ const PagePane = ({
               ))}
             </div>
           )}
-          {canSelect && <p className="flipbook-open-hint">Click to open</p>}
+
+          <div
+            className="flipbook-overview-body-preview scrollbar-none"
+            aria-label={`${page.title} content preview`}
+            // The preview has its own scroll area. Do not let a click inside it
+            // bubble to the page-level open handler, otherwise the first scroll
+            // interaction unexpectedly opens the note.
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+            style={{
+              flex: "1 1 auto",
+              minHeight: 0,
+              overflowY: "auto",
+              width: "100%",
+              marginTop: "1rem",
+              paddingTop: "0.75rem",
+              borderTop: "1px solid #e5e7eb",
+              textAlign: "left",
+            }}
+          >
+            {page.content.length > 0 ? (
+              <ReadOnlyBloggContent
+                key={`overview-preview-${page.id}`}
+                content={page.content}
+              />
+            ) : (
+              <p style={{ color: "#9ca3af", fontStyle: "italic" }}>
+                This note has no body content yet.
+              </p>
+            )}
+          </div>
+
+          {canSelect && (
+            <button
+              type="button"
+              className="flipbook-open-hint"
+              onClick={(event) => {
+                event.stopPropagation();
+                openBlogg();
+              }}
+              style={{
+                flex: "0 0 auto",
+                border: 0,
+                padding: "0.5rem 0 0",
+                background: "transparent",
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              Open note
+            </button>
+          )}
         </article>
       ) : page.pageKind === "detail-cover" ? (
         <article className="flipbook-page-content flipbook-detail-cover">
