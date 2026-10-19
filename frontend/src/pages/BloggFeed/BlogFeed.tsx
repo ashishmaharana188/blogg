@@ -110,21 +110,36 @@ const HomePage = () => {
     setIsLoading(true);
     setLoadError("");
     try {
-      const [notesResult, canvasResult] = await Promise.all([
+      // Notes are the primary public content. Folder metadata is supplemental,
+      // so a failure in /stackAndGroup must not hide notes that /bloggs loaded.
+      const [notesResult, canvasResult] = await Promise.allSettled([
         fetchAllBloggsRequest(),
         fetchStackAndGroup(),
       ]);
-      const notes = (notesResult as BloggItem[]).slice().sort((a, b) => {
+
+      if (notesResult.status === "rejected") throw notesResult.reason;
+
+      const notes = (notesResult.value as BloggItem[]).slice().sort((a, b) => {
         const aTime = new Date(a.createdAt || a.updatedAt || 0).getTime() || 0;
         const bTime = new Date(b.createdAt || b.updatedAt || 0).getTime() || 0;
         return bTime - aTime;
       });
       setBloggs(notes);
-      setStacks(Array.isArray(canvasResult?.stacks) ? canvasResult.stacks : []);
-      setGroups(Array.isArray(canvasResult?.groups) ? canvasResult.groups : []);
+
+      if (canvasResult.status === "fulfilled") {
+        setStacks(Array.isArray(canvasResult.value?.stacks) ? canvasResult.value.stacks : []);
+        setGroups(Array.isArray(canvasResult.value?.groups) ? canvasResult.value.groups : []);
+      } else {
+        // Folder labels can fall back to "Unsorted stack > Others". Keep the
+        // public feed readable even if the folder metadata endpoint is failing.
+        console.warn("Could not load public folder metadata:", canvasResult.reason);
+        setStacks([]);
+        setGroups([]);
+      }
     } catch (error) {
-      console.error("Could not load the blog feed:", error);
-      setLoadError("We couldn't load your notes. Check the backend connection and try again.");
+      const reason = error instanceof Error ? error.message : String(error);
+      console.error("Could not load public notes from GET /bloggs:", error);
+      setLoadError(`We couldn't load public notes from the backend. ${reason}. Check GET /bloggs, the backend URL, and MongoDB connection.`);
     } finally {
       setIsLoading(false);
     }

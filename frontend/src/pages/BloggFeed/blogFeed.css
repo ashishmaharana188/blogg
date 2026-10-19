@@ -29,11 +29,13 @@
 .blog-feed-post-card {
   min-width: 0;
   padding: 22px 24px 17px;
-  border: 1px solid #d5dbe3;
+  border: 2px solid #d5e2e3;
   border-radius: 16px;
   background: #fff;
   box-shadow: 0 2px 5px rgb(15 23 42 / 3%);
-  transition: border-color 160ms ease, box-shadow 160ms ease;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .blog-feed-post-card:hover {
