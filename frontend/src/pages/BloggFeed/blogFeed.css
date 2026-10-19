@@ -310,3 +310,41 @@
     max-height: 273px;
   }
 }
+
+/* Match the six-color tag palette used in the BlockNote note editor.
+   Only colors change here; tag sizing, spacing, and feed card layout stay intact. */
+.blog-feed-tag:nth-child(6n + 1) {
+  background-color: #dbeafe;
+  color: #1e40af;
+  border-color: #bfdbfe;
+}
+
+.blog-feed-tag:nth-child(6n + 2) {
+  background-color: #d1fae5;
+  color: #065f46;
+  border-color: #a7f3d0;
+}
+
+.blog-feed-tag:nth-child(6n + 3) {
+  background-color: #f3e8ff;
+  color: #6b21a8;
+  border-color: #e9d5ff;
+}
+
+.blog-feed-tag:nth-child(6n + 4) {
+  background-color: #fef3c7;
+  color: #92400e;
+  border-color: #fde68a;
+}
+
+.blog-feed-tag:nth-child(6n + 5) {
+  background-color: #ffe4e6;
+  color: #9f1239;
+  border-color: #fecdd3;
+}
+
+.blog-feed-tag:nth-child(6n) {
+  background-color: #cffafe;
+  color: #155e75;
+  border-color: #a5f3fc;
+}
