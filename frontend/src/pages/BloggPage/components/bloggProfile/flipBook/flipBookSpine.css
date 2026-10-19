@@ -146,13 +146,19 @@
   pointer-events: none;
 }
 
+/* Each coil is an open arch, not a closed oval: three 3px strokes with
+   the bottom left open so it reads as simple black wire arcs. */
 .flipbook-spiral-spine span {
   display: block;
-  flex: 0 0 8px;
-  width: 25px;
+  flex: 0 0 12px;
+  width: 27px;
+  height: 12px;
   box-sizing: border-box;
-  border: 1px solid #111;
-  border-radius: 50%;
+  border: 0;
+  border-top: 3px solid #111;
+  border-left: 3px solid #111;
+  border-right: 3px solid #111;
+  border-radius: 18px 18px 0 0;
   background: transparent !important;
   box-shadow: none !important;
 }
