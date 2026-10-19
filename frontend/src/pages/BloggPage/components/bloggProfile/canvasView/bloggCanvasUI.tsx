@@ -20,17 +20,24 @@ import useCanvasInteractionMode from "../../../hooks/canvasView/useCanvasInterac
 const NOTE_STACK_WIDTH = 650;
 const NOTE_STACK_HEIGHT = 2600;
 
+// Fit the initial canvas scale to smaller viewports while retaining room to zoom in.
+const getInitialCanvasScale = () => {
+  if (typeof window === "undefined") return 0.7;
+  return Math.min(0.7, Math.max(0.4, (window.innerWidth - 16) / (NOTE_STACK_WIDTH + 100)));
+};
+
 export default function BloggCanvasUI({
   onOpenForm,
 }: {
   onOpenForm?: (stackId: string, groupId: string, blogg?: BloggSummary) => void;
 }) {
+  const initialCanvasScale = React.useMemo(getInitialCanvasScale, []);
   const state = useBloggSectionState();
   const { isInteracting, startInteraction, settleInteraction } =
     useCanvasInteractionMode(140);
 
   const { canvasScale, syncViewport, isRectVisible } = useCanvasViewport({
-    initialScale: 1,
+    initialScale: initialCanvasScale,
     initialPositionX: 0,
     initialPositionY: 0,
     buffer: 1800,
@@ -76,7 +83,7 @@ export default function BloggCanvasUI({
   return (
     <div className="absolute inset-0 bg-[#f8f9fa] overflow-hidden font-sans">
       <TransformWrapper
-        initialScale={0.7}
+        initialScale={initialCanvasScale}
         initialPositionX={0}
         initialPositionY={0}
         minScale={0.1}

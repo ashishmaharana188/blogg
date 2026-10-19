@@ -33,9 +33,9 @@ export default function BloggHeader({
   }, [isAdmin, refreshUser]);
 
   return (
-    <div className="blogg-shared-header shrink-0 pt-6 px-6 sm:pt-10 sm:px-10 flex justify-between items-end pb-4 border-b border-slate-100 z-50 bg-white">
-      <div className="flex flex-row justify-between items-center w-full mb-2">
-        <div className="flex gap-4 shrink-0 self-start items-center">
+    <div className="blogg-shared-header shrink-0 px-4 pt-4 sm:pt-7 sm:px-6 lg:pt-10 lg:px-10 flex justify-between items-end pb-3 border-b border-slate-100 z-50 bg-white">
+      <div className="blogg-shared-header-inner flex flex-row justify-between items-center w-full mb-2">
+        <div className="blogg-shared-header-nav flex flex-row flex-wrap gap-4 min-w-0 self-start items-center">
           <Link
             className="text-black hover:font-bold"
             to={isProfile ? "/feed" : "/blog"}
@@ -44,7 +44,7 @@ export default function BloggHeader({
           </Link>
           {isProfile && !isFormOpen && (
             <button
-              className="text-sm text-gray-600 hover:text-black hover:font-bold ml-6"
+              className="text-sm text-gray-600 hover:text-black hover:font-bold ml-0 sm:ml-2 md:ml-6"
               onClick={onToggleViewMode}
               type="button"
             >
@@ -52,8 +52,8 @@ export default function BloggHeader({
             </button>
           )}
         </div>
-        <hr className="w-350 border-black border-2 ml-5 mt-2" />
-        <div className="flex gap-4 shrink-0 pl-4 self-end mt-2 items-center">
+        <hr className="blogg-shared-header-rule flex-1 min-w-4 border-black border-2 mx-3 mt-2" />
+        <div className="blogg-shared-header-actions flex gap-4 shrink-0 pl-4 self-end mt-2 items-center">
           {isAdmin && (
             <button
               className="text-black block hover:font-bold truncate"

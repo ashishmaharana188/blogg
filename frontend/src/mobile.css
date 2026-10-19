@@ -1,0 +1,397 @@
+/* Cross-device layout defaults for desktop, tablet, iOS and Android. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  width: 100%;
+  min-width: 320px;
+  height: 100%;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  width: 100%;
+  min-width: 320px;
+  min-height: 100%;
+  margin: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#root {
+  width: 100%;
+  min-width: 320px;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+img,
+video,
+iframe,
+canvas {
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  max-width: 100%;
+}
+
+button,
+a {
+  touch-action: manipulation;
+}
+
+input,
+textarea,
+select {
+  min-width: 0;
+}
+
+.blogg-shared-header-inner {
+  min-width: 0;
+  gap: 12px;
+}
+
+.blogg-shared-header-nav,
+.blogg-shared-header-actions {
+  min-width: 0;
+}
+
+.blogg-shared-header-rule {
+  width: auto;
+}
+
+.blogg-editor-form,
+.blogg-editor-form-inner {
+  min-width: 0;
+}
+
+.blogg-editor-form textarea {
+  display: block;
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.blogg-editor-title {
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.blogg-editor-form .bn-container,
+.blogg-editor-form .bn-editor,
+.blogg-editor-form .bn-block-outer,
+.blogg-editor-form .bn-block-content {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.blogg-editor-form .bn-editor img,
+.blogg-editor-form .bn-editor video,
+.blogg-editor-form .bn-editor iframe,
+.blogg-reader-body img,
+.blogg-reader-body video,
+.blogg-embed-body img,
+.blogg-embed-body video {
+  max-width: 100%;
+  height: auto;
+}
+
+.blogg-editor-form .bn-editor table,
+.blogg-reader-body .bn-editor table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.blogg-shared-header button,
+.auth-submit,
+.account-primary-link,
+.account-secondary-button,
+.flipbook-controls button,
+.flipbook-mode-actions button,
+.blogg-share-trigger {
+  min-height: 40px;
+}
+
+.blogg-share-dialog {
+  max-height: min(90vh, 780px);
+  max-height: min(90dvh, 780px);
+}
+
+.blogg-share-backdrop {
+  padding-top: max(12px, env(safe-area-inset-top));
+  padding-right: max(12px, env(safe-area-inset-right));
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  padding-left: max(12px, env(safe-area-inset-left));
+}
+
+.flipbook-profile {
+  min-width: 0;
+  min-height: 0;
+}
+
+.flipbook-stage {
+  min-width: 0;
+}
+
+.flipbook-footer {
+  padding-bottom: max(14px, env(safe-area-inset-bottom));
+}
+
+@media (max-width: 760px) {
+  .blogg-shared-header {
+    padding-top: max(12px, env(safe-area-inset-top));
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-bottom: 10px;
+    padding-left: max(12px, env(safe-area-inset-left));
+  }
+
+  .blogg-shared-header-inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+    margin-bottom: 0;
+  }
+
+  .blogg-shared-header-nav {
+    grid-column: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 14px;
+    width: 100%;
+  }
+
+  .blogg-shared-header-nav a,
+  .blogg-shared-header-nav button {
+    font-size: 0.76rem;
+    line-height: 1.35;
+  }
+
+  .blogg-shared-header-nav button {
+    margin-left: 0;
+    padding: 6px 0;
+    white-space: normal;
+    text-align: left;
+  }
+
+  .blogg-shared-header-rule {
+    display: none;
+  }
+
+  .blogg-shared-header-actions {
+    grid-column: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    padding-left: 0;
+    margin-top: 0;
+    align-self: auto;
+  }
+
+  .blogg-shared-header-actions button,
+  .blogg-shared-header-actions a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    font-size: 0.8rem;
+  }
+
+  .blogg-editor-form {
+    margin-top: 12px;
+  }
+
+  .blogg-editor-form-inner {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .blogg-editor-field {
+    align-self: stretch;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .blogg-editor-author {
+    font-size: 1rem;
+  }
+
+  .blogg-editor-title {
+    font-size: clamp(1.5rem, 6vw, 2.25rem);
+  }
+
+  .blogg-editor-description {
+    font-size: 1rem;
+  }
+
+  .blog-feed-content {
+    width: calc(100% - 24px);
+    padding-top: 16px;
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+  }
+
+  .blog-feed-post-card {
+    min-width: 0;
+  }
+
+  .blogg-reader-scroll {
+    padding: 16px 12px max(24px, env(safe-area-inset-bottom));
+  }
+
+  .blogg-reader-card {
+    padding: 20px 16px;
+    border-radius: 14px;
+  }
+
+  .blogg-reader-actions {
+    gap: 10px 14px;
+  }
+
+  .blogg-reader-actions .blogg-share-trigger {
+    margin-left: 0;
+  }
+
+  .flipbook-stage {
+    --page-w: min(42vw, calc((100dvh - 200px) * 0.72), 190px);
+    --page-h: calc(var(--page-w) * 1.38);
+    padding: 8px 8px 4px;
+  }
+
+  .flipbook-footer {
+    padding: 6px 8px max(10px, env(safe-area-inset-bottom));
+  }
+
+  .flipbook-mode-actions {
+    flex-wrap: wrap;
+    gap: 6px;
+    width: 100%;
+    margin-bottom: 6px;
+  }
+
+  .flipbook-mode-actions button {
+    padding: 7px 11px;
+    font-size: 0.76rem;
+  }
+
+  .flipbook-controls {
+    gap: 6px;
+    width: 100%;
+    margin-bottom: 6px;
+  }
+
+  .flipbook-controls button {
+    min-width: 60px;
+    padding: 0 4px;
+    font-size: 0.86rem;
+  }
+
+  .flipbook-caption {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 52%;
+    font-size: 0.76rem;
+    white-space: normal;
+  }
+
+  .flipbook-thumbnails {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .flipbook-help,
+  .flipbook-signature {
+    margin-top: 8px;
+  }
+
+  .react-transform-wrapper [class~="bottom-6"][class~="left-6"] {
+    bottom: max(8px, env(safe-area-inset-bottom));
+    left: max(8px, env(safe-area-inset-left));
+  }
+
+  .react-transform-wrapper [class~="right-6"][class~="top-6"] {
+    top: max(8px, env(safe-area-inset-top));
+    right: max(8px, env(safe-area-inset-right));
+    max-width: calc(100% - 76px);
+  }
+
+  .react-transform-wrapper [class~="bottom-6"][class~="left-6"] button {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  .react-transform-wrapper [class~="right-6"][class~="top-6"] input {
+    width: min(50vw, 220px);
+    font-size: 16px;
+  }
+
+  .blogg-share-dialog {
+    width: 100%;
+    max-height: calc(100dvh - 24px);
+    padding: 16px;
+  }
+
+  .blogg-share-copy-row {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 400px) {
+  .blogg-shared-header-nav {
+    gap: 4px 10px;
+  }
+
+  .flipbook-stage {
+    --page-w: min(40vw, calc((100dvh - 190px) * 0.7), 160px);
+  }
+
+  .flipbook-caption {
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 760px) and (orientation: landscape) {
+  .flipbook-stage {
+    --page-w: min(25vw, 112px);
+    --page-h: calc(var(--page-w) * 1.25);
+  }
+
+  .flipbook-footer {
+    padding-top: 3px;
+  }
+
+  .flipbook-help,
+  .flipbook-signature {
+    display: none;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .auth-field input,
+  .account-activity-select,
+  .blogg-share-copy-row input,
+  .blogg-share-dialog textarea,
+  .blogg-editor-form input {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

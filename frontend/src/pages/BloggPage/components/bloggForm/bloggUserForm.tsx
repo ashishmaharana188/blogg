@@ -108,9 +108,9 @@ const UserForm = ({
   };
 
   return (
-    <div className="mt-10 w-full min-h-screen relative">
-      <div className="max-w-6xl mx-auto flex flex-col gap-4 p-4 relative">
-        <div className="self-center -mt-4">
+    <div className="blogg-editor-form mt-6 sm:mt-10 w-full min-h-full relative">
+      <div className="blogg-editor-form-inner w-full max-w-6xl mx-auto flex flex-col gap-4 p-3 sm:p-4 relative">
+        <div className="blogg-editor-field blogg-editor-author-field self-center -mt-4 w-full max-w-[500px]">
           <textarea
             ref={authorRef}
             value={formData.author}
@@ -120,7 +120,7 @@ const UserForm = ({
               autoResize(authorRef);
             }}
             placeholder="Author"
-            className="w-[500px] resize-none overflow-hidden whitespace-pre-wrap break-words text-xl outline-none text-center"
+            className="blogg-editor-author w-full max-w-full resize-none overflow-hidden whitespace-pre-wrap break-words text-lg sm:text-xl outline-none text-center"
           />
         </div>
         <textarea
@@ -132,9 +132,9 @@ const UserForm = ({
             autoResize(titleRef);
           }}
           placeholder="Document Title"
-          className="w-[1100px] resize-none overflow-hidden whitespace-pre-wrap break-words text-4xl font-bold outline-none self-center text-center"
+          className="blogg-editor-title w-full max-w-[1100px] resize-none overflow-hidden whitespace-pre-wrap break-words text-3xl sm:text-4xl font-bold outline-none self-center text-center"
         />
-        <div className="self-center -mt-4">
+        <div className="blogg-editor-field blogg-editor-description-field self-center -mt-4 w-full max-w-[800px]">
           <textarea
             ref={descriptionRef}
             value={formData.description}
@@ -144,7 +144,7 @@ const UserForm = ({
               autoResize(descriptionRef);
             }}
             placeholder="Description"
-            className="w-[800px] mt-5 resize-none overflow-hidden whitespace-pre-wrap break-words text-xl outline-none text-center italic"
+            className="blogg-editor-description w-full max-w-full mt-5 resize-none overflow-hidden whitespace-pre-wrap break-words text-lg sm:text-xl outline-none text-center italic"
           />
         </div>
 
