@@ -229,26 +229,6 @@ const PagePane = ({
             )}
           </div>
 
-          {canSelect && (
-            <button
-              type="button"
-              className="flipbook-open-hint"
-              onClick={(event) => {
-                event.stopPropagation();
-                openBlogg();
-              }}
-              style={{
-                flex: "0 0 auto",
-                border: 0,
-                padding: "0.5rem 0 0",
-                background: "transparent",
-                cursor: "pointer",
-                fontFamily: "inherit",
-              }}
-            >
-              Open note
-            </button>
-          )}
         </article>
       ) : page.pageKind === "detail-cover" ? (
         <article className="flipbook-page-content flipbook-detail-cover">
