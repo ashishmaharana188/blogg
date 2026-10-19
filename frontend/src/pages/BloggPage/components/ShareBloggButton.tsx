@@ -15,7 +15,7 @@ function buildEmbedCode(embedUrl: string, title: string) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
+    .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#39;");
   return `<iframe src="${embedUrl}" title="${safeTitle}" loading="lazy" width="640" height="420" style="max-width:100%;border:1px solid #d8dce2;border-radius:16px;overflow:hidden" allow="clipboard-write"></iframe>`;
 }
@@ -28,7 +28,9 @@ export default function ShareBloggButton({
   const [isOpen, setIsOpen] = useState(false);
   const [feedback, setFeedback] = useState("");
   const noteId = blogg.blogg_id || blogg._id;
-  const directUrl = absolutePath(`/read/${encodeURIComponent(noteId)}`);
+  // Vercel proxies /share/:id to the backend. The public URL remains on the
+  // frontend origin, while the backend returns note-specific Open Graph HTML.
+  const directUrl = absolutePath(`/share/${encodeURIComponent(noteId)}`);
   const embedUrl = absolutePath(`/embed/${encodeURIComponent(noteId)}`);
   const embedCode = buildEmbedCode(embedUrl, blogg.title || "Shared note");
 
@@ -46,7 +48,7 @@ export default function ShareBloggButton({
 
   const handleShare = async () => {
     if (!navigator.share) {
-      await copyText(directUrl, "Direct link");
+      await copyText(directUrl, "Share link");
       return;
     }
     try {
@@ -57,7 +59,7 @@ export default function ShareBloggButton({
       });
     } catch (error) {
       if (error instanceof Error && error.name !== "AbortError") {
-        setFeedback("Use the direct link below to share this note.");
+        setFeedback("Use the share link below to share this note.");
       }
     }
   };
@@ -106,7 +108,7 @@ export default function ShareBloggButton({
               <button type="button" className="blogg-share-close" onClick={() => setIsOpen(false)} aria-label="Close share dialog">×</button>
             </div>
 
-            <div className="blogg-share-preview" aria-label="Embedded thumbnail preview">
+            <div className="blogg-share-preview" aria-label="Local share preview">
               <div className="blogg-share-preview-topline">
                 <span>{blogg.author?.trim() || "Unknown author"}</span>
                 <span>{stackName} › {groupName}</span>
@@ -121,12 +123,12 @@ export default function ShareBloggButton({
               <small>blogg · note preview</small>
             </div>
 
-            <button className="blogg-share-copy-code" type="button" onClick={() => void handleShare()}>Share direct link…</button>
+            <button className="blogg-share-copy-code" type="button" onClick={() => void handleShare()}>Share link…</button>
 
-            <label className="blogg-share-label" htmlFor={`share-url-${noteId}`}>Direct link</label>
+            <label className="blogg-share-label" htmlFor={`share-url-${noteId}`}>Share link with rich preview</label>
             <div className="blogg-share-copy-row">
               <input id={`share-url-${noteId}`} readOnly value={directUrl} onFocus={(event) => event.currentTarget.select()} />
-              <button type="button" onClick={() => void copyText(directUrl, "Direct link")}>Copy link</button>
+              <button type="button" onClick={() => void copyText(directUrl, "Share link")}>Copy link</button>
             </div>
 
             <label className="blogg-share-label" htmlFor={`embed-url-${noteId}`}>Embed thumbnail link</label>

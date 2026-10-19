@@ -9,6 +9,7 @@ import blogInterceptRouter from "../routes/bloggDocument/bloggDocumentIndex.ts";
 import canvasViewInterceptor from "../routes/canvasView/canvasViewIndex.ts";
 import flipBookInterceptor from "../routes/flipBook/flipBookIndex.ts";
 import authenticationRouter from "../routes/authentication/authenticationIndex.ts";
+import sharePreviewRouter from "../routes/sharePreview.ts";
 import cookieParser from "cookie-parser";
 import { errorHandler } from "../middleware/errorHandler.ts";
 import adminStatusRouter from "../routes/adminStatus.ts";
@@ -30,6 +31,7 @@ await warmupPgPool();
 await initializePostgresSchema();
 
 app.use(cookieParser());
+app.use(sharePreviewRouter);
 app.use("/api/auth", authenticationRouter);
 app.use("/api/admin", adminStatusRouter);
 app.use(canvasViewInterceptor);
