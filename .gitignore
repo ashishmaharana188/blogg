@@ -9,11 +9,15 @@ lerna-debug.log*
 backend/.env
 backend/.env.example
 backend/googleSecret.json
+backend/googleSecret1.json
+oauth.json
+commands.txt
 
 node_modules
 dist
 dist-ssr
 *.local
+.venv
 
 # Editor directories and files
 .vscode/*
