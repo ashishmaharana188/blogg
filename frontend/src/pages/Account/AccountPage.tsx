@@ -780,7 +780,7 @@ export default function AccountPage() {
       youtubePanelRef.current,
       mediaColumnRef.current,
       mediaStackRef.current,
-    ].filter((element): element is Element => Boolean(element));
+    ].filter((element): element is HTMLElement => Boolean(element));
     const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(updateMetrics);
     targets.forEach((element) => observer?.observe(element));
     window.addEventListener("resize", updateMetrics);
