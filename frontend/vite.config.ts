@@ -58,10 +58,9 @@ function publicStateAssetsPlugin(): Plugin {
       };
       server.watcher.on("add", refreshAssetList);
       server.watcher.on("unlink", refreshAssetList);
-      return () => {
-        server.watcher.off("add", refreshAssetList);
-        server.watcher.off("unlink", refreshAssetList);
-      };
+      // Keep these listeners for the lifetime of the dev server. configureServer's
+      // returned function is a post-hook, not a teardown callback, and FSWatcher.off
+      // is not available in this project's TypeScript watcher definitions.
     },
   };
 }
