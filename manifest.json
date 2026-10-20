@@ -1,0 +1,23 @@
+{
+  "title": "Blogg admin media showcase",
+  "source_branch": "main",
+  "source_commit": "93ae04a73c44ab6c5cd8a97fdd0d55a226d3daa2",
+  "modified_paths": [
+    "frontend/src/pages/Account/AccountPage.tsx",
+    "frontend/src/pages/Account/accountPage.css",
+    "backend/src/routes/adminShowcase.ts",
+    "backend/src/server/server.ts"
+  ],
+  "added_paths": [
+    "backend/ytmusic_service/app.py",
+    "backend/ytmusic_service/requirements.txt",
+    "backend/ytmusic_service/README.md",
+    "README_ADMIN_SHOWCASE_SETUP.md"
+  ],
+  "notes": [
+    "Apply paths relative to the repository root; the ZIP has no project/ wrapper directory.",
+    "Existing adminStatus routes and Reading/Writing/Editing behavior are not changed.",
+    "No credentials or tokens are included.",
+    "Validated TypeScript syntax with the globally installed TypeScript transpiler and Python syntax with py_compile; a full dependency-backed project build was not run in this environment."
+  ]
+}

@@ -13,6 +13,7 @@ import sharePreviewRouter from "../routes/sharePreview.ts";
 import cookieParser from "cookie-parser";
 import { errorHandler } from "../middleware/errorHandler.ts";
 import adminStatusRouter from "../routes/adminStatus.ts";
+import adminShowcaseRouter from "../routes/adminShowcase.ts";
 
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
@@ -34,6 +35,7 @@ app.use(cookieParser());
 app.use(sharePreviewRouter);
 app.use("/api/auth", authenticationRouter);
 app.use("/api/admin", adminStatusRouter);
+app.use("/api", adminShowcaseRouter);
 app.use(canvasViewInterceptor);
 app.use(blogInterceptRouter);
 app.use(flipBookInterceptor);
