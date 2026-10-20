@@ -326,7 +326,12 @@ router.get("/showcase/ytmusic/liked", ...ADMIN_GUARD, async (_req, res, next) =>
 router.get("/admin/integrations/:provider/connect", ...ADMIN_GUARD, async (req, res, next) => {
   try {
     const provider = String(req.params.provider);
-    if (provider === "ytmusic") return res.status(200).type("text").send("YouTube Music is configured through the companion Python service. See README_ADMIN_SHOWCASE_SETUP.md for the OAuth file, client credentials, and Render service setup. Then return to /account and refresh the page.");
+    const wantsJson = (req.get("accept") || "").toLowerCase().includes("application/json");
+    if (provider === "ytmusic") {
+      const message = "YouTube Music is configured through the companion Python service. See README_ADMIN_SHOWCASE_SETUP.md for the OAuth file, client credentials, and Render service setup. Then return to /account and refresh the page.";
+      if (wantsJson) return res.json({ message });
+      return res.status(200).type("text").send(message);
+    }
     if (provider !== "spotify" && provider !== "youtube") return res.status(404).send("Unknown integration.");
     if (provider === "spotify" ? !spotifyConfigured() : !googleConfigured()) {
       return res.status(503).type("text").send("Integration credentials are missing in the backend environment. See README_ADMIN_SHOWCASE_SETUP.md.");
@@ -347,7 +352,10 @@ router.get("/admin/integrations/:provider/connect", ...ADMIN_GUARD, async (req, 
       client_id: process.env.GOOGLE_OAUTH_CLIENT_ID!, redirect_uri: callback, response_type: "code",
       scope: "https://www.googleapis.com/auth/youtube.readonly", access_type: "offline", prompt: "consent", state,
     }).toString();
-    res.redirect(authUrl.toString());
+    // Fetch-based initiation lets the Vercel page send its partitioned auth cookie
+    // to the API. The frontend then navigates directly to the provider, not Render.
+    if (wantsJson) return res.json({ authorizationUrl: authUrl.toString() });
+    return res.redirect(authUrl.toString());
   } catch (error) { next(error); }
 });
 

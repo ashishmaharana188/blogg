@@ -7,7 +7,6 @@ import {
   type AdminActivity,
   type AdminPresence,
 } from "../../services/adminStatusService";
-import { API_BASE_URL } from "../../services/apiBase";
 import "./accountPage.css";
 
 const ACTIVITIES: AdminActivity[] = ["Writing", "Reading", "Editing"];
@@ -286,8 +285,25 @@ export default function AccountPage() {
     }
   };
 
-  const connect = (provider: "spotify" | "youtube" | "ytmusic") => {
-    window.location.href = `${API_BASE_URL}/api/admin/integrations/${provider}/connect`;
+  const connect = async (provider: "spotify" | "youtube" | "ytmusic") => {
+    // Start OAuth with fetch while the Vercel page is still the top-level site.
+    // Firefox may partition cross-site cookies, so navigating directly to Render
+    // can omit the admin cookie even when authenticated API fetches work.
+    setLinkMessage("");
+    try {
+      const result = await api<{ authorizationUrl?: string; message?: string }>(
+        `/api/admin/integrations/${provider}/connect`,
+        { headers: { Accept: "application/json" } },
+      );
+      if (result.authorizationUrl) {
+        window.location.assign(result.authorizationUrl);
+        return;
+      }
+      if (result.message) setLinkMessage(result.message);
+      else setLinkMessage(`Could not start the ${provider} connection.`);
+    } catch (error) {
+      setLinkMessage(error instanceof Error ? error.message : `Could not connect ${provider}.`);
+    }
   };
   const integration = (provider: string): IntegrationStatus => integrationState[provider] || { configured: false, connected: false };
   const visibleLinks = links.filter((item) => isAdmin || item.visible);
