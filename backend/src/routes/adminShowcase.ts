@@ -844,11 +844,14 @@ router.get("/showcase/youtube/liked", ...ADMIN_GUARD, async (_req, res, next) =>
 
 router.get("/showcase/ytmusic/public", async (_req, res, next) => {
   try {
-    // Keep the published track stable in MongoDB, while opportunistically refreshing
-    // history at most once a minute. This continues working when no admin tab is open.
-    void syncYtmusicHistorySnapshot().catch((error) => {
+    // Await the shared, throttled history refresh so a visitor's first page load
+    // can receive the latest useful snapshot rather than an empty stale response.
+    // A history failure must not hide tracks that were already published.
+    try {
+      await syncYtmusicHistorySnapshot();
+    } catch (error) {
       console.error(`[adminShowcase] Background YouTube Music history sync failed; error_type=${error instanceof Error ? error.name : "unknown"}`);
-    });
+    }
     const [enabled, saved] = await Promise.all([
       readSetting("ytmusic-enabled"),
       readSetting("ytmusic-public-showcase"),

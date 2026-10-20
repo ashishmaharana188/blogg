@@ -520,6 +520,7 @@ export default function AccountPage() {
     try {
       await api("/api/admin/integrations/ytmusic/connect", { method: "POST" });
       await refreshIntegrations();
+      await refreshLikedLibraries();
       await refreshYtmusicPublic();
     } catch {
       // Connection failures are recorded in backend logs.
@@ -553,6 +554,7 @@ export default function AccountPage() {
 
   const integration = (provider: string): IntegrationStatus => integrationState[provider] || { configured: false, connected: false };
   const visibleLinks = links.filter((item) => isAdmin || item.visible);
+  const ytmusicLeadSong = ytmusicPublic.lastPlayed || ytmusicPublic.tracks[0] || null;
 
   return (
     <div className="account-page typewriter-font">
@@ -648,9 +650,25 @@ export default function AccountPage() {
             )}
           </section>
 
-          <section className="account-showcase-section account-showcase-ytmusic-section">
-            <div className="showcase-section-heading">
-              <div><p className="account-eyebrow">YOUTUBE MUSIC</p><h2>Last played and selected tracks</h2></div>
+          <section className="account-showcase-section account-showcase-mini-section account-showcase-ytmusic-section">
+            <div className="showcase-mini-heading">
+              <p className="account-eyebrow">NOW PLAYING</p>
+              <h2>YouTube Music</h2>
+            </div>
+            <div className="showcase-mini-integration-layout">
+              <div className="showcase-mini-music-card">
+                {ytmusicLeadSong?.thumbnail
+                  ? <img src={ytmusicLeadSong.thumbnail} alt="" loading="lazy" />
+                  : <div className="showcase-mini-music-placeholder" aria-hidden="true">♪</div>}
+                <div className="showcase-mini-music-copy">
+                  <span className="showcase-mini-track-label">{ytmusicPublic.lastPlayed ? "LAST PLAYED" : ytmusicLeadSong ? "PUBLIC PICK" : "YOUTUBE MUSIC"}</span>
+                  <strong>{ytmusicLeadSong ? ytmusicLeadSong.title : "No public track shared yet"}</strong>
+                  {ytmusicLeadSong
+                    ? <span>{ytmusicLeadSong.artists.join(", ") || "Unknown artist"}{ytmusicLeadSong.album ? ` · ${ytmusicLeadSong.album}` : ""}</span>
+                    : <span>{isAdmin ? "Connect YouTube Music and select up to three songs for visitors." : "Public tracks appear here when selected by the administrator."}</span>}
+                </div>
+                {ytmusicLeadSong?.url && <a href={ytmusicLeadSong.url} target="_blank" rel="noreferrer" aria-label="Open in YouTube Music">↗</a>}
+              </div>
               {isAdmin && <div className="showcase-mini-actions">
                 {integration("ytmusic").connected
                   ? <button type="button" className="showcase-outline-button" onClick={() => void connectYtmusic()}>Reconnect</button>
@@ -659,30 +677,24 @@ export default function AccountPage() {
                 {integration("ytmusic").connected && <button type="button" className="showcase-outline-button" onClick={() => void refreshLikedLibraries()} disabled={likedMusicLoading}>{likedMusicLoading ? "Refreshing…" : "Refresh"}</button>}
               </div>}
             </div>
-            <div className="showcase-ytmusic-public-block">
-              <h3>Last played</h3>
-              {ytmusicPublic.lastPlayed
-                ? <MusicTrack song={ytmusicPublic.lastPlayed} />
-                : <p className="showcase-empty">No recently played song is available.</p>}
-            </div>
-            <div className="showcase-ytmusic-public-block">
+
+            {ytmusicPublic.tracks.length > 0 && <div className="showcase-ytmusic-public-block">
               <h3>Selected for visitors</h3>
-              {ytmusicPublic.tracks.length
-                ? <div className="showcase-track-list">{ytmusicPublic.tracks.slice(0, 3).map((song, index) => <MusicTrack
-                  song={song}
-                  key={song.videoId || index}
-                  onFeature={isAdmin ? featureSong : undefined}
-                  publicAction={isAdmin ? {
-                    label: "Remove from public",
-                    disabled: ytmusicPublicSaving,
-                    onClick: () => void toggleYtmusicPublicTrack(song),
-                  } : undefined}
-                />)}</div>
-                : <p className="showcase-empty">No songs selected for visitors.</p>}
-            </div>
+              <div className="showcase-track-list">{ytmusicPublic.tracks.slice(0, 3).map((song, index) => <MusicTrack
+                song={song}
+                key={song.videoId || index}
+                onFeature={isAdmin ? featureSong : undefined}
+                publicAction={isAdmin ? {
+                  label: "Remove from public",
+                  disabled: ytmusicPublicSaving,
+                  onClick: () => void toggleYtmusicPublicTrack(song),
+                } : undefined}
+              />)}</div>
+            </div>}
+
             {isAdmin && <>
               <div className="showcase-ytmusic-admin-heading">
-                <h3>Liked songs</h3><span>{ytmusicPublic.tracks.length}/3 selected for visitors</span>
+                <h3>Choose public tracks</h3><span>{ytmusicPublic.tracks.length}/3 selected</span>
               </div>
               {likedMusicLoading
                 ? <p className="showcase-empty" role="status">Loading liked songs…</p>
@@ -702,8 +714,8 @@ export default function AccountPage() {
                         }}
                       />;
                     })}</div>
-                    : <p className="showcase-empty">{integration("ytmusic").connected ? "No liked songs were returned." : "Connect YouTube Music to load liked songs."}</p>}
-              <p className="showcase-admin-hint">Choose up to three liked songs to display publicly. History is checked every minute while the admin page is open.</p>
+                    : <p className="showcase-empty">{integration("ytmusic").connected ? "No liked songs were returned. Check backend logs if this seems wrong." : "Connect YouTube Music to load liked songs."}</p>}
+              <p className="showcase-admin-hint">The public card is visible without an admin session. Your last-played song is saved separately and stays public after disconnecting.</p>
             </>}
           </section>
 
