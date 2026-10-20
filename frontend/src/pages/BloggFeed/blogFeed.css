@@ -356,7 +356,7 @@
   position: absolute;
   z-index: 5;
   top: 18px;
-  left: calc(100% + 130px);
+  left: calc(100% + 50px);
   display: flex;
   flex-direction: column;
   align-items: center;
