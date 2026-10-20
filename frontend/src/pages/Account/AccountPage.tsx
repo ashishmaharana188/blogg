@@ -364,7 +364,7 @@ export default function AccountPage() {
               <div><p className="account-eyebrow">YOUR LIBRARY</p><h2>Liked on YouTube</h2><p>Recently liked videos. Your private library is visible only when you are signed in as administrator.</p></div>
               {isAdmin && <button type="button" className="showcase-outline-button" onClick={() => connect("youtube")}>{integration("youtube").connected ? "Reconnect YouTube" : "Connect YouTube"}</button>}
             </div>
-            {isAdmin ? likedYoutube.length ? <div className="showcase-track-list">{likedYoutube.slice(0, 8).map((song, index) => <MusicTrack song={song} key={song.videoId || index} />)}</div> : <p className="showcase-empty">{integration("youtube").connected ? "No liked videos returned." : "Connect YouTube and configure the Data API to load your likes."}</p> : <p className="showcase-empty">Sign in as the administrator to manage this library.</p>}
+            {isAdmin ? likedYoutube.length ? <div className="showcase-track-list">{likedYoutube.slice(0, 8).map((song, index) => <MusicTrack song={song} key={song.videoId || index} onFeature={featureSong} />)}</div> : <p className="showcase-empty">{integration("youtube").connected ? "No liked videos returned." : "Connect YouTube and configure the Data API to load your likes."}</p> : <p className="showcase-empty">Sign in as the administrator to manage this library.</p>}
             {isAdmin && <p className="showcase-admin-hint">Liked videos are not automatically published. Add individual links to Featured links if you want to share them publicly.</p>}
           </section>
 
@@ -373,7 +373,7 @@ export default function AccountPage() {
               <div><p className="account-eyebrow">YOUTUBE MUSIC</p><h2>Liked songs</h2><p>Your YouTube Music liked songs through the separate ytmusicapi companion service.</p></div>
               {isAdmin && <button type="button" className="showcase-outline-button" onClick={() => connect("ytmusic")}>{integration("ytmusic").connected ? "Refresh Music" : "Music setup"}</button>}
             </div>
-            {isAdmin ? likedMusic.length ? <div className="showcase-track-list">{likedMusic.slice(0, 8).map((song, index) => <MusicTrack song={song} key={song.videoId || index} />)}</div> : <p className="showcase-empty">{integration("ytmusic").configured ? "No songs returned. Check the companion service and credentials." : "YouTube Music is not connected yet."}</p> : <p className="showcase-empty">Sign in as the administrator to manage this library.</p>}
+            {isAdmin ? likedMusic.length ? <div className="showcase-track-list">{likedMusic.slice(0, 8).map((song, index) => <MusicTrack song={song} key={song.videoId || index} onFeature={featureSong} />)}</div> : <p className="showcase-empty">{integration("ytmusic").configured ? "No songs returned. Check the companion service and credentials." : "YouTube Music is not connected yet."}</p> : <p className="showcase-empty">Sign in as the administrator to manage this library.</p>}
             {isAdmin && <p className="showcase-admin-hint">ytmusicapi uses YouTube Music’s unofficial web interface and may require re-authentication.</p>}
           </section>
 
