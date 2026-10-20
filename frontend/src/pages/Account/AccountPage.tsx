@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/authContext";
 import { API_BASE_URL } from "../../services/apiBase";
@@ -293,6 +293,46 @@ function YoutubePlaylistRows({
   );
 }
 
+type DashboardMasonryMetrics = {
+  widths: [number, number, number];
+  heights: [number, number, number];
+};
+
+function estimateFeaturedCardHeight(item: ShowcaseLink, width: number, editable: boolean): number {
+  const cardWidth = Math.max(180, width);
+  const textWidth = Math.max(120, cardWidth - 30);
+  const titleCharsPerLine = Math.max(14, Math.floor(textWidth / 7.2));
+  const descriptionCharsPerLine = Math.max(18, Math.floor(textWidth / 6.1));
+  const titleLines = Math.max(1, Math.ceil(item.title.length / titleCharsPerLine));
+  const descriptionLines = item.description
+    ? Math.max(1, Math.ceil(item.description.length / descriptionCharsPerLine))
+    : 0;
+  const previewHeight = cardWidth * 9 / 16;
+  const bodyHeight = 28 + 10 + 8 + titleLines * 21 +
+    (descriptionLines ? 8 + descriptionLines * 12 : 0) +
+    (editable ? 55 : 0) + 18;
+  return previewHeight + bodyHeight + 2;
+}
+
+function distributeFeaturedLinks(
+  items: ShowcaseLink[],
+  widths: [number, number, number],
+  baseHeights: [number, number, number],
+  editable: boolean,
+): [ShowcaseLink[], ShowcaseLink[], ShowcaseLink[]] {
+  const columns: [ShowcaseLink[], ShowcaseLink[], ShowcaseLink[]] = [[], [], []];
+  const heights = baseHeights.map((height) => Math.max(0, height) + 18);
+  for (const item of items) {
+    let target = 0;
+    for (let index = 1; index < heights.length; index += 1) {
+      if (heights[index] < heights[target]) target = index;
+    }
+    columns[target].push(item);
+    heights[target] += estimateFeaturedCardHeight(item, widths[target], editable) + 14;
+  }
+  return columns;
+}
+
 export default function AccountPage() {
   const navigate = useNavigate();
   const { isAdmin, logout, refreshUser } = useAuth();
@@ -328,6 +368,17 @@ export default function AccountPage() {
   const [ytmusicPublicSaving, setYtmusicPublicSaving] = useState(false);
   const [integrationState, setIntegrationState] = useState<Record<string, IntegrationStatus>>({});
   const [ytmusicConnectError, setYtmusicConnectError] = useState("");
+  const dashboardGridRef = useRef<HTMLDivElement | null>(null);
+  const leftColumnRef = useRef<HTMLDivElement | null>(null);
+  const leftBaseRef = useRef<HTMLDivElement | null>(null);
+  const youtubeColumnRef = useRef<HTMLDivElement | null>(null);
+  const youtubePanelRef = useRef<HTMLElement | null>(null);
+  const mediaColumnRef = useRef<HTMLDivElement | null>(null);
+  const mediaStackRef = useRef<HTMLDivElement | null>(null);
+  const [dashboardMetrics, setDashboardMetrics] = useState<DashboardMasonryMetrics>({
+    widths: [250, 520, 330],
+    heights: [560, 520, 620],
+  });
 
   const refreshPresence = useCallback(async () => {
     try {
@@ -692,6 +743,52 @@ export default function AccountPage() {
 
   const integration = (provider: string): IntegrationStatus => integrationState[provider] || { configured: false, connected: false };
   const visibleLinks = links.filter((item) => item.provider !== "ytmusic" && (isAdmin || item.visible));
+  const featuredColumns = distributeFeaturedLinks(
+    visibleLinks,
+    dashboardMetrics.widths,
+    dashboardMetrics.heights,
+    isAdmin,
+  );
+
+  useLayoutEffect(() => {
+    const updateMetrics = () => {
+      const next: DashboardMasonryMetrics = {
+        widths: [
+          leftColumnRef.current?.clientWidth || 250,
+          youtubeColumnRef.current?.clientWidth || 520,
+          mediaColumnRef.current?.clientWidth || 330,
+        ],
+        heights: [
+          leftBaseRef.current?.getBoundingClientRect().height || 0,
+          youtubePanelRef.current?.getBoundingClientRect().height || 0,
+          mediaStackRef.current?.getBoundingClientRect().height || 0,
+        ],
+      };
+      setDashboardMetrics((current) => {
+        const changed = next.widths.some((value, index) => Math.abs(value - current.widths[index]) > 1) ||
+          next.heights.some((value, index) => Math.abs(value - current.heights[index]) > 1);
+        return changed ? next : current;
+      });
+    };
+
+    updateMetrics();
+    const targets = [
+      dashboardGridRef.current,
+      leftColumnRef.current,
+      leftBaseRef.current,
+      youtubeColumnRef.current,
+      youtubePanelRef.current,
+      mediaColumnRef.current,
+      mediaStackRef.current,
+    ].filter((element): element is Element => Boolean(element));
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(updateMetrics);
+    targets.forEach((element) => observer?.observe(element));
+    window.addEventListener("resize", updateMetrics);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", updateMetrics);
+    };
+  }, []);
   const ytmusicLeadSong = ytmusicPublic.lastPlayed || ytmusicPublic.tracks[0] || null;
 
   return (
@@ -704,209 +801,223 @@ export default function AccountPage() {
         </header>
 
         <main className="account-page-main account-page-main-stack">
-          <div className="account-dashboard-grid">
-          <div className="account-dashboard-left-stack">
-          <section className="account-status-card account-dashboard-status" aria-labelledby="account-status-heading">
-            <p className="account-eyebrow">ADMIN</p>
-            <h1 id="account-status-heading" className="account-status-title">Administrator status</h1>
-            <div className="account-presence-row" aria-live="polite">
-              <span className={`account-presence-pill ${presence.online ? "is-online" : "is-offline"}`}>
-                <span className="account-presence-dot" />{presence.online ? "Online" : "Offline"}
-              </span>
-            </div>
-            {isAdmin ? <>
-              <label className="account-field-label" htmlFor="admin-activity">Activity</label>
-              <select
-                id="admin-activity"
-                value={ACTIVITIES.includes(presence.activity as AdminActivity) ? presence.activity : "Reading"}
-                disabled={busy}
-                onChange={(event) => void changeActivity(event.target.value as AdminActivity)}
-                className="account-activity-select"
-              >
-                {ACTIVITIES.map((activity) => <option key={activity} value={activity}>{activity}</option>)}
-              </select>
-              {message && <p className="account-message" role="status">{message}</p>}
-              <div className="account-card-footer account-status-actions">
-                <button type="button" disabled={busy} onClick={() => void handleLogout()} className="account-secondary-button">
-                  {busy ? "Please wait…" : "Log out"}
-                </button>
+          <div className="account-dashboard-grid" ref={dashboardGridRef}>
+            <div className="account-dashboard-column account-dashboard-left-column" ref={leftColumnRef}>
+              <div className="account-dashboard-left-base" ref={leftBaseRef}>
+                <section className="account-status-card account-dashboard-status" aria-labelledby="account-status-heading">
+                            <p className="account-eyebrow">ADMIN</p>
+                            <h1 id="account-status-heading" className="account-status-title">Administrator status</h1>
+                            <div className="account-presence-row" aria-live="polite">
+                              <span className={`account-presence-pill ${presence.online ? "is-online" : "is-offline"}`}>
+                                <span className="account-presence-dot" />{presence.online ? "Online" : "Offline"}
+                              </span>
+                            </div>
+                            {isAdmin ? <>
+                              <label className="account-field-label" htmlFor="admin-activity">Activity</label>
+                              <select
+                                id="admin-activity"
+                                value={ACTIVITIES.includes(presence.activity as AdminActivity) ? presence.activity : "Reading"}
+                                disabled={busy}
+                                onChange={(event) => void changeActivity(event.target.value as AdminActivity)}
+                                className="account-activity-select"
+                              >
+                                {ACTIVITIES.map((activity) => <option key={activity} value={activity}>{activity}</option>)}
+                              </select>
+                              {message && <p className="account-message" role="status">{message}</p>}
+                              <div className="account-card-footer account-status-actions">
+                                <button type="button" disabled={busy} onClick={() => void handleLogout()} className="account-secondary-button">
+                                  {busy ? "Please wait…" : "Log out"}
+                                </button>
+                              </div>
+                            </> : (
+                              <div className="account-status-actions">
+                                <Link to="/login" className="account-primary-link">Admin login</Link>
+                                {registrationEnabled && <Link to="/register" className="account-secondary-button">Create administrator</Link>}
+                              </div>
+                            )}
+                          </section>
+                <section className="account-showcase-section account-showcase-featured-section account-dashboard-featured-header">
+                            <div className="showcase-section-heading"><div><p className="account-eyebrow">HAND-PICKED</p><h2>Featured links</h2><p>Share videos, songs, notes, articles, and links from any public website with rich preview cards.</p></div></div>
+                            {isAdmin && <form className="showcase-add-link-form" onSubmit={addLink}>
+                              <label htmlFor="showcase-url">Paste a link</label>
+                              <div className="showcase-add-link-row"><input id="showcase-url" type="url" required value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://…" /><button type="submit" disabled={linkBusy}>{linkBusy ? "Adding…" : "Add link"}</button></div>
+                              <p className="showcase-admin-hint">Paste any public HTTP or HTTPS link. Links start hidden; publish each card when you want visitors to see it. Some sites block metadata previews, so a title and domain fallback may be used.</p>
+                              {linkMessage && <p className="account-message" role="status">{linkMessage}</p>}
+                            </form>}
+                            {linksLoading ? <p className="showcase-empty">Loading featured links…</p> : visibleLinks.length === 0 ? <p className="showcase-empty">No featured links have been published yet.</p> : null}
+                          </section>
               </div>
-            </> : (
-              <div className="account-status-actions">
-                <Link to="/login" className="account-primary-link">Admin login</Link>
-                {registrationEnabled && <Link to="/register" className="account-secondary-button">Create administrator</Link>}
-              </div>
-            )}
-          </section>
-
-
-          <section className="account-showcase-section account-showcase-featured-section account-dashboard-featured-panel">
-            <div className="showcase-section-heading"><div><p className="account-eyebrow">HAND-PICKED</p><h2>Featured links</h2><p>Share videos, songs, notes, articles, and links from any public website with rich preview cards.</p></div></div>
-            {isAdmin && <form className="showcase-add-link-form" onSubmit={addLink}>
-              <label htmlFor="showcase-url">Paste a link</label>
-              <div className="showcase-add-link-row"><input id="showcase-url" type="url" required value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://…" /><button type="submit" disabled={linkBusy}>{linkBusy ? "Adding…" : "Add link"}</button></div>
-              <p className="showcase-admin-hint">Paste any public HTTP or HTTPS link. Links start hidden; publish each card when you want visitors to see it. Some sites block metadata previews, so a title and domain fallback may be used.</p>
-              {linkMessage && <p className="account-message" role="status">{linkMessage}</p>}
-            </form>}
-            {linksLoading ? <p className="showcase-empty">Loading featured links…</p> : visibleLinks.length ? (
-              <div className="showcase-links-grid">{visibleLinks.map((item) => <ShowcaseCard key={item.id} item={item} editable={isAdmin} onVisibility={toggleLink} onDelete={removeLink} />)}</div>
-            ) : <p className="showcase-empty">No featured links have been published yet.</p>}
-          </section>
-          </div>
-
-          <section className="account-showcase-section account-dashboard-youtube">
-            <div className="showcase-section-heading">
-              <div><p className="account-eyebrow">YOUTUBE LIBRARY</p><h2>Public playlists</h2><p>Public playlists from your YouTube account.</p></div>
-              {isAdmin && <button type="button" className="showcase-outline-button" onClick={() => connect("youtube")}>{integration("youtube").connected ? "Reconnect YouTube" : "Connect YouTube"}</button>}
+          {featuredColumns[0].length > 0 && (
+            <div className="account-dashboard-featured-card-list" aria-label="Featured links">
+              {featuredColumns[0].map((item) => <ShowcaseCard key={item.id} item={item} editable={isAdmin} onVisibility={toggleLink} onDelete={removeLink} />)}
             </div>
-            <div className="showcase-youtube-library-scroll" role="region" aria-label="YouTube public library" tabIndex={0}>
-            {youtubePlaylistsLoading ? <p className="showcase-empty">Loading public YouTube playlists…</p> : youtubePlaylistsError ? <p className="showcase-empty" role="status">YouTube playlists are temporarily unavailable. Check backend logs.</p> : !youtubeConnected ? (
-              <p className="showcase-empty">{isAdmin ? youtubeConfigured ? "Connect YouTube to load public playlists from that account." : "YouTube is not configured yet." : "No public YouTube playlists are available right now."}</p>
-            ) : youtubePlaylists.length === 0 ? (
-              <p className="showcase-empty">No public playlists were found on the connected account. Set a playlist to Public on YouTube, then refresh this page.</p>
-            ) : (
-              <div className="showcase-youtube-playlist-grid">{youtubePlaylists.map((playlist) => (
-                <div className="showcase-youtube-playlist-entry" key={playlist.id}>
-                  <YoutubePlaylistCard
-                    playlist={playlist}
-                    expanded={Boolean(expandedYoutubePlaylists[playlist.id])}
-                    onToggle={(playlistId) => setExpandedYoutubePlaylists((current) => ({ ...current, [playlistId]: !current[playlistId] }))}
-                  />
-                  {expandedYoutubePlaylists[playlist.id] && <YoutubePlaylistRows playlist={playlist} videos={youtubePlaylistVideos[playlist.id]} onFeature={isAdmin ? featureSong : undefined} onLoad={loadYoutubePlaylistVideos} />}
-                </div>
-              ))}</div>
-            )}
-            </div>
-          </section>
-
-            <div className="account-dashboard-media-stack">
-          <section className="account-showcase-section account-showcase-mini-section">
-            <div className="showcase-mini-heading"><p className="account-eyebrow">NOW PLAYING</p><h2>Spotify</h2></div>
-            <div className="showcase-mini-integration-layout">
-              <div className="showcase-mini-music-card">
-                {nowPlaying.playing && nowPlaying.track?.thumbnail
-                  ? <img src={nowPlaying.track.thumbnail} alt="" loading="lazy" />
-                  : <div className="showcase-mini-music-placeholder" aria-hidden="true">♪</div>}
-                <div className="showcase-mini-music-copy">
-                  <strong>{nowPlaying.playing && nowPlaying.track ? nowPlaying.track.title : "Not connected"}</strong>
-                  {nowPlaying.playing && nowPlaying.track?.artists.length ? <span>{nowPlaying.track.artists.join(", ")}</span> : null}
-                </div>
-                {nowPlaying.playing && nowPlaying.track?.url && <a href={nowPlaying.track.url} target="_blank" rel="noreferrer" aria-label="Open in Spotify">↗</a>}
-              </div>
-              {isAdmin && <div className="showcase-mini-actions">
-                {integration("spotify").connected
-                  ? <button type="button" className="showcase-outline-button" onClick={() => void connect("spotify")}>Reconnect</button>
-                  : <button type="button" className="showcase-outline-button" onClick={() => void connect("spotify")}>Connect</button>}
-                {integration("spotify").connected && <button type="button" className="showcase-outline-button is-danger" onClick={() => void disconnectIntegration("spotify")}>Disconnect</button>}
-              </div>}
-            </div>
-          </section>
-
-          <section className="account-showcase-section account-showcase-mini-section account-showcase-ytmusic-section">
-            <div className="showcase-mini-heading">
-              <p className="account-eyebrow">NOW PLAYING</p>
-              <h2>YouTube Music</h2>
-            </div>
-            <div className="showcase-mini-integration-layout">
-              <div className="showcase-mini-music-card">
-                {ytmusicLeadSong?.thumbnail
-                  ? <img src={ytmusicLeadSong.thumbnail} alt="" loading="lazy" />
-                  : <div className="showcase-mini-music-placeholder" aria-hidden="true">♪</div>}
-                <div className="showcase-mini-music-copy">
-                  <span className="showcase-mini-track-label">{ytmusicPublic.lastPlayed ? "LAST PLAYED" : ytmusicLeadSong ? "PUBLIC PICK" : "YOUTUBE MUSIC"}</span>
-                  <strong>{ytmusicLeadSong ? ytmusicLeadSong.title : "No public track shared yet"}</strong>
-                  {ytmusicLeadSong
-                    ? <span>{ytmusicLeadSong.artists.join(", ") || "Unknown artist"}{ytmusicLeadSong.album ? ` · ${ytmusicLeadSong.album}` : ""}</span>
-                    : <span>{isAdmin ? "Connect YouTube Music and select up to three songs for visitors." : "Public tracks appear here when selected by the administrator."}</span>}
-                </div>
-                {ytmusicLeadSong?.url && <a href={ytmusicLeadSong.url} target="_blank" rel="noreferrer" aria-label="Open in YouTube Music">↗</a>}
-              </div>
-              {isAdmin && <div className="showcase-mini-actions">
-                {integration("ytmusic").connected
-                  ? <button type="button" className="showcase-outline-button" onClick={() => void connectYtmusic()}>Reconnect</button>
-                  : <button type="button" className="showcase-outline-button" onClick={() => void connectYtmusic()}>Connect</button>}
-                {integration("ytmusic").connected && <button type="button" className="showcase-outline-button is-danger" onClick={() => void disconnectIntegration("ytmusic")}>Disconnect</button>}
-                {integration("ytmusic").connected && <button type="button" className="showcase-outline-button" onClick={() => void refreshLikedLibraries()} disabled={likedMusicLoading}>{likedMusicLoading ? "Refreshing…" : "Refresh"}</button>}
-              </div>}
+          )}
             </div>
 
-            {ytmusicConnectError && isAdmin && (
-              <p className="showcase-ytmusic-connect-error" role="alert">{ytmusicConnectError}</p>
-            )}
-
-            {ytmusicPublic.tracks.length > 0 && <div className="showcase-ytmusic-public-block">
-              <div className="showcase-ytmusic-subsection-heading">
-                {isAdmin ? (
-                  <button
-                    type="button"
-                    className="showcase-ytmusic-collapse-toggle"
-                    aria-expanded={!selectedTracksCollapsed}
-                    onClick={() => setSelectedTracksCollapsed((collapsed) => !collapsed)}
-                  >
-                    <span className="showcase-ytmusic-section-title">Selected for visitors</span>
-                    <span className="showcase-ytmusic-collapse-mark" aria-hidden="true">{selectedTracksCollapsed ? "+" : "−"}</span>
-                  </button>
-                ) : <h3>Selected for visitors</h3>}
-              </div>
-              {(!isAdmin || !selectedTracksCollapsed) && (
-                <div className="showcase-track-list">{ytmusicPublic.tracks.slice(0, 3).map((song, index) => <MusicTrack
-                  song={song}
-                  key={song.videoId || index}
-                  publicAction={isAdmin ? {
-                    label: "Remove from public",
-                    disabled: ytmusicPublicSaving,
-                    onClick: () => void toggleYtmusicPublicTrack(song),
-                  } : undefined}
-                />)}</div>
-              )}
-            </div>}
-
-            {isAdmin && <>
-              <div className="showcase-ytmusic-admin-heading">
-                <button
-                  type="button"
-                  className="showcase-ytmusic-collapse-toggle"
-                  aria-expanded={!pickerCollapsed}
-                  onClick={() => setPickerCollapsed((collapsed) => !collapsed)}
-                >
-                  <span className="showcase-ytmusic-section-title">Choose public tracks</span>
-                  <span className="showcase-ytmusic-selected-count">{ytmusicPublic.tracks.length}/3 selected</span>
-                  <span className="showcase-ytmusic-collapse-mark" aria-hidden="true">{pickerCollapsed ? "+" : "−"}</span>
-                </button>
-              </div>
-              {!pickerCollapsed && <>
-              <div className="showcase-ytmusic-picker-scroll" ref={ytmusicPickerScrollRef} role="region" aria-label="Choose public tracks from liked songs" tabIndex={0}>
-                {likedMusicLoading
-                  ? <p className="showcase-empty" role="status">Loading liked songs…</p>
-                  : likedMusicError
-                    ? <p className="showcase-empty" role="status">YouTube Music could not be refreshed. Check backend logs.</p>
-                    : likedMusic.length
-                      ? <div className="showcase-track-list">{likedMusic.slice(0, ytmusicPickerVisibleCount).map((song, index) => {
-                        const alreadySelected = Boolean(song.videoId) && ytmusicPublic.tracks.some((item) => item.videoId === song.videoId);
-                        return <MusicTrack
-                          song={song}
-                          key={song.videoId || index}
-                          publicAction={{
-                            label: alreadySelected ? "Remove from public" : ytmusicPublic.tracks.length >= 3 ? "Limit reached" : "Show to visitors",
-                            disabled: ytmusicPublicSaving || (!alreadySelected && ytmusicPublic.tracks.length >= 3),
-                            onClick: () => void toggleYtmusicPublicTrack(song),
-                          }}
-                        />;
-                      })}</div>
-                      : <p className="showcase-empty">{integration("ytmusic").connected ? "No liked songs were returned. Check backend logs if this seems wrong." : "Connect YouTube Music to load liked songs."}</p>}
-                {!likedMusicLoading && !likedMusicError && ytmusicPickerVisibleCount < likedMusic.length && (
-                  <div ref={ytmusicPickerSentinelRef} className="showcase-ytmusic-picker-sentinel" aria-hidden="true" />
-                )}
-              </div>
-              <p className="showcase-admin-hint">The public card is visible without an admin session. Your last-played song is saved separately and stays public after disconnecting.</p>
-              </>}
-
-            </>}
-          </section>
-
+            <div className="account-dashboard-column account-dashboard-youtube-column" ref={youtubeColumnRef}>
+              <section className="account-showcase-section account-dashboard-youtube" ref={youtubePanelRef}>
+                          <div className="showcase-section-heading">
+                            <div><p className="account-eyebrow">YOUTUBE LIBRARY</p><h2>Public playlists</h2><p>Public playlists from your YouTube account.</p></div>
+                            {isAdmin && <button type="button" className="showcase-outline-button" onClick={() => connect("youtube")}>{integration("youtube").connected ? "Reconnect YouTube" : "Connect YouTube"}</button>}
+                          </div>
+                          <div className="showcase-youtube-library-scroll" role="region" aria-label="YouTube public library" tabIndex={0}>
+                          {youtubePlaylistsLoading ? <p className="showcase-empty">Loading public YouTube playlists…</p> : youtubePlaylistsError ? <p className="showcase-empty" role="status">YouTube playlists are temporarily unavailable. Check backend logs.</p> : !youtubeConnected ? (
+                            <p className="showcase-empty">{isAdmin ? youtubeConfigured ? "Connect YouTube to load public playlists from that account." : "YouTube is not configured yet." : "No public YouTube playlists are available right now."}</p>
+                          ) : youtubePlaylists.length === 0 ? (
+                            <p className="showcase-empty">No public playlists were found on the connected account. Set a playlist to Public on YouTube, then refresh this page.</p>
+                          ) : (
+                            <div className="showcase-youtube-playlist-grid">{youtubePlaylists.map((playlist) => (
+                              <div className="showcase-youtube-playlist-entry" key={playlist.id}>
+                                <YoutubePlaylistCard
+                                  playlist={playlist}
+                                  expanded={Boolean(expandedYoutubePlaylists[playlist.id])}
+                                  onToggle={(playlistId) => setExpandedYoutubePlaylists((current) => ({ ...current, [playlistId]: !current[playlistId] }))}
+                                />
+                                {expandedYoutubePlaylists[playlist.id] && <YoutubePlaylistRows playlist={playlist} videos={youtubePlaylistVideos[playlist.id]} onFeature={isAdmin ? featureSong : undefined} onLoad={loadYoutubePlaylistVideos} />}
+                              </div>
+                            ))}</div>
+                          )}
+                          </div>
+                        </section>
+          {featuredColumns[1].length > 0 && (
+            <div className="account-dashboard-featured-card-list" aria-label="Featured links">
+              {featuredColumns[1].map((item) => <ShowcaseCard key={item.id} item={item} editable={isAdmin} onVisibility={toggleLink} onDelete={removeLink} />)}
+            </div>
+          )}
             </div>
 
-
+            <div className="account-dashboard-column account-dashboard-media-column" ref={mediaColumnRef}>
+              <div className="account-dashboard-media-stack" ref={mediaStackRef}>
+                <section className="account-showcase-section account-showcase-mini-section">
+                            <div className="showcase-mini-heading"><p className="account-eyebrow">NOW PLAYING</p><h2>Spotify</h2></div>
+                            <div className="showcase-mini-integration-layout">
+                              <div className="showcase-mini-music-card">
+                                {nowPlaying.playing && nowPlaying.track?.thumbnail
+                                  ? <img src={nowPlaying.track.thumbnail} alt="" loading="lazy" />
+                                  : <div className="showcase-mini-music-placeholder" aria-hidden="true">♪</div>}
+                                <div className="showcase-mini-music-copy">
+                                  <strong>{nowPlaying.playing && nowPlaying.track ? nowPlaying.track.title : "Not connected"}</strong>
+                                  {nowPlaying.playing && nowPlaying.track?.artists.length ? <span>{nowPlaying.track.artists.join(", ")}</span> : null}
+                                </div>
+                                {nowPlaying.playing && nowPlaying.track?.url && <a href={nowPlaying.track.url} target="_blank" rel="noreferrer" aria-label="Open in Spotify">↗</a>}
+                              </div>
+                              {isAdmin && <div className="showcase-mini-actions">
+                                {integration("spotify").connected
+                                  ? <button type="button" className="showcase-outline-button" onClick={() => void connect("spotify")}>Reconnect</button>
+                                  : <button type="button" className="showcase-outline-button" onClick={() => void connect("spotify")}>Connect</button>}
+                                {integration("spotify").connected && <button type="button" className="showcase-outline-button is-danger" onClick={() => void disconnectIntegration("spotify")}>Disconnect</button>}
+                              </div>}
+                            </div>
+                          </section>
+                
+                          <section className="account-showcase-section account-showcase-mini-section account-showcase-ytmusic-section">
+                            <div className="showcase-mini-heading">
+                              <p className="account-eyebrow">NOW PLAYING</p>
+                              <h2>YouTube Music</h2>
+                            </div>
+                            <div className="showcase-mini-integration-layout">
+                              <div className="showcase-mini-music-card">
+                                {ytmusicLeadSong?.thumbnail
+                                  ? <img src={ytmusicLeadSong.thumbnail} alt="" loading="lazy" />
+                                  : <div className="showcase-mini-music-placeholder" aria-hidden="true">♪</div>}
+                                <div className="showcase-mini-music-copy">
+                                  <span className="showcase-mini-track-label">{ytmusicPublic.lastPlayed ? "LAST PLAYED" : ytmusicLeadSong ? "PUBLIC PICK" : "YOUTUBE MUSIC"}</span>
+                                  <strong>{ytmusicLeadSong ? ytmusicLeadSong.title : "No public track shared yet"}</strong>
+                                  {ytmusicLeadSong
+                                    ? <span>{ytmusicLeadSong.artists.join(", ") || "Unknown artist"}{ytmusicLeadSong.album ? ` · ${ytmusicLeadSong.album}` : ""}</span>
+                                    : <span>{isAdmin ? "Connect YouTube Music and select up to three songs for visitors." : "Public tracks appear here when selected by the administrator."}</span>}
+                                </div>
+                                {ytmusicLeadSong?.url && <a href={ytmusicLeadSong.url} target="_blank" rel="noreferrer" aria-label="Open in YouTube Music">↗</a>}
+                              </div>
+                              {isAdmin && <div className="showcase-mini-actions">
+                                {integration("ytmusic").connected
+                                  ? <button type="button" className="showcase-outline-button" onClick={() => void connectYtmusic()}>Reconnect</button>
+                                  : <button type="button" className="showcase-outline-button" onClick={() => void connectYtmusic()}>Connect</button>}
+                                {integration("ytmusic").connected && <button type="button" className="showcase-outline-button is-danger" onClick={() => void disconnectIntegration("ytmusic")}>Disconnect</button>}
+                                {integration("ytmusic").connected && <button type="button" className="showcase-outline-button" onClick={() => void refreshLikedLibraries()} disabled={likedMusicLoading}>{likedMusicLoading ? "Refreshing…" : "Refresh"}</button>}
+                              </div>}
+                            </div>
+                
+                            {ytmusicConnectError && isAdmin && (
+                              <p className="showcase-ytmusic-connect-error" role="alert">{ytmusicConnectError}</p>
+                            )}
+                
+                            {ytmusicPublic.tracks.length > 0 && <div className="showcase-ytmusic-public-block">
+                              <div className="showcase-ytmusic-subsection-heading">
+                                {isAdmin ? (
+                                  <button
+                                    type="button"
+                                    className="showcase-ytmusic-collapse-toggle"
+                                    aria-expanded={!selectedTracksCollapsed}
+                                    onClick={() => setSelectedTracksCollapsed((collapsed) => !collapsed)}
+                                  >
+                                    <span className="showcase-ytmusic-section-title">Selected for visitors</span>
+                                    <span className="showcase-ytmusic-collapse-mark" aria-hidden="true">{selectedTracksCollapsed ? "+" : "−"}</span>
+                                  </button>
+                                ) : <h3>Selected for visitors</h3>}
+                              </div>
+                              {(!isAdmin || !selectedTracksCollapsed) && (
+                                <div className="showcase-track-list">{ytmusicPublic.tracks.slice(0, 3).map((song, index) => <MusicTrack
+                                  song={song}
+                                  key={song.videoId || index}
+                                  publicAction={isAdmin ? {
+                                    label: "Remove from public",
+                                    disabled: ytmusicPublicSaving,
+                                    onClick: () => void toggleYtmusicPublicTrack(song),
+                                  } : undefined}
+                                />)}</div>
+                              )}
+                            </div>}
+                
+                            {isAdmin && <>
+                              <div className="showcase-ytmusic-admin-heading">
+                                <button
+                                  type="button"
+                                  className="showcase-ytmusic-collapse-toggle"
+                                  aria-expanded={!pickerCollapsed}
+                                  onClick={() => setPickerCollapsed((collapsed) => !collapsed)}
+                                >
+                                  <span className="showcase-ytmusic-section-title">Choose public tracks</span>
+                                  <span className="showcase-ytmusic-selected-count">{ytmusicPublic.tracks.length}/3 selected</span>
+                                  <span className="showcase-ytmusic-collapse-mark" aria-hidden="true">{pickerCollapsed ? "+" : "−"}</span>
+                                </button>
+                              </div>
+                              {!pickerCollapsed && <>
+                              <div className="showcase-ytmusic-picker-scroll" ref={ytmusicPickerScrollRef} role="region" aria-label="Choose public tracks from liked songs" tabIndex={0}>
+                                {likedMusicLoading
+                                  ? <p className="showcase-empty" role="status">Loading liked songs…</p>
+                                  : likedMusicError
+                                    ? <p className="showcase-empty" role="status">YouTube Music could not be refreshed. Check backend logs.</p>
+                                    : likedMusic.length
+                                      ? <div className="showcase-track-list">{likedMusic.slice(0, ytmusicPickerVisibleCount).map((song, index) => {
+                                        const alreadySelected = Boolean(song.videoId) && ytmusicPublic.tracks.some((item) => item.videoId === song.videoId);
+                                        return <MusicTrack
+                                          song={song}
+                                          key={song.videoId || index}
+                                          publicAction={{
+                                            label: alreadySelected ? "Remove from public" : ytmusicPublic.tracks.length >= 3 ? "Limit reached" : "Show to visitors",
+                                            disabled: ytmusicPublicSaving || (!alreadySelected && ytmusicPublic.tracks.length >= 3),
+                                            onClick: () => void toggleYtmusicPublicTrack(song),
+                                          }}
+                                        />;
+                                      })}</div>
+                                      : <p className="showcase-empty">{integration("ytmusic").connected ? "No liked songs were returned. Check backend logs if this seems wrong." : "Connect YouTube Music to load liked songs."}</p>}
+                                {!likedMusicLoading && !likedMusicError && ytmusicPickerVisibleCount < likedMusic.length && (
+                                  <div ref={ytmusicPickerSentinelRef} className="showcase-ytmusic-picker-sentinel" aria-hidden="true" />
+                                )}
+                              </div>
+                              <p className="showcase-admin-hint">The public card is visible without an admin session. Your last-played song is saved separately and stays public after disconnecting.</p>
+                              </>}
+                
+                            </>}
+                          </section>
+              </div>
+          {featuredColumns[2].length > 0 && (
+            <div className="account-dashboard-featured-card-list" aria-label="Featured links">
+              {featuredColumns[2].map((item) => <ShowcaseCard key={item.id} item={item} editable={isAdmin} onVisibility={toggleLink} onDelete={removeLink} />)}
+            </div>
+          )}
+            </div>
           </div>
         </main>
       </div>
