@@ -305,7 +305,14 @@
   flex-basis: 42px;
 }
 .account-dashboard-media-stack .showcase-track-feature { padding: 5px 7px; font-size: .63rem; }
-.account-showcase-featured-section { margin-top: 18px; }
+.account-showcase-featured-section { margin-top: 0; }
+.account-dashboard-featured-row {
+  grid-column: 1 / -1;
+  align-self: start;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
 .account-showcase-featured-section .showcase-links-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .account-showcase-featured-section .showcase-add-link-form { margin-bottom: 16px; }
 @media (max-width: 1120px) {

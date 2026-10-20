@@ -691,7 +691,7 @@ export default function AccountPage() {
   }, [isAdmin, integrationState.ytmusic?.connected, refreshLikedLibraries, syncYtmusicHistory]);
 
   const integration = (provider: string): IntegrationStatus => integrationState[provider] || { configured: false, connected: false };
-  const visibleLinks = links.filter((item) => isAdmin || item.visible);
+  const visibleLinks = links.filter((item) => item.provider !== "ytmusic" && (isAdmin || item.visible));
   const ytmusicLeadSong = ytmusicPublic.lastPlayed || ytmusicPublic.tracks[0] || null;
 
   return (
@@ -889,9 +889,8 @@ export default function AccountPage() {
           </section>
 
             </div>
-          </div>
 
-          <section className="account-showcase-section account-showcase-featured-section">
+          <section className="account-showcase-section account-showcase-featured-section account-dashboard-featured-row">
             <div className="showcase-section-heading"><div><p className="account-eyebrow">HAND-PICKED</p><h2>Featured links</h2><p>Share videos, songs, notes, articles, and links from any public website with rich preview cards.</p></div></div>
             {isAdmin && <form className="showcase-add-link-form" onSubmit={addLink}>
               <label htmlFor="showcase-url">Paste a link</label>
@@ -903,6 +902,7 @@ export default function AccountPage() {
               <div className="showcase-links-grid">{visibleLinks.map((item) => <ShowcaseCard key={item.id} item={item} editable={isAdmin} onVisibility={toggleLink} onDelete={removeLink} />)}</div>
             ) : <p className="showcase-empty">No featured links have been published yet.</p>}
           </section>
+          </div>
         </main>
       </div>
     </div>

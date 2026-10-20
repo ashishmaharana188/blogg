@@ -1103,6 +1103,9 @@ router.post("/admin/showcase/links", ...ADMIN_GUARD, async (req, res, next) => {
     const url = await safePreviewUrl(req.body?.url);
     if (!url) return res.status(400).json({ message: "Enter a valid public HTTP or HTTPS link. Private/internal network addresses are not allowed." });
     const provider = providerFor(url);
+    if (provider === "ytmusic") {
+      return res.status(400).json({ message: "YouTube Music tracks are managed in the YouTube Music section and cannot be added to Featured links." });
+    }
     const metadata = await providerPreview(url, provider);
     const domainLabel = url.hostname.replace(/^www\./i, "");
     const title = cleanText(req.body?.title, 180) || metadata.title || domainLabel;
