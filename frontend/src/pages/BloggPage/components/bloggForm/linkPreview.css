@@ -1,0 +1,139 @@
+.blogg-link-preview {
+  box-sizing: border-box;
+  width: min(100%, 760px);
+  margin: 14px 0;
+  overflow: hidden;
+  border: 1px solid #d9e0e7;
+  border-radius: 12px;
+  background: #fff;
+  color: #172033;
+  box-shadow: 0 2px 7px rgb(15 23 42 / 5%);
+}
+
+.blogg-link-preview-anchor {
+  display: grid;
+  grid-template-columns: minmax(120px, 31%) minmax(0, 1fr) 28px;
+  align-items: stretch;
+  min-height: 116px;
+  color: inherit !important;
+  text-decoration: none !important;
+}
+
+.blogg-link-preview-anchor.no-image {
+  grid-template-columns: minmax(0, 1fr) 28px;
+}
+
+.blogg-link-preview-anchor:hover .blogg-link-preview-title {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.blogg-link-preview-media {
+  min-width: 0;
+  min-height: 116px;
+  background: #f1f4f7;
+}
+
+.blogg-link-preview-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 116px;
+  max-height: 220px;
+  object-fit: cover;
+}
+
+.blogg-link-preview-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 6px;
+  padding: 14px 16px;
+}
+
+.blogg-link-preview-provider {
+  max-width: 100%;
+  color: #758195;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.blogg-link-preview-title {
+  color: #192538;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.blogg-link-preview-description {
+  display: -webkit-box;
+  max-width: 100%;
+  overflow: hidden;
+  color: #5e6a7a;
+  font-size: 12px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.blogg-link-preview-url {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  color: #8a94a2;
+  font-size: 10px;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blogg-link-preview-open {
+  align-self: start;
+  padding: 13px 10px 0 0;
+  color: #6b7788;
+  font-size: 15px;
+}
+
+@media (max-width: 520px) {
+  .blogg-link-preview-anchor {
+    grid-template-columns: minmax(82px, 28%) minmax(0, 1fr) 20px;
+    min-height: 96px;
+  }
+
+  .blogg-link-preview-anchor.no-image {
+    grid-template-columns: minmax(0, 1fr) 20px;
+  }
+
+  .blogg-link-preview-media,
+  .blogg-link-preview-media img {
+    min-height: 96px;
+  }
+
+  .blogg-link-preview-copy {
+    gap: 4px;
+    padding: 10px;
+  }
+
+  .blogg-link-preview-title {
+    font-size: 12px;
+  }
+
+  .blogg-link-preview-description {
+    font-size: 11px;
+    -webkit-line-clamp: 2;
+  }
+}
+
+/* Keep the card legible inside Blogg's dark editing theme. */
+.blogg-editor-form .blogg-link-preview {
+  background: #fff;
+  color: #172033;
+}

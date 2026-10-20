@@ -3,12 +3,13 @@ import { useCreateBlockNote, FormattingToolbarController } from "@blocknote/reac
 import { BlockNoteView } from "@blocknote/mantine";
 import { uploadFile } from "../../services/bloggService";
 import { BloggFormattingToolbar } from "./bloggFormattingToolbar";
+import { bloggEditorSchema } from "./bloggEditorSchema";
+import { fetchLinkPreview } from "./linkPreviewService";
 
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
 import { useRef, useState } from "react";
 
-// Pre-define full Tailwind classes so the compiler detects them
 const TAG_COLORS = [
   "bg-blue-100 text-blue-800 border-blue-200",
   "bg-emerald-100 text-emerald-800 border-emerald-200",
@@ -18,6 +19,73 @@ const TAG_COLORS = [
   "bg-cyan-100 text-cyan-800 border-cyan-200",
 ];
 
+type PastedLink = { url: string; label: string };
+
+function normaliseHttpUrl(value: string): string | null {
+  try {
+    const url = new URL(value.trim());
+    if ((url.protocol !== "https:" && url.protocol !== "http:") || url.username || url.password) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+/** Handles both address-bar URLs (plain text) and a single copied hyperlink (HTML clipboard). */
+function readPastedLink(event: ClipboardEvent): PastedLink | null {
+  const clipboard = event.clipboardData;
+  if (!clipboard) return null;
+
+  const plain = clipboard.getData("text/plain").trim();
+  const plainUrl = normaliseHttpUrl(plain);
+  if (plainUrl && !/\s/.test(plain)) return { url: plainUrl, label: plain };
+
+  const html = clipboard.getData("text/html");
+  if (!html) return null;
+  try {
+    const parsed = new DOMParser().parseFromString(html, "text/html");
+    const anchors = Array.from(parsed.querySelectorAll("a[href]"));
+    if (anchors.length !== 1) return null;
+    const anchor = anchors[0];
+    const url = normaliseHttpUrl(anchor.getAttribute("href") || "");
+    const label = (anchor.textContent || plain || "").replace(/\s+/g, " ").trim();
+    const wholeClipboardText = (parsed.body.textContent || "").replace(/\s+/g, " ").trim();
+    if (!url || (wholeClipboardText && label && wholeClipboardText !== label)) return null;
+    return { url, label: label || plain || url };
+  } catch {
+    return null;
+  }
+}
+
+function textOfBlock(block: { content?: unknown }): string {
+  if (typeof block.content === "string") return block.content;
+  if (!Array.isArray(block.content)) return "";
+  return block.content.map((part) => {
+    if (typeof part === "string") return part;
+    if (part && typeof part === "object") {
+      const inline = part as { type?: string; text?: string; content?: unknown };
+      if (inline.type === "text") return inline.text || "";
+      if (inline.type === "link" && Array.isArray(inline.content)) {
+        return inline.content.map((nested) => typeof nested === "object" && nested && "text" in nested ? String((nested as { text?: unknown }).text || "") : "").join("");
+      }
+    }
+    return "";
+  }).join("");
+}
+
+function providerLabel(urlValue: string): string {
+  try {
+    const url = new URL(urlValue);
+    if (url.hostname === "open.spotify.com") return "Spotify";
+    if (url.hostname === "music.youtube.com") return "YouTube Music";
+    if (["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"].includes(url.hostname)) return "YouTube";
+    if (url.hostname === "noteonstuff.vercel.app" && url.pathname.startsWith("/share/")) return "Blogg";
+    return url.hostname.replace(/^www\./i, "");
+  } catch {
+    return "Website";
+  }
+}
+
 const UserForm = ({
   onContentChange,
   selectedBlogg,
@@ -26,15 +94,12 @@ const UserForm = ({
   const [isReadOnly, setIsReadOnly] = useState(
     selectedBlogg !== null && selectedBlogg !== undefined && !initialEditMode,
   );
-
   const [formData, setFormData] = useState({
     author: selectedBlogg?.author ?? "",
     title: selectedBlogg?.title ?? "",
     description: selectedBlogg?.subtitle ?? "",
     content: selectedBlogg?.content ?? [],
   });
-
-  // Tag System State
   const [tags, setTags] = useState<{ text: string; colorClass: string }[]>(
     (selectedBlogg?.tags ?? []).map((text, index) => ({
       text,
@@ -43,24 +108,94 @@ const UserForm = ({
   );
   const [isAddingTag, setIsAddingTag] = useState(false);
   const [tagInput, setTagInput] = useState("");
+  const pendingPreviewsRef = useRef<Set<Promise<void>>>(new Set());
 
   const editor = useCreateBlockNote({
+    schema: bloggEditorSchema,
     initialContent: selectedBlogg?.content as any,
     uploadFile,
+    pasteHandler: ({ event, editor: pasteEditor, defaultPasteHandler }) => {
+      const pasted = readPastedLink(event);
+      if (!pasted) return defaultPasteHandler();
+
+      let cursor: ReturnType<typeof pasteEditor.getTextCursorPosition>;
+      try {
+        cursor = pasteEditor.getTextCursorPosition();
+      } catch {
+        return defaultPasteHandler();
+      }
+
+      const currentBlock = cursor.block;
+      const isBlankParagraph = currentBlock.type === "paragraph" && textOfBlock(currentBlock).trim() === "";
+
+      // A standalone HTTPS URL on a blank paragraph becomes a saved, clickable preview block.
+      // URLs pasted into an existing sentence (or HTTP URLs) remain inline hyperlinks instead.
+      if (isBlankParagraph && pasted.url.startsWith("https://")) {
+        const blockId = currentBlock.id;
+        const initialProps = {
+          url: pasted.url,
+          title: pasted.url,
+          description: "Loading link preview…",
+          image: "",
+          provider: providerLabel(pasted.url),
+        };
+        pasteEditor.updateBlock(blockId, { type: "linkPreview", props: initialProps });
+        // A preview is a non-editable block. Keep a normal paragraph after it so
+        // the caret has a safe place to land and the user can continue writing.
+        const trailingParagraph = pasteEditor.insertBlocks(
+          [{ type: "paragraph" }],
+          blockId,
+          "after",
+        )[0];
+        if (trailingParagraph) {
+          pasteEditor.setTextCursorPosition(trailingParagraph.id, "start");
+        }
+
+        let pending: Promise<void>;
+        pending = fetchLinkPreview(pasted.url).then((metadata) => {
+          const latestBlock = pasteEditor.getBlock(blockId);
+          if (!latestBlock || latestBlock.type !== "linkPreview") return;
+          pasteEditor.updateBlock(blockId, {
+            props: {
+              url: metadata.url || pasted.url,
+              title: metadata.title || pasted.url,
+              description: metadata.description || "",
+              image: metadata.image || "",
+              provider: metadata.provider || initialProps.provider,
+            },
+          });
+        }).catch(() => {
+          const latestBlock = pasteEditor.getBlock(blockId);
+          if (!latestBlock || latestBlock.type !== "linkPreview") return;
+          pasteEditor.updateBlock(blockId, {
+            props: {
+              ...initialProps,
+              description: "Preview details could not be loaded. Open the original link.",
+            },
+          });
+        }).finally(() => {
+          pendingPreviewsRef.current.delete(pending);
+        });
+        pendingPreviewsRef.current.add(pending);
+        return true;
+      }
+
+      // Using BlockNote's inline-link schema ensures the URL is clickable when pasted into text.
+      pasteEditor.insertInlineContent({
+        type: "link",
+        content: pasted.label || pasted.url,
+        href: pasted.url,
+      });
+      return true;
+    },
   });
 
   const authorRef = useRef<HTMLTextAreaElement>(null);
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleTitleChange = (
-    field: "author" | "title" | "description",
-    value: string,
-  ) => {
-    setFormData({
-      ...formData,
-      [field]: value,
-    });
+  const handleTitleChange = (field: "author" | "title" | "description", value: string) => {
+    setFormData({ ...formData, [field]: value });
   };
 
   const autoResize = (ref: React.RefObject<HTMLTextAreaElement | null>) => {
@@ -70,11 +205,9 @@ const UserForm = ({
     }
   };
 
-  // Tag Input Handlers
   const confirmTag = () => {
     if (tagInput.trim()) {
-      const randomColor =
-        TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)];
+      const randomColor = TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)];
       setTags([...tags, { text: tagInput.trim(), colorClass: randomColor }]);
     }
     setTagInput("");
@@ -96,12 +229,16 @@ const UserForm = ({
     setTags(tags.filter((_, index) => index !== indexToRemove));
   };
 
-  const saveForm = () => {
+  const saveForm = async () => {
+    // Do not persist a temporary "Loading link preview…" placeholder if the user saves quickly.
+    if (pendingPreviewsRef.current.size > 0) {
+      await Promise.all(Array.from(pendingPreviewsRef.current));
+    }
     const blog = {
       author: formData.author,
       title: formData.title,
       subtitle: formData.description,
-      tags: tags.map((t) => t.text), // Extract pure strings for the backend
+      tags: tags.map((tag) => tag.text),
       content: editor.document,
     };
     onContentChange(blog);
@@ -115,8 +252,8 @@ const UserForm = ({
             ref={authorRef}
             value={formData.author}
             readOnly={isReadOnly}
-            onChange={(e) => {
-              handleTitleChange("author", e.target.value);
+            onChange={(event) => {
+              handleTitleChange("author", event.target.value);
               autoResize(authorRef);
             }}
             placeholder="Author"
@@ -127,8 +264,8 @@ const UserForm = ({
           ref={titleRef}
           value={formData.title}
           readOnly={isReadOnly}
-          onChange={(e) => {
-            handleTitleChange("title", e.target.value);
+          onChange={(event) => {
+            handleTitleChange("title", event.target.value);
             autoResize(titleRef);
           }}
           placeholder="Document Title"
@@ -139,8 +276,8 @@ const UserForm = ({
             ref={descriptionRef}
             value={formData.description}
             readOnly={isReadOnly}
-            onChange={(e) => {
-              handleTitleChange("description", e.target.value);
+            onChange={(event) => {
+              handleTitleChange("description", event.target.value);
               autoResize(descriptionRef);
             }}
             placeholder="Description"
@@ -148,83 +285,37 @@ const UserForm = ({
           />
         </div>
 
-        {/* Dynamic Tag Container */}
         <div className="flex flex-wrap items-center justify-center gap-2 mt-4 min-h-[32px]">
           {tags.map((tag, index) => (
-            <div
-              key={index}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border transition-all ${tag.colorClass}`}
-            >
+            <div key={index} className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border transition-all ${tag.colorClass}`}>
               <span>{tag.text}</span>
-
-              {!isReadOnly && (
-                <button
-                  onClick={() => removeTag(index)}
-                  className="hover:text-black opacity-50 hover:opacity-100 transition-opacity focus:outline-none"
-                  title="Remove tag"
-                >
-                  ×
-                </button>
-              )}
+              {!isReadOnly && <button onClick={() => removeTag(index)} className="hover:text-black opacity-50 hover:opacity-100 transition-opacity focus:outline-none" title="Remove tag">×</button>}
             </div>
           ))}
-
-          {!isReadOnly &&
-            (isAddingTag ? (
-              <input
-                autoFocus
-                type="text"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={handleTagKeyDown}
-                onBlur={confirmTag}
-                placeholder="Type & Enter..."
-                className="w-32 px-3 py-1 text-xs font-bold border border-gray-300 rounded-full focus:outline-none focus:border-slate-800 text-center bg-white shadow-sm"
-              />
-            ) : (
-              <button
-                onClick={() => setIsAddingTag(true)}
-                className="px-4 py-1 text-xs border border-gray-300 rounded-full font-bold text-gray-600 hover:bg-gray-100 transition-colors shadow-sm"
-              >
-                + Add Tag
-              </button>
-            ))}
+          {!isReadOnly && (isAddingTag ? (
+            <input
+              autoFocus
+              type="text"
+              value={tagInput}
+              onChange={(event) => setTagInput(event.target.value)}
+              onKeyDown={handleTagKeyDown}
+              onBlur={confirmTag}
+              placeholder="Type & Enter..."
+              className="w-32 px-3 py-1 text-xs font-bold border border-gray-300 rounded-full focus:outline-none focus:border-slate-800 text-center bg-white shadow-sm"
+            />
+          ) : (
+            <button onClick={() => setIsAddingTag(true)} className="px-4 py-1 text-xs border border-gray-300 rounded-full font-bold text-gray-600 hover:bg-gray-100 transition-colors shadow-sm">+ Add Tag</button>
+          ))}
         </div>
 
         <div className="mt-10 [&_.bn-editor]:pt-6 [&_.bn-editor]:pb-12">
-          <BlockNoteView
-            editor={editor}
-            theme="dark"
-            filePanel={!isReadOnly}
-            editable={!isReadOnly}
-            formattingToolbar={false}
-          >
-            {!isReadOnly && (
-              <FormattingToolbarController formattingToolbar={BloggFormattingToolbar} />
-            )}
+          <BlockNoteView editor={editor} theme="dark" filePanel={!isReadOnly} editable={!isReadOnly} formattingToolbar={false}>
+            {!isReadOnly && <FormattingToolbarController formattingToolbar={BloggFormattingToolbar} />}
           </BlockNoteView>
         </div>
 
-        {isReadOnly && (
-          <div className="flex justify-end mt-4">
-            <button
-              className="px-5 py-1 text-l bg-white border border-gray-300 text-black rounded font-bold hover:bg-black hover:text-white transition-colors"
-              onClick={() => setIsReadOnly(!isReadOnly)}
-            >
-              EDIT
-            </button>
-          </div>
-        )}
-        {!isReadOnly && (
-          <div className="flex justify-end mt-4">
-            <button
-              className="px-5 py-1 text-l bg-white border border-gray-300 text-black rounded font-bold hover:bg-black hover:text-white transition-colors"
-              onClick={saveForm}
-            >
-              SAVE
-            </button>
-          </div>
-        )}
+        {isReadOnly && <div className="flex justify-end mt-4"><button className="px-5 py-1 text-l bg-white border border-gray-300 text-black rounded font-bold hover:bg-black hover:text-white transition-colors" onClick={() => setIsReadOnly(!isReadOnly)}>EDIT</button></div>}
+        {!isReadOnly && <div className="flex justify-end mt-4"><button className="px-5 py-1 text-l bg-white border border-gray-300 text-black rounded font-bold hover:bg-black hover:text-white transition-colors" onClick={saveForm}>SAVE</button></div>}
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import { BlockNoteView } from "@blocknote/mantine";
 import { useCreateBlockNote } from "@blocknote/react";
+import { bloggEditorSchema } from "../../bloggForm/bloggEditorSchema";
 
 type ReadOnlyBloggContentProps = {
   content: any[];
@@ -7,10 +8,10 @@ type ReadOnlyBloggContentProps = {
 
 export function ReadOnlyBloggContent({ content }: ReadOnlyBloggContentProps) {
   const editor = useCreateBlockNote({
-    initialContent:
-      content.length > 0 ? content : [{ type: "paragraph", content: "" }],
+    schema: bloggEditorSchema,
+    initialContent: content.length > 0 ? content : [{ type: "paragraph", content: "" }],
   });
 
-  // Read-only renderers should not expose image download or other editor toolbar actions.
+  // Read-only renderers share the schema so saved preview blocks render outside the editor.
   return <BlockNoteView editor={editor} editable={false} theme="light" formattingToolbar={false} />;
 }
