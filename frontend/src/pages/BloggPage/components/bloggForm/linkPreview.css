@@ -140,11 +140,11 @@
 
 /*
  * BlockNote can apply a blue focus/selection frame to the wrapper around an
- * attachment. Because this stylesheet is loaded by the shared BlockNote
- * schema, this reset applies to the editor, feed, reader, and flipbook.
+ * attachment. This file is imported by the shared BlockNote schema, so the
+ * resets apply to the editor, feed, reader, and flipbook.
  *
  * Clear the frame on attachment wrappers only. Keep the link preview's own
- * neutral card border and the existing styling of the surrounding page intact.
+ * neutral card border and the existing styling of surrounding page cards.
  */
 .bn-editor :is(.bn-block-outer, .bn-block, .bn-block-content):has(
   .blogg-link-preview,
@@ -182,6 +182,33 @@
   border-color: transparent !important;
 }
 
+/*
+ * Important: BlockNote draws its blue ProseMirror selection outline on the
+ * direct children of the selected node, not necessarily on the block wrapper.
+ * Reset that child outline for media/attachment block content types.
+ * These selectors follow BlockNote's own selection rule and are more specific,
+ * while leaving selection/focus behavior on normal text blocks untouched.
+ */
+.bn-editor .bn-block-content.ProseMirror-selectednode:is(
+  [data-content-type="image"],
+  [data-content-type="video"],
+  [data-content-type="audio"],
+  [data-content-type="file"],
+  [data-content-type="embed"],
+  [data-content-type="linkPreview"]
+) > *,
+.bn-editor .ProseMirror-selectednode > .bn-block-content:is(
+  [data-content-type="image"],
+  [data-content-type="video"],
+  [data-content-type="audio"],
+  [data-content-type="file"],
+  [data-content-type="embed"],
+  [data-content-type="linkPreview"]
+) > * {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 /* A focused link preview/media element must not reintroduce the blue frame. */
 .bn-editor .bn-block-outer:has(.blogg-link-preview) .blogg-link-preview-anchor:focus,
 .bn-editor .bn-block-outer:has(.blogg-link-preview) .blogg-link-preview-anchor:focus-visible,
@@ -198,7 +225,6 @@
   outline: none !important;
   box-shadow: none !important;
 }
-
 
 /* Also neutralize a frame attached directly to a media element or its wrapper. */
 .bn-editor :is(
