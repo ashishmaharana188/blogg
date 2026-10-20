@@ -38,14 +38,13 @@ type YoutubePlaylist = {
   url: string;
   itemCount: number;
 };
-type YoutubeDisplayMode = "playlist" | "rows";
 type PlaylistVideosState = { loading: boolean; items: Song[]; error?: string };
 type YoutubePlaylistsResponse = {
   configured: boolean;
   connected: boolean;
-  mode: YoutubeDisplayMode;
   playlists: YoutubePlaylist[];
 };
+type YtMusicPublicState = { connected: boolean; lastPlayed: Song | null; tracks: Song[] };
 type IntegrationStatus = { configured: boolean; connected: boolean; message?: string };
 type IntegrationsResponse = {
   spotify: IntegrationStatus & { playing: boolean; track?: Song | null; provider?: string };
@@ -128,7 +127,7 @@ function ShowcaseCard({
   );
 }
 
-function MusicTrack({ song, onFeature }: { song: Song; onFeature?: (song: Song) => void }) {
+function MusicTrack({ song, onFeature, publicAction }: { song: Song; onFeature?: (song: Song) => void; publicAction?: { label: string; disabled?: boolean; onClick: () => void } }) {
   return (
     <div className="showcase-track">
       {song.thumbnail ? (
@@ -142,22 +141,44 @@ function MusicTrack({ song, onFeature }: { song: Song; onFeature?: (song: Song) 
       </div>
       {song.url && <a href={song.url} target="_blank" rel="noreferrer">Open ↗</a>}
       {song.url && onFeature && <button type="button" className="showcase-track-feature" onClick={() => onFeature(song)}>Feature</button>}
+      {publicAction && <button type="button" className="showcase-track-feature" disabled={publicAction.disabled} onClick={publicAction.onClick}>{publicAction.label}</button>}
     </div>
   );
 }
 
-function YoutubePlaylistCard({ playlist }: { playlist: YoutubePlaylist }) {
+function YoutubePlaylistCard({ playlist, expanded, onToggle }: { playlist: YoutubePlaylist; expanded: boolean; onToggle: (playlistId: string) => void }) {
   return (
-    <a className="showcase-youtube-playlist-card" href={playlist.url} target="_blank" rel="noreferrer">
+    <button type="button" className="showcase-youtube-playlist-card" aria-expanded={expanded} onClick={() => onToggle(playlist.id)}>
       {playlist.thumbnail ? <img src={playlist.thumbnail} alt="" loading="lazy" /> : <div className="showcase-youtube-playlist-placeholder" aria-hidden="true">▶</div>}
       <div className="showcase-youtube-playlist-copy">
         <strong>{playlist.title}</strong>
         <span>{playlist.itemCount} {playlist.itemCount === 1 ? "video" : "videos"}</span>
         {playlist.description && <p>{playlist.description}</p>}
-        <span className="showcase-youtube-playlist-open">Open playlist ↗</span>
+        <span className="showcase-youtube-playlist-open">{expanded ? "Hide songs −" : "Show songs ＋"}</span>
       </div>
-    </a>
+    </button>
   );
+}
+
+function openYoutubeTarget(rawUrl: string, target: "app" | "browser") {
+  let url: URL;
+  try { url = new URL(rawUrl); } catch { return; }
+  const playlistId = url.searchParams.get("list");
+  const videoId = url.searchParams.get("v");
+  const contentPath = playlistId ? `playlist?list=${encodeURIComponent(playlistId)}` : `watch?v=${encodeURIComponent(videoId || "")}`;
+  const webUrl = `https://www.youtube.com/${contentPath}`;
+  if (target === "browser") {
+    window.open(webUrl, "_blank", "noopener,noreferrer");
+    return;
+  }
+  const agent = navigator.userAgent || "";
+  if (/Android/i.test(agent)) {
+    window.location.assign(`intent://www.youtube.com/${contentPath}#Intent;package=com.google.android.youtube;scheme=https;end`);
+  } else if (/iPhone|iPad|iPod/i.test(agent)) {
+    window.location.assign(`youtube://www.youtube.com/${contentPath}`);
+  } else {
+    window.open(webUrl, "_blank", "noopener,noreferrer");
+  }
 }
 
 function YoutubePlaylistRows({
@@ -197,7 +218,10 @@ function YoutubePlaylistRows({
           <h3>{playlist.title}</h3>
           <span>{playlist.itemCount} {playlist.itemCount === 1 ? "video" : "videos"}</span>
         </div>
-        <a href={playlist.url} target="_blank" rel="noreferrer">Open playlist ↗</a>
+        <div className="showcase-youtube-open-actions">
+          <button type="button" onClick={() => openYoutubeTarget(playlist.url, "app")}>Open in app</button>
+          <button type="button" onClick={() => openYoutubeTarget(playlist.url, "browser")}>Open in browser</button>
+        </div>
       </div>
       {playlist.description && <p className="showcase-youtube-playlist-description">{playlist.description}</p>}
       {videos?.loading ? <p className="showcase-empty showcase-playlist-loading">Loading playlist videos…</p> : !videos ? <p className="showcase-empty showcase-playlist-loading">Videos load as this playlist comes into view.</p> : videos.error ? <p className="showcase-empty">{videos.error}</p> : videos.items.length ? (
@@ -222,7 +246,7 @@ export default function AccountPage() {
     configured: false, connected: false, playing: false,
   });
   const [youtubePlaylists, setYoutubePlaylists] = useState<YoutubePlaylist[]>([]);
-  const [youtubeMode, setYoutubeMode] = useState<YoutubeDisplayMode>("playlist");
+  const [expandedYoutubePlaylists, setExpandedYoutubePlaylists] = useState<Record<string, boolean>>({});
   const [youtubeConnected, setYoutubeConnected] = useState(false);
   const [youtubeConfigured, setYoutubeConfigured] = useState(false);
   const [youtubePlaylistsLoading, setYoutubePlaylistsLoading] = useState(true);
@@ -231,6 +255,8 @@ export default function AccountPage() {
   const [likedMusic, setLikedMusic] = useState<Song[]>([]);
   const [likedMusicLoading, setLikedMusicLoading] = useState(true);
   const [likedMusicError, setLikedMusicError] = useState("");
+  const [ytmusicPublic, setYtmusicPublic] = useState<YtMusicPublicState>({ connected: false, lastPlayed: null, tracks: [] });
+  const [ytmusicPublicSaving, setYtmusicPublicSaving] = useState(false);
   const [integrationState, setIntegrationState] = useState<Record<string, IntegrationStatus>>({});
 
   const refreshPresence = useCallback(async () => {
@@ -273,7 +299,7 @@ export default function AccountPage() {
     } catch (error) {
       setYoutubePlaylistVideos((current) => ({
         ...current,
-        [playlistId]: { loading: false, items: [], error: error instanceof Error ? error.message : "Could not load playlist videos." },
+        [playlistId]: { loading: false, items: [], error: "Playlist videos are temporarily unavailable. Check backend logs." },
       }));
     }
   }, []);
@@ -284,14 +310,12 @@ export default function AccountPage() {
     try {
       const data = await api<YoutubePlaylistsResponse>("/api/showcase/youtube/playlists");
       const playlists = Array.isArray(data.playlists) ? data.playlists : [];
-      const mode = data.mode === "rows" ? "rows" : "playlist";
       setYoutubePlaylists(playlists);
-      setYoutubeMode(mode);
       setYoutubeConnected(Boolean(data.connected));
       setYoutubeConfigured(Boolean(data.configured));
     } catch (error) {
       setYoutubePlaylists([]);
-      setYoutubePlaylistsError(error instanceof Error ? error.message : "Could not load public YouTube playlists.");
+      setYoutubePlaylistsError("YouTube playlists are temporarily unavailable. Check backend logs.");
     } finally {
       setYoutubePlaylistsLoading(false);
     }
@@ -310,7 +334,7 @@ export default function AccountPage() {
         ytmusic: { configured: true, connected: true },
       }));
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Could not load YouTube Music liked songs.";
+      const message = "YouTube Music could not be refreshed. Check backend logs.";
       setLikedMusicError(message);
       setIntegrationState((current) => ({
         ...current,
@@ -324,18 +348,6 @@ export default function AccountPage() {
       setLikedMusicLoading(false);
     }
   }, [isAdmin]);
-
-  const changeYoutubeMode = async (mode: YoutubeDisplayMode) => {
-    const previousMode = youtubeMode;
-    setYoutubeMode(mode);
-    setYoutubePlaylistsError("");
-    try {
-      await api("/api/admin/showcase/youtube/display-mode", { method: "POST", body: JSON.stringify({ mode }) });
-    } catch (error) {
-      setYoutubeMode(previousMode);
-      setYoutubePlaylistsError(error instanceof Error ? error.message : "Could not save the YouTube display mode.");
-    }
-  };
 
   useEffect(() => {
     if (isAdmin) {
@@ -360,13 +372,10 @@ export default function AccountPage() {
     void refreshShowcase();
     void refreshIntegrations();
     void refreshYoutubePlaylists();
+    if (!isAdmin) return;
     const pollId = window.setInterval(() => { void refreshIntegrations(); }, 30_000);
     return () => window.clearInterval(pollId);
-  }, [refreshShowcase, refreshIntegrations, refreshYoutubePlaylists]);
-
-  useEffect(() => {
-    if (isAdmin) void refreshLikedLibraries();
-  }, [isAdmin, refreshLikedLibraries]);
+  }, [refreshShowcase, refreshIntegrations, refreshYoutubePlaylists, isAdmin]);
 
   const changeActivity = async (activity: AdminActivity) => {
     setBusy(true);
@@ -441,26 +450,107 @@ export default function AccountPage() {
     }
   };
 
-  const connect = async (provider: "spotify" | "youtube" | "ytmusic") => {
+  const connect = async (provider: "spotify" | "youtube") => {
     // Start OAuth with fetch while the Vercel page is still the top-level site.
     // Firefox may partition cross-site cookies, so navigating directly to Render
     // can omit the admin cookie even when authenticated API fetches work.
-    setLinkMessage("");
     try {
-      const result = await api<{ authorizationUrl?: string; message?: string }>(
+      const result = await api<{ authorizationUrl?: string }>(
         `/api/admin/integrations/${provider}/connect`,
         { headers: { Accept: "application/json" } },
       );
-      if (result.authorizationUrl) {
-        window.location.assign(result.authorizationUrl);
-        return;
-      }
-      if (result.message) setLinkMessage(result.message);
-      else setLinkMessage(`Could not start the ${provider} connection.`);
-    } catch (error) {
-      setLinkMessage(error instanceof Error ? error.message : `Could not connect ${provider}.`);
+      if (result.authorizationUrl) window.location.assign(result.authorizationUrl);
+    } catch {
+      // Integration failures are logged by the backend. Keep diagnostics off the page.
     }
   };
+
+  const refreshYtmusicPublic = useCallback(async () => {
+    try {
+      const data = await api<YtMusicPublicState>("/api/showcase/ytmusic/public", { cache: "no-store" });
+      setYtmusicPublic({
+        connected: Boolean(data.connected),
+        lastPlayed: data.lastPlayed || null,
+        tracks: Array.isArray(data.tracks) ? data.tracks.slice(0, 3) : [],
+      });
+    } catch {
+      // Public playback and selections are optional. Detailed errors stay in backend logs.
+    }
+  }, []);
+
+  const toggleYtmusicPublicTrack = async (song: Song) => {
+    if (!song.videoId) return;
+    const currentlySelected = ytmusicPublic.tracks.some((item) => item.videoId === song.videoId);
+    const nextTracks = currentlySelected
+      ? ytmusicPublic.tracks.filter((item) => item.videoId !== song.videoId)
+      : [...ytmusicPublic.tracks, song].slice(0, 3);
+    if (!currentlySelected && ytmusicPublic.tracks.length >= 3) return;
+    setYtmusicPublicSaving(true);
+    try {
+      const data = await api<{ tracks: Song[] }>("/api/admin/showcase/ytmusic/public-tracks", {
+        method: "POST", body: JSON.stringify({ tracks: nextTracks }),
+      });
+      setYtmusicPublic((current) => ({ ...current, tracks: Array.isArray(data.tracks) ? data.tracks.slice(0, 3) : nextTracks }));
+    } catch {
+      // Keep the UI quiet on API failures; the backend logs the diagnostic.
+    } finally {
+      setYtmusicPublicSaving(false);
+    }
+  };
+
+  const disconnectIntegration = async (provider: "spotify" | "ytmusic") => {
+    try {
+      await api(`/api/admin/integrations/${provider}/disconnect`, { method: "POST" });
+      await refreshIntegrations();
+      if (provider === "spotify") {
+        setNowPlaying({ configured: true, connected: false, playing: false });
+        setIntegrationState((current) => ({ ...current, spotify: { configured: current.spotify?.configured ?? false, connected: false } }));
+      } else {
+        setLikedMusic([]);
+        setLikedMusicError("");
+        setIntegrationState((current) => ({ ...current, ytmusic: { configured: current.ytmusic?.configured ?? false, connected: false } }));
+        // Keep the saved public snapshot, especially the last-played track, after disconnect.
+      }
+    } catch {
+      // Disconnect failures are recorded in backend logs.
+    }
+  };
+
+  const connectYtmusic = async () => {
+    try {
+      await api("/api/admin/integrations/ytmusic/connect", { method: "POST" });
+      await refreshIntegrations();
+      await refreshYtmusicPublic();
+    } catch {
+      // Connection failures are recorded in backend logs.
+    }
+  };
+
+  const syncYtmusicHistory = useCallback(async () => {
+    if (!isAdmin || !integrationState.ytmusic?.connected) return;
+    try {
+      const data = await api<{ lastPlayed: Song | null }>("/api/admin/showcase/ytmusic/sync-history", { method: "POST" });
+      setYtmusicPublic((current) => ({ ...current, connected: true, lastPlayed: data.lastPlayed || current.lastPlayed }));
+      await refreshYtmusicPublic();
+    } catch {
+      // The last successful track remains visible until a newer one is found.
+    }
+  }, [isAdmin, integrationState.ytmusic?.connected, refreshYtmusicPublic]);
+
+  useEffect(() => {
+    void refreshYtmusicPublic();
+    const pollId = window.setInterval(() => { void refreshYtmusicPublic(); }, 60_000);
+    return () => window.clearInterval(pollId);
+  }, [refreshYtmusicPublic]);
+
+  useEffect(() => {
+    if (!isAdmin || !integrationState.ytmusic?.connected) return;
+    void refreshLikedLibraries();
+    void syncYtmusicHistory();
+    const historyPoll = window.setInterval(() => { void syncYtmusicHistory(); }, 60_000);
+    return () => window.clearInterval(historyPoll);
+  }, [isAdmin, integrationState.ytmusic?.connected, refreshLikedLibraries, syncYtmusicHistory]);
+
   const integration = (provider: string): IntegrationStatus => integrationState[provider] || { configured: false, connected: false };
   const visibleLinks = links.filter((item) => isAdmin || item.visible);
 
@@ -513,22 +603,26 @@ export default function AccountPage() {
             </>}
           </section>
 
-          <section className="account-showcase-section">
-            <div className="showcase-section-heading">
-              <div><p className="account-eyebrow">A LITTLE CURRENTLY</p><h2>Now playing</h2><p>What’s playing on Spotify right now, when the connection is enabled.</p></div>
-              {isAdmin && <button type="button" className="showcase-outline-button" onClick={() => connect("spotify")}>{integration("spotify").connected ? "Reconnect Spotify" : "Connect Spotify"}</button>}
-            </div>
-            {nowPlaying.playing && nowPlaying.track ? (
-              <div className="showcase-now-playing">
-                {nowPlaying.track.thumbnail ? <img className="showcase-now-cover" src={nowPlaying.track.thumbnail} alt="Album artwork" /> : <div className="showcase-now-cover showcase-track-empty">♪</div>}
-                <div className="showcase-now-copy">
-                  <span className="showcase-live-dot">● LIVE</span><h3>{nowPlaying.track.title}</h3><p>{nowPlaying.track.artists.join(", ")}</p>
-                  {nowPlaying.track.album && <span>{nowPlaying.track.album}</span>}
-                  {nowPlaying.track.url && <a href={nowPlaying.track.url} target="_blank" rel="noreferrer">Listen on Spotify ↗</a>}
+          <section className="account-showcase-section account-showcase-mini-section">
+            <div className="showcase-mini-heading"><p className="account-eyebrow">NOW PLAYING</p><h2>Spotify</h2></div>
+            <div className="showcase-mini-integration-layout">
+              <div className="showcase-mini-music-card">
+                {nowPlaying.playing && nowPlaying.track?.thumbnail
+                  ? <img src={nowPlaying.track.thumbnail} alt="" loading="lazy" />
+                  : <div className="showcase-mini-music-placeholder" aria-hidden="true">♪</div>}
+                <div className="showcase-mini-music-copy">
+                  <strong>{nowPlaying.playing && nowPlaying.track ? nowPlaying.track.title : "Not connected"}</strong>
+                  {nowPlaying.playing && nowPlaying.track?.artists.length ? <span>{nowPlaying.track.artists.join(", ")}</span> : null}
                 </div>
+                {nowPlaying.playing && nowPlaying.track?.url && <a href={nowPlaying.track.url} target="_blank" rel="noreferrer" aria-label="Open in Spotify">↗</a>}
               </div>
-            ) : <p className="showcase-empty">{nowPlaying.message || (nowPlaying.connected ? "Nothing is playing on Spotify right now." : "Spotify is not connected yet.")}</p>}
-            {isAdmin && integration("spotify").configured && <p className="showcase-admin-hint">{integration("spotify").connected ? "Spotify connected. Playback refreshes approximately every 30 seconds." : "App credentials are configured. Connect your Spotify account to finish setup."}</p>}
+              {isAdmin && <div className="showcase-mini-actions">
+                {integration("spotify").connected
+                  ? <button type="button" className="showcase-outline-button" onClick={() => void connect("spotify")}>Reconnect</button>
+                  : <button type="button" className="showcase-outline-button" onClick={() => void connect("spotify")}>Connect</button>}
+                {integration("spotify").connected && <button type="button" className="showcase-outline-button is-danger" onClick={() => void disconnectIntegration("spotify")}>Disconnect</button>}
+              </div>}
+            </div>
           </section>
 
           <section className="account-showcase-section">
@@ -536,33 +630,81 @@ export default function AccountPage() {
               <div><p className="account-eyebrow">YOUTUBE LIBRARY</p><h2>Public playlists</h2><p>Public playlists owned by the connected YouTube account. Visitors only receive playlist metadata and videos from public playlists.</p></div>
               {isAdmin && <button type="button" className="showcase-outline-button" onClick={() => connect("youtube")}>{integration("youtube").connected ? "Reconnect YouTube" : "Connect YouTube"}</button>}
             </div>
-            {isAdmin && <div className="showcase-youtube-mode-row" role="group" aria-label="YouTube playlist display mode">
-              <span>Display mode</span>
-              <button type="button" className={youtubeMode === "playlist" ? "is-active" : ""} aria-pressed={youtubeMode === "playlist"} onClick={() => void changeYoutubeMode("playlist")}>Playlist</button>
-              <button type="button" className={youtubeMode === "rows" ? "is-active" : ""} aria-pressed={youtubeMode === "rows"} onClick={() => void changeYoutubeMode("rows")}>Rows</button>
-            </div>}
-            {youtubePlaylistsLoading ? <p className="showcase-empty">Loading public YouTube playlists…</p> : youtubePlaylistsError ? <p className="showcase-empty" role="status">{youtubePlaylistsError}</p> : !youtubeConnected ? (
-              <p className="showcase-empty">{isAdmin ? youtubeConfigured ? "Connect YouTube to load public playlists from that account." : "Configure the Google OAuth credentials and YouTube Data API key, then connect YouTube." : "No public YouTube playlists are available right now."}</p>
+            {youtubePlaylistsLoading ? <p className="showcase-empty">Loading public YouTube playlists…</p> : youtubePlaylistsError ? <p className="showcase-empty" role="status">YouTube playlists are temporarily unavailable. Check backend logs.</p> : !youtubeConnected ? (
+              <p className="showcase-empty">{isAdmin ? youtubeConfigured ? "Connect YouTube to load public playlists from that account." : "YouTube is not configured yet." : "No public YouTube playlists are available right now."}</p>
             ) : youtubePlaylists.length === 0 ? (
               <p className="showcase-empty">No public playlists were found on the connected account. Set a playlist to Public on YouTube, then refresh this page.</p>
-            ) : youtubeMode === "playlist" ? (
-              <div className="showcase-youtube-playlist-grid">{youtubePlaylists.map((playlist) => <YoutubePlaylistCard playlist={playlist} key={playlist.id} />)}</div>
             ) : (
-              <div className="showcase-youtube-playlist-rows-list">{youtubePlaylists.map((playlist) => <YoutubePlaylistRows playlist={playlist} videos={youtubePlaylistVideos[playlist.id]} onFeature={isAdmin ? featureSong : undefined} onLoad={loadYoutubePlaylistVideos} key={playlist.id} />)}</div>
+              <div className="showcase-youtube-playlist-grid">{youtubePlaylists.map((playlist) => (
+                <div className="showcase-youtube-playlist-entry" key={playlist.id}>
+                  <YoutubePlaylistCard
+                    playlist={playlist}
+                    expanded={Boolean(expandedYoutubePlaylists[playlist.id])}
+                    onToggle={(playlistId) => setExpandedYoutubePlaylists((current) => ({ ...current, [playlistId]: !current[playlistId] }))}
+                  />
+                  {expandedYoutubePlaylists[playlist.id] && <YoutubePlaylistRows playlist={playlist} videos={youtubePlaylistVideos[playlist.id]} onFeature={isAdmin ? featureSong : undefined} onLoad={loadYoutubePlaylistVideos} />}
+                </div>
+              ))}</div>
             )}
-            {isAdmin && <p className="showcase-admin-hint">Playlist mode links directly to each public playlist. Rows mode expands its videos here. The selected mode is saved for visitors too.</p>}
           </section>
 
-          <section className="account-showcase-section">
+          <section className="account-showcase-section account-showcase-ytmusic-section">
             <div className="showcase-section-heading">
-              <div><p className="account-eyebrow">YOUTUBE MUSIC</p><h2>Liked songs</h2><p>Your YouTube Music liked songs through the separate ytmusicapi companion service.</p></div>
-              {isAdmin && <button type="button" className="showcase-outline-button" onClick={() => void refreshLikedLibraries()} disabled={likedMusicLoading}>{likedMusicLoading ? "Refreshing…" : "Refresh Music"}</button>}
+              <div><p className="account-eyebrow">YOUTUBE MUSIC</p><h2>Last played and selected tracks</h2></div>
+              {isAdmin && <div className="showcase-mini-actions">
+                {integration("ytmusic").connected
+                  ? <button type="button" className="showcase-outline-button" onClick={() => void connectYtmusic()}>Reconnect</button>
+                  : <button type="button" className="showcase-outline-button" onClick={() => void connectYtmusic()}>Connect</button>}
+                {integration("ytmusic").connected && <button type="button" className="showcase-outline-button is-danger" onClick={() => void disconnectIntegration("ytmusic")}>Disconnect</button>}
+                {integration("ytmusic").connected && <button type="button" className="showcase-outline-button" onClick={() => void refreshLikedLibraries()} disabled={likedMusicLoading}>{likedMusicLoading ? "Refreshing…" : "Refresh"}</button>}
+              </div>}
             </div>
-            {isAdmin ? likedMusicLoading ? <p className="showcase-empty" role="status">Loading liked songs from YouTube Music…</p> : likedMusicError ? <div className="showcase-empty"><p role="alert">Could not load liked songs: {likedMusicError}</p><button type="button" className="showcase-outline-button" onClick={() => void refreshLikedLibraries()}>Try again</button></div> : likedMusic.length ? <>
-              <p className="showcase-admin-hint" role="status">Loaded {likedMusic.length} liked {likedMusic.length === 1 ? "song" : "songs"}.</p>
-              <div className="showcase-track-list">{likedMusic.slice(0, 8).map((song, index) => <MusicTrack song={song} key={song.videoId || index} onFeature={featureSong} />)}</div>
-            </> : <p className="showcase-empty">{integration("ytmusic").connected ? "The companion service responded successfully but returned no liked songs." : integration("ytmusic").message || "YouTube Music is not connected. Check the companion service status and credentials."}</p> : <p className="showcase-empty">Sign in as the administrator to manage this library.</p>}
-            {isAdmin && <p className="showcase-admin-hint">ytmusicapi uses YouTube Music’s unofficial web interface and may require re-authentication.</p>}
+            <div className="showcase-ytmusic-public-block">
+              <h3>Last played</h3>
+              {ytmusicPublic.lastPlayed
+                ? <MusicTrack song={ytmusicPublic.lastPlayed} />
+                : <p className="showcase-empty">No recently played song is available.</p>}
+            </div>
+            <div className="showcase-ytmusic-public-block">
+              <h3>Selected for visitors</h3>
+              {ytmusicPublic.tracks.length
+                ? <div className="showcase-track-list">{ytmusicPublic.tracks.slice(0, 3).map((song, index) => <MusicTrack
+                  song={song}
+                  key={song.videoId || index}
+                  onFeature={isAdmin ? featureSong : undefined}
+                  publicAction={isAdmin ? {
+                    label: "Remove from public",
+                    disabled: ytmusicPublicSaving,
+                    onClick: () => void toggleYtmusicPublicTrack(song),
+                  } : undefined}
+                />)}</div>
+                : <p className="showcase-empty">No songs selected for visitors.</p>}
+            </div>
+            {isAdmin && <>
+              <div className="showcase-ytmusic-admin-heading">
+                <h3>Liked songs</h3><span>{ytmusicPublic.tracks.length}/3 selected for visitors</span>
+              </div>
+              {likedMusicLoading
+                ? <p className="showcase-empty" role="status">Loading liked songs…</p>
+                : likedMusicError
+                  ? <p className="showcase-empty" role="status">YouTube Music could not be refreshed. Check backend logs.</p>
+                  : likedMusic.length
+                    ? <div className="showcase-track-list">{likedMusic.slice(0, 25).map((song, index) => {
+                      const alreadySelected = Boolean(song.videoId) && ytmusicPublic.tracks.some((item) => item.videoId === song.videoId);
+                      return <MusicTrack
+                        song={song}
+                        key={song.videoId || index}
+                        onFeature={featureSong}
+                        publicAction={{
+                          label: alreadySelected ? "Remove from public" : ytmusicPublic.tracks.length >= 3 ? "Limit reached" : "Show to visitors",
+                          disabled: ytmusicPublicSaving || (!alreadySelected && ytmusicPublic.tracks.length >= 3),
+                          onClick: () => void toggleYtmusicPublicTrack(song),
+                        }}
+                      />;
+                    })}</div>
+                    : <p className="showcase-empty">{integration("ytmusic").connected ? "No liked songs were returned." : "Connect YouTube Music to load liked songs."}</p>}
+              <p className="showcase-admin-hint">Choose up to three liked songs to display publicly. History is checked every minute while the admin page is open.</p>
+            </>}
           </section>
 
           <section className="account-showcase-section">

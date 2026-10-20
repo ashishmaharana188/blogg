@@ -218,11 +218,15 @@ function youtubeSong(video: any): Song {
   };
 }
 function ytmusicSong(song: any): Song {
+  const artists = Array.isArray(song?.artists)
+    ? song.artists.map((artist: any) => cleanText(typeof artist === "string" ? artist : artist?.name, 100)).filter(Boolean)
+    : [];
+  const album = typeof song?.album === "string" ? song.album : song?.album?.name;
   return {
     title: cleanText(song?.title, 240) || "Untitled track",
-    artists: Array.isArray(song?.artists) ? song.artists.map((artist: any) => cleanText(artist?.name, 100)).filter(Boolean) : [],
-    album: cleanText(song?.album?.name, 180) || undefined,
-    thumbnail: Array.isArray(song?.thumbnails) ? song.thumbnails.at(-1)?.url : undefined,
+    artists,
+    album: cleanText(album, 180) || undefined,
+    thumbnail: (typeof song?.thumbnail === "string" ? song.thumbnail : Array.isArray(song?.thumbnails) ? song.thumbnails.at(-1)?.url : undefined),
     url: song?.videoId ? `https://music.youtube.com/watch?v=${encodeURIComponent(song.videoId)}` : undefined,
     videoId: cleanText(song?.videoId, 100) || undefined,
   };
@@ -524,8 +528,12 @@ async function fetchYoutubePlaylistVideos(token: string, playlistId: string): Pr
 async function ytmusicIntegrationStatus(): Promise<IntegrationStatus> {
   const serviceUrl = process.env.YTMUSIC_SERVICE_URL?.replace(/\/+$/, "");
   const serviceToken = process.env.YTMUSIC_SERVICE_TOKEN;
-  if (!serviceUrl || !serviceToken) {
-    return { configured: false, connected: false, message: "YouTube Music companion service URL or service token is missing in the Node backend." };
+  const configured = Boolean(serviceUrl && serviceToken);
+  if (!configured) return { configured: false, connected: false, message: "YouTube Music companion service is not configured." };
+
+  const enabledRecord = await readSetting("ytmusic-enabled");
+  if (enabledRecord?.enabled !== true) {
+    return { configured: true, connected: false, message: "YouTube Music is disconnected." };
   }
 
   try {
@@ -534,24 +542,114 @@ async function ytmusicIntegrationStatus(): Promise<IntegrationStatus> {
       signal: AbortSignal.timeout(3000),
     });
     if (!response.ok) {
-      return { configured: true, connected: false, message: `YouTube Music companion service health check returned HTTP ${response.status}.` };
+      console.error(`[adminShowcase] YouTube Music health check failed; http_status=${response.status}`);
+      return { configured: true, connected: false, message: "YouTube Music companion service is temporarily unavailable." };
     }
     const health = await response.json() as {
       ok?: boolean;
       authConfigured?: boolean;
       tokenConfigured?: boolean;
       oauthConfigured?: boolean;
+      browserAuthReady?: boolean;
     };
-    const ready = Boolean(health.ok && health.authConfigured && health.tokenConfigured && health.oauthConfigured);
+    const authReady = Boolean(health.browserAuthReady || health.oauthConfigured);
+    const ready = Boolean(health.ok && health.authConfigured && health.tokenConfigured && authReady);
     return {
       configured: true,
       connected: ready,
-      message: ready
-        ? "YouTube Music companion service is reachable and its required configuration is present."
-        : "YouTube Music companion service is reachable, but its auth file, service token, or OAuth credentials are not configured.",
+      message: ready ? "YouTube Music companion service is reachable." : "YouTube Music companion authentication is not ready.",
     };
-  } catch {
-    return { configured: true, connected: false, message: "Could not reach the YouTube Music companion service health endpoint." };
+  } catch (error) {
+    console.error(`[adminShowcase] YouTube Music health check failed; error_type=${error instanceof Error ? error.name : "unknown"}`);
+    return { configured: true, connected: false, message: "YouTube Music companion service is temporarily unavailable." };
+  }
+}
+
+async function fetchYtmusicServiceItems(endpoint: "liked" | "history"): Promise<any[]> {
+  const serviceUrl = process.env.YTMUSIC_SERVICE_URL?.replace(/\/+$/, "");
+  const serviceToken = process.env.YTMUSIC_SERVICE_TOKEN;
+  if (!serviceUrl || !serviceToken) throw new Error("YouTube Music companion service is not configured.");
+
+  let response: Response;
+  try {
+    response = await fetch(`${serviceUrl}/${endpoint}`, {
+      headers: { Authorization: `Bearer ${serviceToken}` },
+      signal: AbortSignal.timeout(9000),
+    });
+  } catch (error) {
+    console.error(`[adminShowcase] YouTube Music ${endpoint} request failed; error_type=${error instanceof Error ? error.name : "unknown"}`);
+    throw new Error("YouTube Music companion request failed.");
+  }
+  if (!response.ok) {
+    let detail = "";
+    try {
+      const body = await response.json() as { detail?: unknown; message?: unknown };
+      detail = cleanText(body.detail ?? body.message, 180);
+    } catch { /* Non-JSON upstream errors need no UI exposure. */ }
+    console.error(`[adminShowcase] YouTube Music ${endpoint} request failed; http_status=${response.status}${detail ? `; detail=${detail}` : ""}`);
+    throw new Error(`YouTube Music companion returned HTTP ${response.status}.`);
+  }
+  const data = await response.json() as { items?: unknown };
+  if (!Array.isArray(data.items)) {
+    console.error(`[adminShowcase] YouTube Music ${endpoint} returned invalid data; items_array=false`);
+    throw new Error("YouTube Music companion returned an invalid response.");
+  }
+  return data.items;
+}
+
+function normalizePublicSong(value: any): Song | null {
+  const videoId = cleanText(value?.videoId, 100);
+  if (!/^[A-Za-z0-9_-]{6,20}$/.test(videoId)) return null;
+  const artists = Array.isArray(value?.artists)
+    ? value.artists.map((artist: unknown) => cleanText(artist, 100)).filter(Boolean).slice(0, 8)
+    : [];
+  const thumbnail = typeof value?.thumbnail === "string" && value.thumbnail.startsWith("https://")
+    ? value.thumbnail.slice(0, 2048)
+    : undefined;
+  return {
+    videoId,
+    title: cleanText(value?.title, 240) || "Untitled track",
+    artists,
+    album: cleanText(value?.album, 180) || undefined,
+    thumbnail,
+    url: `https://music.youtube.com/watch?v=${encodeURIComponent(videoId)}`,
+  };
+}
+
+let ytmusicHistorySyncInFlight: Promise<Song | null> | null = null;
+
+async function syncYtmusicHistorySnapshot(force = false): Promise<Song | null> {
+  if (ytmusicHistorySyncInFlight) return ytmusicHistorySyncInFlight;
+
+  const pending = (async (): Promise<Song | null> => {
+    const enabled = await readSetting("ytmusic-enabled");
+    const saved = await readSetting("ytmusic-public-showcase");
+    const existingLastPlayed: Song | null = saved?.lastPlayed || null;
+    if (enabled?.enabled !== true) return existingLastPlayed;
+
+    const syncState = await readSetting("ytmusic-history-sync-state");
+    const lastSyncTime = syncState?.lastSyncedAt
+      ? new Date(syncState.lastSyncedAt as Date).getTime()
+      : 0;
+    if (!force && Date.now() - lastSyncTime < 60_000) return existingLastPlayed;
+
+    // Persist the throttle before the external call to avoid duplicate requests from
+    // multiple public visitors arriving at the same time.
+    await saveSetting("ytmusic-history-sync-state", { lastSyncedAt: new Date() });
+    const history = await fetchYtmusicServiceItems("history");
+    const latest = normalizePublicSong(history[0]);
+    if (!latest || latest.videoId === existingLastPlayed?.videoId) return existingLastPlayed;
+
+    await saveSetting("ytmusic-public-showcase", { lastPlayed: latest, lastPlayedAt: new Date() });
+    console.info("[adminShowcase] Updated public YouTube Music last-played snapshot");
+    return latest;
+  })();
+
+  ytmusicHistorySyncInFlight = pending;
+  try {
+    return await pending;
+  } finally {
+    if (ytmusicHistorySyncInFlight === pending) ytmusicHistorySyncInFlight = null;
   }
 }
 
@@ -597,7 +695,7 @@ router.get("/showcase/integrations", async (_req, res, next) => {
     let spotify: any = { ...status.spotify, playing: false, provider: "spotify" };
     if (status.spotify.connected) {
       try {
-        spotify = await cached("spotify-currently-playing-v2", 20_000, async () => {
+        spotify = await cached("spotify-currently-playing-v2", 60_000, async () => {
           const token = await getAccessToken("spotify");
           if (!token) return { connected: false, playing: false, provider: "spotify" };
           const headers = { Authorization: `Bearer ${token}` };
@@ -660,7 +758,7 @@ router.get("/showcase/integrations", async (_req, res, next) => {
           connected: true,
           playing: false,
           provider: "spotify",
-          message: `Could not read Spotify playback (${reason}). Check the backend logs if the problem persists.`,
+          message: "Spotify playback is temporarily unavailable.",
         };
       }
     }
@@ -744,35 +842,104 @@ router.get("/showcase/youtube/liked", ...ADMIN_GUARD, async (_req, res, next) =>
   }
 });
 
+router.get("/showcase/ytmusic/public", async (_req, res, next) => {
+  try {
+    // Keep the published track stable in MongoDB, while opportunistically refreshing
+    // history at most once a minute. This continues working when no admin tab is open.
+    void syncYtmusicHistorySnapshot().catch((error) => {
+      console.error(`[adminShowcase] Background YouTube Music history sync failed; error_type=${error instanceof Error ? error.name : "unknown"}`);
+    });
+    const [enabled, saved] = await Promise.all([
+      readSetting("ytmusic-enabled"),
+      readSetting("ytmusic-public-showcase"),
+    ]);
+    res.setHeader("Cache-Control", "public, max-age=15");
+    return res.json({
+      connected: enabled?.enabled === true,
+      lastPlayed: saved?.lastPlayed || null,
+      tracks: Array.isArray(saved?.tracks) ? saved.tracks.slice(0, 3) : [],
+    });
+  } catch (error) { next(error); }
+});
+
+router.post("/admin/showcase/ytmusic/public-tracks", ...ADMIN_GUARD, async (req, res, next) => {
+  try {
+    const supplied = req.body?.tracks;
+    if (!Array.isArray(supplied) || supplied.length > 3) {
+      return res.status(400).json({ message: "Choose no more than three tracks." });
+    }
+    const tracks = supplied.map(normalizePublicSong);
+    if (tracks.some((track) => !track)) {
+      return res.status(400).json({ message: "One or more selected tracks are invalid." });
+    }
+    await saveSetting("ytmusic-public-showcase", { tracks });
+    res.setHeader("Cache-Control", "no-store");
+    return res.json({ tracks });
+  } catch (error) { next(error); }
+});
+
+router.post("/admin/showcase/ytmusic/sync-history", ...ADMIN_GUARD, async (_req, res, next) => {
+  try {
+    const enabled = await readSetting("ytmusic-enabled");
+    if (enabled?.enabled !== true) {
+      return res.status(409).json({ message: "YouTube Music is disconnected." });
+    }
+    const lastPlayed = await syncYtmusicHistorySnapshot(true);
+    res.setHeader("Cache-Control", "private, no-store");
+    return res.json({ lastPlayed });
+  } catch (error) {
+    console.error(`[adminShowcase] YouTube Music history sync failed; error_type=${error instanceof Error ? error.name : "unknown"}`);
+    return res.status(502).json({ message: "Could not refresh YouTube Music history. Check backend logs." });
+  }
+});
+
 router.get("/showcase/ytmusic/liked", ...ADMIN_GUARD, async (_req, res, next) => {
   try {
-    const serviceUrl = process.env.YTMUSIC_SERVICE_URL?.replace(/\/+$/, "");
-    const serviceToken = process.env.YTMUSIC_SERVICE_TOKEN;
-    if (!serviceUrl || !serviceToken) {
-      return res.status(503).json({ message: "YouTube Music companion service URL or service token is missing in the Node backend." });
+    const enabled = await readSetting("ytmusic-enabled");
+    if (enabled?.enabled !== true) {
+      return res.status(409).json({ message: "YouTube Music is disconnected." });
     }
-    const response = await fetch(`${serviceUrl}/liked`, {
-      headers: { Authorization: `Bearer ${serviceToken}` }, signal: AbortSignal.timeout(9000),
-    });
-    if (!response.ok) {
-      let detail = "";
-      try {
-        const upstream = await response.json() as { detail?: unknown; message?: unknown };
-        if (typeof upstream.detail === "string") detail = cleanText(upstream.detail, 180);
-        else if (typeof upstream.message === "string") detail = cleanText(upstream.message, 180);
-      } catch { /* The upstream may return a non-JSON error response. */ }
-      const reason = detail ? `: ${detail}` : "";
-      return res.status(502).json({ message: `YouTube Music companion service returned HTTP ${response.status}${reason}.` });
-    }
-    const data = await response.json() as { items?: any[] };
-    if (!Array.isArray(data.items)) {
-      return res.status(502).json({ message: "YouTube Music companion service returned an invalid response: expected an items array." });
-    }
+    const items = await fetchYtmusicServiceItems("liked");
     res.setHeader("Cache-Control", "private, no-store");
-    return res.json({ items: data.items.slice(0, 50).map(ytmusicSong) });
+    return res.json({ items: items.slice(0, 50).map(ytmusicSong) });
   } catch (error) {
-    const reason = error instanceof Error ? cleanText(error.message, 180) : "Unknown error";
-    return res.status(502).json({ message: `Could not load YouTube Music liked songs${reason ? `: ${reason}` : "."}` });
+    console.error(`[adminShowcase] YouTube Music liked songs failed; error_type=${error instanceof Error ? error.name : "unknown"}`);
+    return res.status(502).json({ message: "Could not load YouTube Music liked songs. Check backend logs." });
+  }
+});
+
+router.post("/admin/integrations/ytmusic/connect", ...ADMIN_GUARD, async (_req, res, next) => {
+  try {
+    // Test the mounted browser-auth session before enabling any routine refreshes.
+    await fetchYtmusicServiceItems("liked");
+    await saveSetting("ytmusic-enabled", { enabled: true, connectedAt: new Date() });
+    console.info("[adminShowcase] YouTube Music integration enabled by administrator");
+    return res.json({ success: true, connected: true });
+  } catch (error) {
+    console.error(`[adminShowcase] YouTube Music connect failed; error_type=${error instanceof Error ? error.name : "unknown"}`);
+    return res.status(502).json({ message: "Could not connect YouTube Music. Check backend logs and the companion service authentication." });
+  }
+});
+
+router.post("/admin/integrations/:provider/disconnect", ...ADMIN_GUARD, async (req, res, next) => {
+  try {
+    const provider = String(req.params.provider);
+    if (provider === "spotify") {
+      await getDB().collection("adminIntegrationSettings").deleteOne({ key: "spotify" });
+      await getDB().collection("adminShowcaseCache").deleteOne({ key: "spotify-currently-playing-v2" });
+      console.info("[adminShowcase] Spotify integration disconnected by administrator");
+      return res.json({ success: true, provider });
+    }
+    if (provider === "ytmusic") {
+      await saveSetting("ytmusic-enabled", { enabled: false, disconnectedAt: new Date() });
+      // Keep the published last-played snapshot and public track selection intact.
+      console.info("[adminShowcase] YouTube Music integration disconnected by administrator");
+      return res.json({ success: true, provider });
+    }
+    return res.status(400).json({ message: "Only Spotify and YouTube Music can be disconnected here." });
+  } catch (error) {
+    console.error("[adminShowcase] Integration disconnect failed", error instanceof Error ? error.name : "unknown");
+    next(error);
   }
 });
 

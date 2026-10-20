@@ -326,3 +326,87 @@ def liked(authorization: Optional[str] = Header(default=None)):
         )
     logger.info("Retrieved YouTube Music liked songs; item_count=%d", len(items))
     return {"items": items}
+
+
+@app.get("/history", response_model=SongList)
+def history(authorization: Optional[str] = Header(default=None)):
+    if not SERVICE_TOKEN or authorization != f"Bearer {SERVICE_TOKEN}":
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    try:
+        client = get_client()
+        history_songs = client.get_history()
+    except Exception as exc:
+        logger.exception(
+            "YouTube Music history request failed; error_type=%s",
+            type(exc).__name__,
+        )
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                f"YouTube Music history request failed ({type(exc).__name__}). "
+                "Check the companion service logs for the upstream traceback."
+            ),
+        ) from exc
+
+    if not isinstance(history_songs, list):
+        logger.error(
+            "Unexpected YouTube Music history response shape; response_type=%s",
+            type(history_songs).__name__,
+        )
+        raise HTTPException(
+            status_code=502,
+            detail="YouTube Music returned an unexpected history response shape.",
+        )
+
+    items = []
+    for song in history_songs[:LIMIT]:
+        if not isinstance(song, dict):
+            continue
+
+        video_id = song.get("videoId")
+        thumbnails = song.get("thumbnails") or []
+        if not isinstance(thumbnails, list):
+            thumbnails = []
+
+        artists_data = song.get("artists") or []
+        if not isinstance(artists_data, list):
+            artists_data = []
+        artists = []
+        for artist in artists_data:
+            if isinstance(artist, dict):
+                name = artist.get("name")
+            elif isinstance(artist, str):
+                name = artist
+            else:
+                name = None
+            if isinstance(name, str) and name.strip():
+                artists.append(name.strip())
+
+        album_data = song.get("album")
+        if isinstance(album_data, dict):
+            album_name = album_data.get("name")
+        elif isinstance(album_data, str):
+            album_name = album_data
+        else:
+            album_name = None
+
+        thumbnail_url = None
+        for thumbnail in reversed(thumbnails):
+            if isinstance(thumbnail, dict) and thumbnail.get("url"):
+                thumbnail_url = thumbnail["url"]
+                break
+
+        items.append(
+            Song(
+                title=song.get("title") or "Untitled track",
+                artists=artists,
+                album=album_name,
+                thumbnail=thumbnail_url,
+                url=f"https://music.youtube.com/watch?v={video_id}" if video_id else None,
+                videoId=video_id,
+            )
+        )
+
+    logger.info("Retrieved YouTube Music history; item_count=%d", len(items))
+    return {"items": items}

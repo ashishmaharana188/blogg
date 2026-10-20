@@ -127,3 +127,72 @@
   .showcase-youtube-playlist-card > img, .showcase-youtube-playlist-placeholder { width:100px; flex-basis:100px; }
   .showcase-youtube-playlist-heading { flex-direction:column; gap:7px; }
 }
+
+
+/* Compact music cards and administrator-only integration controls. */
+.account-showcase-mini-section {
+  width: min(100%, 600px);
+  align-self: center;
+  padding: 18px;
+}
+.showcase-mini-heading { margin-bottom: 12px; }
+.showcase-mini-heading .account-eyebrow { margin-bottom: 4px; }
+.showcase-mini-heading h2 { margin: 0; color: #172033; font-size: 1rem; line-height: 1.4; }
+.showcase-mini-integration-layout { display: flex; align-items: center; gap: 12px; }
+.showcase-mini-music-card {
+  display: flex; align-items: center; gap: 12px; flex: 1 1 260px; min-width: 0;
+  max-width: 360px; box-sizing: border-box; padding: 10px;
+  border: 1px solid #e3e8ee; border-radius: 12px; background: #fff;
+}
+.showcase-mini-music-card > img, .showcase-mini-music-placeholder {
+  width: 64px; height: 64px; flex: 0 0 64px; object-fit: cover;
+  border-radius: 8px; background: #f0f2f4;
+}
+.showcase-mini-music-placeholder { display: grid; place-items: center; color: #7d8794; font-size: 1.5rem; }
+.showcase-mini-music-copy { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.showcase-mini-music-copy strong { color: #253044; font-size: .79rem; line-height: 1.5; overflow-wrap: anywhere; }
+.showcase-mini-music-copy span { color: #687586; font-size: .7rem; line-height: 1.45; overflow-wrap: anywhere; }
+.showcase-mini-music-card > a { color: #29364a; text-decoration: none; font-size: 1rem; }
+.showcase-mini-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
+.showcase-mini-actions .showcase-outline-button { min-height: 34px; padding: 6px 10px; font-size: .69rem; }
+.showcase-outline-button.is-danger { border-color: #ebcccc; color: #a33131; }
+.showcase-outline-button:disabled, .showcase-track-feature:disabled { opacity: .55; cursor: wait; }
+
+/* Playlists expand in place instead of switching the whole section between modes. */
+.showcase-youtube-playlist-entry { min-width: 0; }
+.showcase-youtube-playlist-entry:has(.showcase-youtube-playlist-rows) { grid-column: 1 / -1; }
+.showcase-youtube-playlist-card {
+  appearance: none; box-sizing: border-box; width: 100%; text-align: left; cursor: pointer;
+  font: inherit; color: inherit;
+}
+.showcase-youtube-playlist-card:focus-visible { outline: 2px solid #273246; outline-offset: 3px; }
+.showcase-youtube-playlist-entry .showcase-youtube-playlist-rows {
+  margin-top: 12px; padding: 14px; border: 1px solid #e3e8ee; border-radius: 12px;
+  background: #fff;
+}
+.showcase-youtube-open-actions { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: 7px; }
+.showcase-youtube-open-actions button {
+  min-height: 32px; padding: 6px 10px; border: 1px solid #ccd4de; border-radius: 999px;
+  background: #fff; color: #29364a; font-size: .68rem; cursor: pointer;
+}
+.showcase-youtube-open-actions button:hover { background: #f5f7f9; }
+.showcase-youtube-playlist-heading > div:first-child { min-width: 0; }
+.showcase-ytmusic-public-block { margin-top: 18px; }
+.showcase-ytmusic-public-block h3, .showcase-ytmusic-admin-heading h3 {
+  margin: 0; color: #263247; font-size: .86rem; line-height: 1.5;
+}
+.showcase-ytmusic-admin-heading {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-top: 24px; padding-top: 18px; border-top: 1px solid #edf0f4;
+}
+.showcase-ytmusic-admin-heading > span { color: #687586; font-size: .7rem; }
+.account-showcase-ytmusic-section .showcase-track-list { margin-top: 3px; }
+@media (max-width: 680px) {
+  .account-showcase-mini-section { width: 100%; padding: 17px 14px; }
+  .showcase-mini-integration-layout { align-items: flex-start; flex-direction: column; }
+  .showcase-mini-music-card { width: 100%; max-width: 100%; }
+  .showcase-mini-actions { width: 100%; }
+  .showcase-youtube-open-actions { flex-direction: row; }
+  .showcase-youtube-playlist-heading { align-items: flex-start; }
+  .showcase-ytmusic-admin-heading { align-items: flex-start; flex-direction: column; }
+}
