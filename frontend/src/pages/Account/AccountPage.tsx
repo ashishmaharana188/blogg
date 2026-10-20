@@ -372,7 +372,7 @@ export default function AccountPage() {
                   {nowPlaying.track.url && <a href={nowPlaying.track.url} target="_blank" rel="noreferrer">Listen on Spotify ↗</a>}
                 </div>
               </div>
-            ) : <p className="showcase-empty">{nowPlaying.connected ? "Nothing is playing on Spotify right now." : "Spotify is not connected yet."}</p>}
+            ) : <p className="showcase-empty">{nowPlaying.message || (nowPlaying.connected ? "Nothing is playing on Spotify right now." : "Spotify is not connected yet.")}</p>}
             {isAdmin && integration("spotify").configured && <p className="showcase-admin-hint">{integration("spotify").connected ? "Spotify connected. Playback refreshes approximately every 30 seconds." : "App credentials are configured. Connect your Spotify account to finish setup."}</p>}
           </section>
 

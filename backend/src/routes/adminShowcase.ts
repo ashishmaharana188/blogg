@@ -274,19 +274,55 @@ router.get("/showcase/integrations", async (_req, res, next) => {
     let spotify: any = { ...status.spotify, playing: false, provider: "spotify" };
     if (status.spotify.connected) {
       try {
-        spotify = await cached("spotify-currently-playing-v1", 20_000, async () => {
+        spotify = await cached("spotify-currently-playing-v2", 20_000, async () => {
           const token = await getAccessToken("spotify");
           if (!token) return { connected: false, playing: false, provider: "spotify" };
-          const response = await fetch(`${SPOTIFY_API}/me/player/currently-playing`, {
-            headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-          });
-          if (response.status === 204) return { connected: true, playing: false, provider: "spotify" };
-          if (!response.ok) throw new Error(`Spotify API returned ${response.status}.`);
+          const headers = { Authorization: `Bearer ${token}` };
+          const requestOptions = { headers, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) };
+          let response = await fetch(`${SPOTIFY_API}/me/player/currently-playing`, requestOptions);
+          let usedPlaybackStateFallback = false;
+
+          // Spotify occasionally reports 204 from currently-playing even while audio
+          // is audible. Try GET /me/player once before telling the user nothing is playing.
+          // This fallback needs the additional user-read-playback-state OAuth scope.
+          if (response.status === 204) {
+            usedPlaybackStateFallback = true;
+            response = await fetch(`${SPOTIFY_API}/me/player`, requestOptions);
+            if (response.status === 204) {
+              return {
+                connected: true,
+                playing: false,
+                provider: "spotify",
+                message: "Spotify's API returned HTTP 204 from both playback endpoints. If music is audible, the API is not exposing that device's playback state right now. Keep Spotify open in the foreground and refresh, or try Spotify Web Player.",
+              };
+            }
+          }
+
+          if (!response.ok) {
+            // Include the HTTP status for diagnosis, but never log or expose access tokens.
+            throw new Error(`Spotify playback API returned HTTP ${response.status}${usedPlaybackStateFallback ? " on the playback-state fallback" : ""}. Reconnect Spotify if this persists; the connection now also needs user-read-playback-state permission.`);
+          }
           const playback = await response.json() as any;
-          return { connected: true, playing: Boolean(playback.is_playing && playback.item), track: spotifySong(playback.item), provider: "spotify" };
+          const track = spotifySong(playback.item);
+          if (playback.is_playing === true && !playback.item) {
+            return {
+              connected: true,
+              playing: false,
+              provider: "spotify",
+              message: "Spotify reported active playback but returned no current track. Refresh the Account page and try again.",
+            };
+          }
+          return { connected: true, playing: Boolean(playback.is_playing && track), track, provider: "spotify" };
         });
-      } catch {
-        spotify = { connected: true, playing: false, provider: "spotify", message: "Spotify could not be refreshed. Reconnect from the account page if needed." };
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : "Unknown Spotify playback error.";
+        console.error(`[adminShowcase] Spotify playback lookup failed: ${reason}`);
+        spotify = {
+          connected: true,
+          playing: false,
+          provider: "spotify",
+          message: `Could not read Spotify playback (${reason}). Check the backend logs if the problem persists.`,
+        };
       }
     }
     res.json({ spotify, youtube: status.youtube, ytmusic: status.ytmusic });
@@ -347,7 +383,7 @@ router.get("/admin/integrations/:provider/connect", ...ADMIN_GUARD, async (req, 
       : new URL("https://accounts.google.com/o/oauth2/v2/auth");
     authUrl.search = new URLSearchParams(provider === "spotify" ? {
       client_id: process.env.SPOTIFY_CLIENT_ID!, response_type: "code", redirect_uri: callback,
-      scope: "user-read-currently-playing", state,
+      scope: "user-read-currently-playing user-read-playback-state", state,
     } : {
       client_id: process.env.GOOGLE_OAUTH_CLIENT_ID!, redirect_uri: callback, response_type: "code",
       scope: "https://www.googleapis.com/auth/youtube.readonly", access_type: "offline", prompt: "consent", state,
