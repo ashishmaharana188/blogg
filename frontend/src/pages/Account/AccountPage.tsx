@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/authContext";
 import { API_BASE_URL } from "../../services/apiBase";
@@ -30,6 +30,22 @@ type Song = {
   url?: string;
   videoId?: string;
 };
+type YoutubePlaylist = {
+  id: string;
+  title: string;
+  description: string;
+  thumbnail?: string;
+  url: string;
+  itemCount: number;
+};
+type YoutubeDisplayMode = "playlist" | "rows";
+type PlaylistVideosState = { loading: boolean; items: Song[]; error?: string };
+type YoutubePlaylistsResponse = {
+  configured: boolean;
+  connected: boolean;
+  mode: YoutubeDisplayMode;
+  playlists: YoutubePlaylist[];
+};
 type IntegrationStatus = { configured: boolean; connected: boolean; message?: string };
 type IntegrationsResponse = {
   spotify: IntegrationStatus & { playing: boolean; track?: Song | null; provider?: string };
@@ -59,8 +75,18 @@ function ProviderMark({ provider }: { provider: string }) {
     spotify: "SPOTIFY",
     ytmusic: "YT MUSIC",
     blogg: "BLOGG",
+    web: "LINK",
   };
   return <span className="showcase-provider-mark">{labels[provider] || provider.toUpperCase()}</span>;
+}
+
+function showcaseProviderLabel(item: ShowcaseLink): string {
+  if (item.provider === "blogg") return "BLOGG NOTE";
+  if (item.provider === "web") {
+    try { return new URL(item.url).hostname.replace(/^www\./i, "").toUpperCase(); }
+    catch { return "WEBSITE"; }
+  }
+  return item.provider.toUpperCase();
 }
 
 function ShowcaseCard({
@@ -86,7 +112,7 @@ function ShowcaseCard({
         </a>
       )}
       <div className="showcase-link-body">
-        <p className="showcase-card-provider">{item.provider === "blogg" ? "BLOGG NOTE" : item.provider.toUpperCase()}</p>
+        <p className="showcase-card-provider">{showcaseProviderLabel(item)}</p>
         <a href={item.url} target="_blank" rel="noreferrer" className="showcase-link-title">{item.title}</a>
         {item.description && <p className="showcase-link-description">{item.description}</p>}
         {editable && (
@@ -120,6 +146,67 @@ function MusicTrack({ song, onFeature }: { song: Song; onFeature?: (song: Song) 
   );
 }
 
+function YoutubePlaylistCard({ playlist }: { playlist: YoutubePlaylist }) {
+  return (
+    <a className="showcase-youtube-playlist-card" href={playlist.url} target="_blank" rel="noreferrer">
+      {playlist.thumbnail ? <img src={playlist.thumbnail} alt="" loading="lazy" /> : <div className="showcase-youtube-playlist-placeholder" aria-hidden="true">▶</div>}
+      <div className="showcase-youtube-playlist-copy">
+        <strong>{playlist.title}</strong>
+        <span>{playlist.itemCount} {playlist.itemCount === 1 ? "video" : "videos"}</span>
+        {playlist.description && <p>{playlist.description}</p>}
+        <span className="showcase-youtube-playlist-open">Open playlist ↗</span>
+      </div>
+    </a>
+  );
+}
+
+function YoutubePlaylistRows({
+  playlist,
+  videos,
+  onFeature,
+  onLoad,
+}: {
+  playlist: YoutubePlaylist;
+  videos?: PlaylistVideosState;
+  onFeature?: (song: Song) => void;
+  onLoad: (playlistId: string) => void;
+}) {
+  const sectionRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (videos || !sectionRef.current) return;
+    const section = sectionRef.current;
+    if (typeof IntersectionObserver === "undefined") {
+      onLoad(playlist.id);
+      return;
+    }
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        observer.disconnect();
+        onLoad(playlist.id);
+      }
+    }, { rootMargin: "600px 0px" });
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, [onLoad, playlist.id, videos]);
+
+  return (
+    <section ref={sectionRef} className="showcase-youtube-playlist-rows" aria-label={playlist.title}>
+      <div className="showcase-youtube-playlist-heading">
+        <div>
+          <h3>{playlist.title}</h3>
+          <span>{playlist.itemCount} {playlist.itemCount === 1 ? "video" : "videos"}</span>
+        </div>
+        <a href={playlist.url} target="_blank" rel="noreferrer">Open playlist ↗</a>
+      </div>
+      {playlist.description && <p className="showcase-youtube-playlist-description">{playlist.description}</p>}
+      {videos?.loading ? <p className="showcase-empty showcase-playlist-loading">Loading playlist videos…</p> : !videos ? <p className="showcase-empty showcase-playlist-loading">Videos load as this playlist comes into view.</p> : videos.error ? <p className="showcase-empty">{videos.error}</p> : videos.items.length ? (
+        <div className="showcase-track-list">{videos.items.map((song, index) => <MusicTrack song={song} key={song.videoId || `${playlist.id}-${index}`} onFeature={onFeature} />)}</div>
+      ) : <p className="showcase-empty">This playlist has no accessible videos.</p>}
+    </section>
+  );
+}
+
 export default function AccountPage() {
   const navigate = useNavigate();
   const { user, isAdmin, loading, logout, refreshUser } = useAuth();
@@ -134,7 +221,13 @@ export default function AccountPage() {
   const [nowPlaying, setNowPlaying] = useState<IntegrationsResponse["spotify"]>({
     configured: false, connected: false, playing: false,
   });
-  const [likedYoutube, setLikedYoutube] = useState<Song[]>([]);
+  const [youtubePlaylists, setYoutubePlaylists] = useState<YoutubePlaylist[]>([]);
+  const [youtubeMode, setYoutubeMode] = useState<YoutubeDisplayMode>("playlist");
+  const [youtubeConnected, setYoutubeConnected] = useState(false);
+  const [youtubeConfigured, setYoutubeConfigured] = useState(false);
+  const [youtubePlaylistsLoading, setYoutubePlaylistsLoading] = useState(true);
+  const [youtubePlaylistsError, setYoutubePlaylistsError] = useState("");
+  const [youtubePlaylistVideos, setYoutubePlaylistVideos] = useState<Record<string, PlaylistVideosState>>({});
   const [likedMusic, setLikedMusic] = useState<Song[]>([]);
   const [integrationState, setIntegrationState] = useState<Record<string, IntegrationStatus>>({});
 
@@ -167,14 +260,43 @@ export default function AccountPage() {
     }
   }, []);
 
+  const loadYoutubePlaylistVideos = useCallback(async (playlistId: string) => {
+    setYoutubePlaylistVideos((current) => ({
+      ...current,
+      [playlistId]: { loading: true, items: current[playlistId]?.items || [] },
+    }));
+    try {
+      const data = await api<{ items: Song[] }>(`/api/showcase/youtube/playlists/${encodeURIComponent(playlistId)}/videos`);
+      setYoutubePlaylistVideos((current) => ({ ...current, [playlistId]: { loading: false, items: data.items || [] } }));
+    } catch (error) {
+      setYoutubePlaylistVideos((current) => ({
+        ...current,
+        [playlistId]: { loading: false, items: [], error: error instanceof Error ? error.message : "Could not load playlist videos." },
+      }));
+    }
+  }, []);
+
+  const refreshYoutubePlaylists = useCallback(async () => {
+    setYoutubePlaylistsLoading(true);
+    setYoutubePlaylistsError("");
+    try {
+      const data = await api<YoutubePlaylistsResponse>("/api/showcase/youtube/playlists");
+      const playlists = Array.isArray(data.playlists) ? data.playlists : [];
+      const mode = data.mode === "rows" ? "rows" : "playlist";
+      setYoutubePlaylists(playlists);
+      setYoutubeMode(mode);
+      setYoutubeConnected(Boolean(data.connected));
+      setYoutubeConfigured(Boolean(data.configured));
+    } catch (error) {
+      setYoutubePlaylists([]);
+      setYoutubePlaylistsError(error instanceof Error ? error.message : "Could not load public YouTube playlists.");
+    } finally {
+      setYoutubePlaylistsLoading(false);
+    }
+  }, []);
+
   const refreshLikedLibraries = useCallback(async () => {
     if (!isAdmin) return;
-    try {
-      const data = await api<{ items: Song[] }>("/api/showcase/youtube/liked");
-      setLikedYoutube(data.items || []);
-    } catch {
-      setLikedYoutube([]);
-    }
     try {
       const data = await api<{ items: Song[] }>("/api/showcase/ytmusic/liked");
       setLikedMusic(data.items || []);
@@ -182,6 +304,18 @@ export default function AccountPage() {
       setLikedMusic([]);
     }
   }, [isAdmin]);
+
+  const changeYoutubeMode = async (mode: YoutubeDisplayMode) => {
+    const previousMode = youtubeMode;
+    setYoutubeMode(mode);
+    setYoutubePlaylistsError("");
+    try {
+      await api("/api/admin/showcase/youtube/display-mode", { method: "POST", body: JSON.stringify({ mode }) });
+    } catch (error) {
+      setYoutubeMode(previousMode);
+      setYoutubePlaylistsError(error instanceof Error ? error.message : "Could not save the YouTube display mode.");
+    }
+  };
 
   useEffect(() => {
     if (isAdmin) {
@@ -205,9 +339,10 @@ export default function AccountPage() {
   useEffect(() => {
     void refreshShowcase();
     void refreshIntegrations();
+    void refreshYoutubePlaylists();
     const pollId = window.setInterval(() => { void refreshIntegrations(); }, 30_000);
     return () => window.clearInterval(pollId);
-  }, [refreshShowcase, refreshIntegrations]);
+  }, [refreshShowcase, refreshIntegrations, refreshYoutubePlaylists]);
 
   useEffect(() => {
     if (isAdmin) void refreshLikedLibraries();
@@ -378,11 +513,24 @@ export default function AccountPage() {
 
           <section className="account-showcase-section">
             <div className="showcase-section-heading">
-              <div><p className="account-eyebrow">YOUR LIBRARY</p><h2>Liked on YouTube</h2><p>Recently liked videos. Your private library is visible only when you are signed in as administrator.</p></div>
+              <div><p className="account-eyebrow">YOUTUBE LIBRARY</p><h2>Public playlists</h2><p>Public playlists owned by the connected YouTube account. Visitors only receive playlist metadata and videos from public playlists.</p></div>
               {isAdmin && <button type="button" className="showcase-outline-button" onClick={() => connect("youtube")}>{integration("youtube").connected ? "Reconnect YouTube" : "Connect YouTube"}</button>}
             </div>
-            {isAdmin ? likedYoutube.length ? <div className="showcase-track-list">{likedYoutube.slice(0, 8).map((song, index) => <MusicTrack song={song} key={song.videoId || index} onFeature={featureSong} />)}</div> : <p className="showcase-empty">{integration("youtube").connected ? "No liked videos returned." : "Connect YouTube and configure the Data API to load your likes."}</p> : <p className="showcase-empty">Sign in as the administrator to manage this library.</p>}
-            {isAdmin && <p className="showcase-admin-hint">Liked videos are not automatically published. Add individual links to Featured links if you want to share them publicly.</p>}
+            {isAdmin && <div className="showcase-youtube-mode-row" role="group" aria-label="YouTube playlist display mode">
+              <span>Display mode</span>
+              <button type="button" className={youtubeMode === "playlist" ? "is-active" : ""} aria-pressed={youtubeMode === "playlist"} onClick={() => void changeYoutubeMode("playlist")}>Playlist</button>
+              <button type="button" className={youtubeMode === "rows" ? "is-active" : ""} aria-pressed={youtubeMode === "rows"} onClick={() => void changeYoutubeMode("rows")}>Rows</button>
+            </div>}
+            {youtubePlaylistsLoading ? <p className="showcase-empty">Loading public YouTube playlists…</p> : youtubePlaylistsError ? <p className="showcase-empty" role="status">{youtubePlaylistsError}</p> : !youtubeConnected ? (
+              <p className="showcase-empty">{isAdmin ? youtubeConfigured ? "Connect YouTube to load public playlists from that account." : "Configure the Google OAuth credentials and YouTube Data API key, then connect YouTube." : "No public YouTube playlists are available right now."}</p>
+            ) : youtubePlaylists.length === 0 ? (
+              <p className="showcase-empty">No public playlists were found on the connected account. Set a playlist to Public on YouTube, then refresh this page.</p>
+            ) : youtubeMode === "playlist" ? (
+              <div className="showcase-youtube-playlist-grid">{youtubePlaylists.map((playlist) => <YoutubePlaylistCard playlist={playlist} key={playlist.id} />)}</div>
+            ) : (
+              <div className="showcase-youtube-playlist-rows-list">{youtubePlaylists.map((playlist) => <YoutubePlaylistRows playlist={playlist} videos={youtubePlaylistVideos[playlist.id]} onFeature={isAdmin ? featureSong : undefined} onLoad={loadYoutubePlaylistVideos} key={playlist.id} />)}</div>
+            )}
+            {isAdmin && <p className="showcase-admin-hint">Playlist mode links directly to each public playlist. Rows mode expands its videos here. The selected mode is saved for visitors too.</p>}
           </section>
 
           <section className="account-showcase-section">
@@ -395,11 +543,11 @@ export default function AccountPage() {
           </section>
 
           <section className="account-showcase-section">
-            <div className="showcase-section-heading"><div><p className="account-eyebrow">HAND-PICKED</p><h2>Featured links</h2><p>Share selected videos, songs, notes, and links with rich preview cards.</p></div></div>
+            <div className="showcase-section-heading"><div><p className="account-eyebrow">HAND-PICKED</p><h2>Featured links</h2><p>Share videos, songs, notes, articles, and links from any public website with rich preview cards.</p></div></div>
             {isAdmin && <form className="showcase-add-link-form" onSubmit={addLink}>
               <label htmlFor="showcase-url">Paste a link</label>
               <div className="showcase-add-link-row"><input id="showcase-url" type="url" required value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://…" /><button type="submit" disabled={linkBusy}>{linkBusy ? "Adding…" : "Add link"}</button></div>
-              <p className="showcase-admin-hint">Links start hidden. Publish each card when you want visitors to see it.</p>
+              <p className="showcase-admin-hint">Paste any public HTTP or HTTPS link. Links start hidden; publish each card when you want visitors to see it. Some sites block metadata previews, so a title and domain fallback may be used.</p>
               {linkMessage && <p className="account-message" role="status">{linkMessage}</p>}
             </form>}
             {linksLoading ? <p className="showcase-empty">Loading featured links…</p> : visibleLinks.length ? (

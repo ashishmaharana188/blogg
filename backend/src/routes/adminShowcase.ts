@@ -1,4 +1,8 @@
 import { Router } from "express";
+import { lookup } from "node:dns/promises";
+import { isIP } from "node:net";
+import * as http from "node:http";
+import * as https from "node:https";
 import {
   createHash,
   timingSafeEqual,
@@ -18,6 +22,8 @@ const ADMIN_GUARD = [authenticationMiddleware, adminMiddleware] as const;
 const MAX_LINKS = 80;
 const FETCH_TIMEOUT_MS = 6500;
 const SPOTIFY_API = "https://api.spotify.com/v1";
+const YOUTUBE_API = "https://www.googleapis.com/youtube/v3";
+const YOUTUBE_PUBLIC_CACHE_MS = 60_000;
 type Song = { title: string; artists: string[]; album?: string; thumbnail?: string; url?: string; videoId?: string };
 type IntegrationStatus = { configured: boolean; connected: boolean; message?: string };
 type CacheEntry<T> = { key: string; value: T; expiresAt: Date; updatedAt: Date };
@@ -31,30 +37,65 @@ const callbackUrl = (provider: "spotify" | "youtube") => `${apiBase()}/api/admin
 const spotifyConfigured = () => Boolean(process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET && apiBase());
 const googleConfigured = () => Boolean(process.env.GOOGLE_OAUTH_CLIENT_ID && process.env.GOOGLE_OAUTH_CLIENT_SECRET && process.env.YOUTUBE_API_KEY && apiBase());
 
-// Deliberately allowlist providers instead of fetching arbitrary URLs. This avoids turning the link
-// preview feature into an SSRF proxy against private network addresses or cloud metadata endpoints.
-function safeProviderUrl(value: unknown): URL | null {
+// Accept ordinary public HTTPS pages for rich previews, but never fetch local/private
+// network targets. Redirect targets are revalidated before every follow-up request.
+function isPublicIp(address: string): boolean {
+  if (isIP(address) === 4) {
+    const parts = address.split(".").map(Number);
+    const [a, b, c] = parts;
+    if (a === 0 || a === 10 || a === 127 || a >= 224) return false;
+    if (a === 169 && b === 254) return false;
+    if (a === 172 && b >= 16 && b <= 31) return false;
+    if (a === 192 && b === 168) return false;
+    if (a === 100 && b >= 64 && b <= 127) return false;
+    if (a === 192 && b === 0 && c === 0) return false;
+    if (a === 198 && (b === 18 || b === 19)) return false;
+    if (a === 198 && b === 51 && c === 100) return false;
+    if (a === 203 && b === 0 && c === 113) return false;
+    if (a === 192 && b === 0 && c === 2) return false;
+    return true;
+  }
+  if (isIP(address) === 6) {
+    const value = address.toLowerCase();
+    if (value === "::" || value === "::1" || value.startsWith("::ffff:")) return false;
+    // Require globally allocated unicast space (2000::/3), excluding special-purpose
+    // 2001::/23, 6to4 (2002::/16), and the 3fff::/20 documentation block.
+    const segments = value.split(":");
+    const firstSegment = parseInt(segments[0] || "0", 16);
+    const secondSegment = parseInt(segments[1] || "0", 16);
+    if (firstSegment < 0x2000 || firstSegment > 0x3fff) return false;
+    if ((firstSegment === 0x2001 && secondSegment < 0x0200) || firstSegment === 0x2002 || value.startsWith("3fff:")) return false;
+    return true;
+  }
+  return false;
+}
+
+async function safePreviewUrl(value: unknown): Promise<URL | null> {
   if (typeof value !== "string" || value.length > 2048) return null;
   try {
     const url = new URL(value);
-    if (url.protocol !== "https:") return null;
-    const host = url.hostname.toLowerCase();
-      const allowed = new Set([
-      "youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be",
-      "open.spotify.com", "noteonstuff.vercel.app",
-    ]);
-    if (!allowed.has(host)) return null;
-    if (host === "noteonstuff.vercel.app" && !url.pathname.startsWith("/share/")) return null;
+    const defaultPort = url.protocol === "https:" ? "443" : "80";
+    if ((url.protocol !== "https:" && url.protocol !== "http:") || url.username || url.password || (url.port && url.port !== defaultPort)) return null;
+    const host = url.hostname.toLowerCase().replace(/\.$/, "");
+    if (!host || host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal") || host.endsWith(".test")) return null;
+    // Do not accept IP literals. Normal site URLs should use DNS hostnames.
+    if (isIP(host)) return null;
+    const records = await lookup(host, { all: true, verbatim: true });
+    if (!records.length || records.some((record) => !isPublicIp(record.address))) return null;
+    url.hostname = host;
     return url;
   } catch {
     return null;
   }
 }
-function providerFor(url: URL): "youtube" | "ytmusic" | "spotify" | "blogg" {
-  if (url.hostname === "open.spotify.com") return "spotify";
-  if (url.hostname === "music.youtube.com") return "ytmusic";
-  if (["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"].includes(url.hostname)) return "youtube";
-  return "blogg";
+
+function providerFor(url: URL): "youtube" | "ytmusic" | "spotify" | "blogg" | "web" {
+  const host = url.hostname.toLowerCase();
+  if (host === "open.spotify.com") return "spotify";
+  if (host === "music.youtube.com") return "ytmusic";
+  if (["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"].includes(host)) return "youtube";
+  if (host === "noteonstuff.vercel.app") return "blogg";
+  return "web";
 }
 
 async function readSetting(key: string) {
@@ -200,12 +241,152 @@ function firstImageFromBlocks(blocks: unknown): string {
   }
   return "";
 }
-async function providerPreview(url: URL, provider: "youtube" | "ytmusic" | "spotify" | "blogg") {
+function decodeHtml(value: string): string {
+  return value
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&#(\d+);/g, (_match, decimal) => {
+      const codePoint = Number(decimal);
+      return Number.isInteger(codePoint) && codePoint >= 0 && codePoint <= 0x10ffff ? String.fromCodePoint(codePoint) : "";
+    })
+    .replace(/&#x([\da-f]+);/gi, (_match, hexadecimal) => {
+      const codePoint = parseInt(hexadecimal, 16);
+      return Number.isInteger(codePoint) && codePoint >= 0 && codePoint <= 0x10ffff ? String.fromCodePoint(codePoint) : "";
+    });
+}
+
+function attributeValue(tag: string, attribute: string): string {
+  const escaped = attribute.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = tag.match(new RegExp(`\\b${escaped}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, "i"));
+  return decodeHtml(match?.[1] ?? match?.[2] ?? match?.[3] ?? "").trim();
+}
+
+function htmlMeta(html: string, names: string[]): string {
+  for (const tag of html.match(/<meta\b[^>]*>/gi) || []) {
+    const key = (attributeValue(tag, "property") || attributeValue(tag, "name") || attributeValue(tag, "itemprop")).toLowerCase();
+    if (names.includes(key)) {
+      const value = attributeValue(tag, "content");
+      if (value) return cleanText(value, 500);
+    }
+  }
+  return "";
+}
+
+type PublicHtmlResponse = { status: number; location: string; contentType: string; body: string };
+
+async function requestPublicHtml(url: URL): Promise<PublicHtmlResponse> {
+  // Resolve once, reject every non-public answer, and pin the socket to the validated
+  // address. This prevents the HTTP client from performing a second, unvalidated DNS lookup.
+  const records = await lookup(url.hostname, { all: true, verbatim: true });
+  if (!records.length || records.some((record) => !isPublicIp(record.address))) {
+    throw new Error("Preview host did not resolve exclusively to public addresses.");
+  }
+  const address = records[0];
+  const port = Number(url.port || (url.protocol === "https:" ? 443 : 80));
+  const transport = url.protocol === "https:" ? https : http;
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (result: PublicHtmlResponse) => {
+      if (settled) return;
+      settled = true;
+      resolve(result);
+    };
+    const request = transport.request({
+      hostname: address.address,
+      family: address.family,
+      port,
+      method: "GET",
+      path: `${url.pathname}${url.search}`,
+      headers: {
+        Host: url.host,
+        Accept: "text/html,application/xhtml+xml;q=0.9,*/*;q=0.1",
+        "User-Agent": "BloggLinkPreview/1.0",
+        Connection: "close",
+      },
+      ...(url.protocol === "https:" ? { servername: url.hostname, rejectUnauthorized: true } : {}),
+    }, (response) => {
+      const status = response.statusCode || 0;
+      const location = typeof response.headers.location === "string" ? response.headers.location : "";
+      const contentType = typeof response.headers["content-type"] === "string" ? response.headers["content-type"] as string : "";
+      const chunks: Buffer[] = [];
+      let byteCount = 0;
+      response.on("data", (chunk: Buffer | string) => {
+        const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        const remaining = 500_000 - byteCount;
+        if (remaining > 0) {
+          const accepted = buffer.length > remaining ? buffer.subarray(0, remaining) : buffer;
+          chunks.push(accepted);
+          byteCount += accepted.length;
+        }
+        if (byteCount >= 500_000) {
+          finish({ status, location, contentType, body: Buffer.concat(chunks).toString("utf8") });
+          response.destroy();
+        }
+      });
+      response.on("end", () => finish({ status, location, contentType, body: Buffer.concat(chunks).toString("utf8") }));
+      response.on("error", () => finish({ status, location, contentType, body: Buffer.concat(chunks).toString("utf8") }));
+    });
+    request.setTimeout(FETCH_TIMEOUT_MS, () => request.destroy(new Error("Preview request timed out.")));
+    request.on("error", (error) => {
+      if (!settled) {
+        settled = true;
+        reject(error);
+      }
+    });
+    request.end();
+  });
+}
+
+async function getHtmlPreview(startUrl: URL): Promise<{ title: string; description: string; image: string }> {
+  let currentUrl = startUrl;
+  for (let redirectCount = 0; redirectCount <= 3; redirectCount += 1) {
+    const safeUrl = await safePreviewUrl(currentUrl.toString());
+    if (!safeUrl) return { title: "", description: "", image: "" };
+    let response: PublicHtmlResponse;
+    try {
+      response = await requestPublicHtml(safeUrl);
+    } catch {
+      return { title: "", description: "", image: "" };
+    }
+    if ([301, 302, 303, 307, 308].includes(response.status)) {
+      if (!response.location || redirectCount === 3) return { title: "", description: "", image: "" };
+      try { currentUrl = new URL(response.location, safeUrl); } catch { return { title: "", description: "", image: "" }; }
+      continue;
+    }
+    if (response.status < 200 || response.status >= 300 || !/text\/html|application\/xhtml\+xml/i.test(response.contentType) || !response.body) {
+      return { title: "", description: "", image: "" };
+    }
+    const html = response.body;
+    const titleTag = html.match(/<title\b[^>]*>([\s\S]*?)<\/title\s*>/i)?.[1] || "";
+    const rawImage = htmlMeta(html, ["og:image", "og:image:url", "twitter:image"]);
+    let image = "";
+    if (rawImage) {
+      try {
+        const imageUrl = new URL(rawImage, safeUrl);
+        if (imageUrl.protocol === "https:" && !imageUrl.username && !imageUrl.password) {
+          const safeImageUrl = await safePreviewUrl(imageUrl.toString());
+          if (safeImageUrl) image = safeImageUrl.toString();
+        }
+      } catch { /* Ignore malformed or non-public preview image URLs. */ }
+    }
+    return {
+      title: htmlMeta(html, ["og:title", "twitter:title"]) || cleanText(decodeHtml(titleTag.replace(/<[^>]*>/g, "")), 180),
+      description: htmlMeta(html, ["og:description", "description", "twitter:description"]),
+      image,
+    };
+  }
+  return { title: "", description: "", image: "" };
+}
+
+async function providerPreview(url: URL, provider: "youtube" | "ytmusic" | "spotify" | "blogg" | "web") {
   let title = "";
   let description = "";
   let image = "";
   if (provider === "youtube" || provider === "ytmusic" || provider === "spotify") {
-    // Host is allowlisted above and the request always targets a fixed provider endpoint.
     const endpoint = provider === "spotify" ? "https://open.spotify.com/oembed" : "https://www.youtube.com/oembed";
     try {
       const previewUrl = new URL(endpoint);
@@ -217,8 +398,8 @@ async function providerPreview(url: URL, provider: "youtube" | "ytmusic" | "spot
         description = cleanText(data.author_name ? `By ${data.author_name}` : data.provider_name, 180);
         if (typeof data.thumbnail_url === "string" && data.thumbnail_url.startsWith("https://")) image = data.thumbnail_url;
       }
-    } catch { /* Fall back to a useful provider-labelled card if oEmbed is unavailable. */ }
-  } else {
+    } catch { /* Fall through to standard Open Graph metadata. */ }
+  } else if (provider === "blogg" && url.pathname.startsWith("/share/")) {
     const noteId = decodeURIComponent(url.pathname.split("/").filter(Boolean).at(-1) || "");
     if (noteId) {
       const objectId = /^[a-f\d]{24}$/i.test(noteId) ? new ObjectId(noteId) : null;
@@ -233,8 +414,80 @@ async function providerPreview(url: URL, provider: "youtube" | "ytmusic" | "spot
       }
     }
   }
+  if (!title || !description || !image) {
+    const generic = await getHtmlPreview(url);
+    title ||= generic.title;
+    description ||= generic.description;
+    image ||= generic.image;
+  }
+  const domainLabel = url.hostname.replace(/^www\./i, "");
+  title ||= provider === "spotify" ? "Open on Spotify" : provider === "ytmusic" ? "YouTube Music" : provider === "youtube" ? "YouTube video" : provider === "blogg" ? "Open on Blogg" : domainLabel;
+  description ||= provider === "spotify" ? "Open this on Spotify." : provider === "ytmusic" ? "Listen on YouTube Music." : provider === "youtube" ? "Watch on YouTube." : provider === "blogg" ? "Open this page on Blogg." : `Visit ${domainLabel}.`;
   return { title, description, image };
 }
+
+function isYoutubePlaylistId(value: string): boolean {
+  return /^[A-Za-z0-9_-]{8,100}$/.test(value);
+}
+
+async function fetchYoutubeJson(url: URL, token: string): Promise<any> {
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({})) as any;
+    const detail = cleanText(body?.error?.message, 180);
+    throw new Error(`YouTube Data API returned ${response.status}${detail ? `: ${detail}` : ""}. Check the Google OAuth connection and YouTube Data API configuration.`);
+  }
+  return response.json();
+}
+
+async function fetchPublicYoutubePlaylists(token: string) {
+  const playlists: Array<{ id: string; title: string; description: string; thumbnail?: string; url: string; itemCount: number }> = [];
+  let pageToken = "";
+  // Limit the returned list to 200 public playlists, but keep paging past private/unlisted ones.
+  do {
+    const params = new URLSearchParams({ part: "snippet,contentDetails,status", mine: "true", maxResults: "50", key: process.env.YOUTUBE_API_KEY || "" });
+    if (pageToken) params.set("pageToken", pageToken);
+    const data = await fetchYoutubeJson(new URL(`${YOUTUBE_API}/playlists?${params.toString()}`), token);
+    for (const item of data.items || []) {
+      if (item?.status?.privacyStatus !== "public" || !item.id) continue;
+      const snippet = item.snippet || {};
+      playlists.push({
+        id: String(item.id),
+        title: cleanText(snippet.title, 180) || "Untitled playlist",
+        description: cleanText(snippet.description, 280),
+        thumbnail: snippet.thumbnails?.maxres?.url || snippet.thumbnails?.high?.url || snippet.thumbnails?.medium?.url || snippet.thumbnails?.default?.url,
+        url: `https://www.youtube.com/playlist?list=${encodeURIComponent(item.id)}`,
+        itemCount: Number(item.contentDetails?.itemCount || 0),
+      });
+      if (playlists.length >= 200) break;
+    }
+    pageToken = playlists.length >= 200 ? "" : String(data.nextPageToken || "");
+  } while (pageToken);
+  return playlists;
+}
+
+async function fetchYoutubePlaylistVideos(token: string, playlistId: string): Promise<Song[]> {
+  const items: Song[] = [];
+  let pageToken = "";
+  // YouTube playlists can be large; paginate the playlist rather than silently taking only the first page.
+  do {
+    const params = new URLSearchParams({ part: "snippet,contentDetails", playlistId, maxResults: "50", key: process.env.YOUTUBE_API_KEY || "" });
+    if (pageToken) params.set("pageToken", pageToken);
+    const data = await fetchYoutubeJson(new URL(`${YOUTUBE_API}/playlistItems?${params.toString()}`), token);
+    for (const entry of data.items || []) {
+      const videoId = entry?.contentDetails?.videoId || entry?.snippet?.resourceId?.videoId;
+      const privacyTitle = String(entry?.snippet?.title || "").toLowerCase();
+      if (!videoId || privacyTitle === "private video" || privacyTitle === "deleted video") continue;
+      items.push(youtubeSong({ id: videoId, snippet: entry.snippet || {} }));
+    }
+    pageToken = items.length >= 5000 ? "" : String(data.nextPageToken || "");
+  } while (pageToken);
+  return items.slice(0, 5000);
+}
+
 async function integrationStates() {
   const [spotify, youtube, ytmusic] = await Promise.all(["spotify", "youtube", "ytmusic"].map(readSetting));
   return {
@@ -342,6 +595,53 @@ router.get("/showcase/integrations", async (_req, res, next) => {
       }
     }
     res.json({ spotify, youtube: status.youtube, ytmusic: status.ytmusic });
+  } catch (error) { next(error); }
+});
+
+router.get("/showcase/youtube/playlists", async (_req, res, next) => {
+  try {
+    const status = await integrationStates();
+    const setting = await readSetting("youtube-playlist-display-mode");
+    const mode = setting?.mode === "rows" ? "rows" : "playlist";
+    if (!status.youtube.connected) return res.json({ configured: status.youtube.configured, connected: false, mode, playlists: [] });
+    const playlists = await cached("youtube-public-playlists-v1", YOUTUBE_PUBLIC_CACHE_MS, async () => {
+      const token = await getAccessToken("youtube");
+      if (!token) return [];
+      return fetchPublicYoutubePlaylists(token);
+    });
+    res.setHeader("Cache-Control", "public, max-age=60");
+    res.json({ configured: status.youtube.configured, connected: true, mode, playlists });
+  } catch (error) { next(error); }
+});
+
+router.get("/showcase/youtube/playlists/:playlistId/videos", async (req, res, next) => {
+  try {
+    const playlistId = String(req.params.playlistId || "");
+    if (!isYoutubePlaylistId(playlistId)) return res.status(400).json({ message: "Invalid YouTube playlist ID." });
+    const playlists = await cached("youtube-public-playlists-v1", YOUTUBE_PUBLIC_CACHE_MS, async () => {
+      const token = await getAccessToken("youtube");
+      return token ? fetchPublicYoutubePlaylists(token) : [];
+    });
+    if (!playlists.some((playlist) => playlist.id === playlistId)) {
+      return res.status(404).json({ message: "This playlist is not one of the connected account's public playlists." });
+    }
+    const videos = await cached(`youtube-public-playlist-videos-v1-${playlistId}`, YOUTUBE_PUBLIC_CACHE_MS, async () => {
+      const token = await getAccessToken("youtube");
+      return token ? fetchYoutubePlaylistVideos(token, playlistId) : [];
+    });
+    res.setHeader("Cache-Control", "public, max-age=60");
+    res.json({ items: videos });
+  } catch (error) { next(error); }
+});
+
+router.post("/admin/showcase/youtube/display-mode", ...ADMIN_GUARD, async (req, res, next) => {
+  try {
+    const mode = req.body?.mode;
+    if (mode !== "playlist" && mode !== "rows") {
+      return res.status(400).json({ message: "mode must be 'playlist' or 'rows'." });
+    }
+    await saveSetting("youtube-playlist-display-mode", { mode });
+    res.json({ success: true, mode });
   } catch (error) { next(error); }
 });
 
@@ -455,12 +755,13 @@ router.get("/admin/integrations/:provider/callback", async (req, res, next) => {
 
 router.post("/admin/showcase/links", ...ADMIN_GUARD, async (req, res, next) => {
   try {
-    const url = safeProviderUrl(req.body?.url);
-    if (!url) return res.status(400).json({ message: "Use an HTTPS link from YouTube, YouTube Music, Spotify, or the Blogg site." });
+    const url = await safePreviewUrl(req.body?.url);
+    if (!url) return res.status(400).json({ message: "Enter a valid public HTTP or HTTPS link. Private/internal network addresses are not allowed." });
     const provider = providerFor(url);
     const metadata = await providerPreview(url, provider);
-    const title = cleanText(req.body?.title, 180) || metadata.title || (provider === "spotify" ? "Open on Spotify" : provider === "ytmusic" ? "YouTube Music track" : provider === "youtube" ? "YouTube video" : "Shared note on Blogg");
-    const description = metadata.description || (provider === "ytmusic" ? "Listen on YouTube Music." : provider === "youtube" ? "Watch on YouTube." : provider === "spotify" ? "Open this on Spotify." : "Open this note on Blogg.");
+    const domainLabel = url.hostname.replace(/^www\./i, "");
+    const title = cleanText(req.body?.title, 180) || metadata.title || domainLabel;
+    const description = metadata.description || `Visit ${domainLabel}.`;
     const image = metadata.image;
     const collection = getDB().collection("adminShowcaseLinks");
     if (await collection.countDocuments({}) >= MAX_LINKS) return res.status(409).json({ message: "Showcase limit reached. Remove an older link first." });

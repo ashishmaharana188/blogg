@@ -97,3 +97,33 @@
 
 .showcase-track-feature { flex:0 0 auto; padding:6px 10px; border:1px solid #cbd4de; border-radius:999px; background:#fff; color:#374151; font-size:.68rem; cursor:pointer; }
 .showcase-track-feature:hover { background:#f5f7f9; }
+
+/* Public YouTube playlist showcase and persistent display-mode controls. */
+.showcase-youtube-mode-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:0 0 16px; }
+.showcase-youtube-mode-row > span { margin-right:4px; color:#697586; font-size:.75rem; }
+.showcase-youtube-mode-row button { min-height:34px; padding:7px 13px; border:1px solid #ccd4de; border-radius:999px; background:#fff; color:#344054; font-size:.72rem; cursor:pointer; }
+.showcase-youtube-mode-row button.is-active { border-color:#172033; background:#172033; color:#fff; }
+.showcase-youtube-playlist-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.showcase-youtube-playlist-card { display:flex; min-width:0; gap:13px; padding:12px; border:1px solid #e3e8ee; border-radius:12px; color:inherit; background:#fff; text-decoration:none; transition:border-color 140ms ease,background 140ms ease; }
+.showcase-youtube-playlist-card:hover { border-color:#aab4c0; background:#fafbfc; }
+.showcase-youtube-playlist-card > img, .showcase-youtube-playlist-placeholder { width:112px; aspect-ratio:16/9; flex:0 0 112px; object-fit:cover; border-radius:7px; background:#f0f2f4; }
+.showcase-youtube-playlist-placeholder { display:grid; place-items:center; color:#667085; font-size:1.5rem; }
+.showcase-youtube-playlist-copy { display:flex; min-width:0; flex-direction:column; align-items:flex-start; gap:5px; }
+.showcase-youtube-playlist-copy strong { color:#202b3b; font-size:.83rem; line-height:1.45; overflow-wrap:anywhere; }
+.showcase-youtube-playlist-copy span { color:#687586; font-size:.7rem; line-height:1.5; }
+.showcase-youtube-playlist-copy p { display:-webkit-box; margin:0; overflow:hidden; color:#697586; font-size:.72rem; line-height:1.55; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
+.showcase-youtube-playlist-copy .showcase-youtube-playlist-open { margin-top:auto; padding-top:3px; color:#263247; font-weight:700; }
+.showcase-youtube-playlist-rows-list { display:flex; flex-direction:column; gap:16px; }
+.showcase-youtube-playlist-rows { min-width:0; padding:0 0 14px; border-bottom:1px solid #edf0f4; }
+.showcase-youtube-playlist-rows:last-child { padding-bottom:0; border-bottom:0; }
+.showcase-youtube-playlist-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.showcase-youtube-playlist-heading h3 { margin:0; color:#202b3b; font-size:.95rem; line-height:1.5; overflow-wrap:anywhere; }
+.showcase-youtube-playlist-heading span { display:block; margin-top:4px; color:#687586; font-size:.7rem; }
+.showcase-youtube-playlist-heading > a { flex:0 0 auto; color:#29364a; font-size:.72rem; }
+.showcase-youtube-playlist-description { margin:8px 0 2px; color:#697586; font-size:.74rem; line-height:1.6; }
+.showcase-playlist-loading { padding-top:12px; }
+@media (max-width: 680px) {
+  .showcase-youtube-playlist-grid { grid-template-columns:1fr; }
+  .showcase-youtube-playlist-card > img, .showcase-youtube-playlist-placeholder { width:100px; flex-basis:100px; }
+  .showcase-youtube-playlist-heading { flex-direction:column; gap:7px; }
+}
