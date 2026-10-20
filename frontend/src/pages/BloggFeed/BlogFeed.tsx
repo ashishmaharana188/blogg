@@ -15,6 +15,29 @@ type CanvasStack = { stack_id: string; stack_name: string };
 type CanvasGroup = { group_id: string; group_name: string; stack_id: string };
 const EMPTY_BLOCKS: any[] = [{ type: "paragraph", content: "" }];
 
+
+const FEED_TICKER_TEXT =
+  "NOTES, IDEAS, AND OBSERVATIONS · THINGS READ, HEARD, AND REMEMBERED · A QUIET ARCHIVE OF WHAT STAYS WITH US ·";
+
+function FeedTicker() {
+  return (
+    <section className="blog-feed-ticker" role="region" aria-label="Scrolling blog feed text">
+      <span className="blog-feed-ticker-sr-only">{FEED_TICKER_TEXT}</span>
+      <div className="blog-feed-ticker-window" aria-hidden="true">
+        <div className="blog-feed-ticker-track">
+          {[0, 1].map((group) => (
+            <div className="blog-feed-ticker-group" key={group}>
+              {[0, 1, 2].map((run) => (
+                <span className="blog-feed-ticker-item" key={run}>{FEED_TICKER_TEXT}</span>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function formatDate(value?: string) {
   if (!value) return "Recently";
   const date = new Date(value);
@@ -98,6 +121,7 @@ const HomePage = () => {
   return (
     <div className="blog-feed-page typewriter-font">
       <BloggHeader page="feed" onNewNote={() => navigate("/blog?newNote=1")} />
+      <FeedTicker />
       <main className="blog-feed-content">
         {isLoading ? <div className="blog-feed-state" role="status">Loading notes…</div> : loadError ? (
           <div className="blog-feed-state blog-feed-state-error"><p>{loadError}</p><button type="button" onClick={() => void loadFeed()}>Try again</button></div>
