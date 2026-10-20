@@ -41,7 +41,12 @@ const FlipBookThumbnailBar = ({
       {pages.map((page, index) => {
         const isActive = index === currentSpread || index === currentSpread + 1;
         const isBlank = page.pageKind === "blank" || page.id === "blank";
-        const imageUrl = isBlank ? undefined : findFirstImageUrl(page.content ?? []);
+        // The cover page has no body blocks of its own. Its preview should use
+        // the note's content so the cover thumbnail can still show its first image.
+        const imageBlocks = page.pageKind === "detail-cover"
+          ? page.blogg?.content ?? []
+          : page.content ?? [];
+        const imageUrl = isBlank ? undefined : findFirstImageUrl(imageBlocks);
 
         return (
           <button

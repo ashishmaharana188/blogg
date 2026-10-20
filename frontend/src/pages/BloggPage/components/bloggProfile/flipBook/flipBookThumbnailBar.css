@@ -19,15 +19,101 @@
   background: #fff;
 }
 
-/* Keep the book's responsive dimensions stable when opening a note adds
-   action buttons to the footer and changes the stage's available height. */
-.flipbook-stage > .flipbook-book {
-  flex: 0 0 auto;
+/*
+ * Keep responsive dimensions independent of content and state changes.
+ * Higher selector specificity prevents the legacy .flipbook-stage rules from
+ * overriding these values when the note is opened or rendered on a phone.
+ */
+.flipbook-profile .flipbook-stage {
+  --page-w: clamp(300px, 30vw, 500px);
+  --page-h: calc(var(--page-w) * 1.2);
+  --spread-w: calc(var(--page-w) * 2);
+  --book-radius: clamp(18px, 1vw, 36px);
+}
+
+@media (max-width: 980px) {
+  .flipbook-profile .flipbook-stage {
+    --page-w: clamp(150px, 44vw, 400px);
+    --page-h: calc(var(--page-w) * 1.5);
+  }
+}
+
+@media (max-width: 760px) {
+  .flipbook-profile .flipbook-stage {
+    /* Legacy viewport fallback, followed by the stable small viewport unit. */
+    --page-w: min(42vw, calc((100vh - 200px) * 0.72), 190px);
+    --page-w: min(42vw, calc((100svh - 200px) * 0.72), 190px);
+    --page-h: calc(var(--page-w) * 1.38);
+  }
+}
+
+@media (max-width: 400px) {
+  .flipbook-profile .flipbook-stage {
+    --page-w: min(40vw, calc((100vh - 190px) * 0.7), 160px);
+    --page-w: min(40vw, calc((100svh - 190px) * 0.7), 160px);
+  }
+}
+
+@media (max-width: 760px) and (orientation: landscape) {
+  .flipbook-profile .flipbook-stage {
+    --page-w: min(25vw, 112px);
+    --page-h: calc(var(--page-w) * 1.25);
+  }
+}
+
+/* Lock the book to the responsive dimensions above. It must not grow to fit
+   intrinsic note/media content or flex differently when the action row appears. */
+.flipbook-profile .flipbook-stage > .flipbook-book {
+  flex: 0 0 var(--spread-w) !important;
   box-sizing: border-box;
-  width: var(--spread-w);
-  height: var(--page-h);
-  min-width: var(--spread-w);
-  max-width: var(--spread-w);
-  min-height: var(--page-h);
-  max-height: var(--page-h);
+  width: var(--spread-w) !important;
+  min-width: var(--spread-w) !important;
+  max-width: var(--spread-w) !important;
+  height: var(--page-h) !important;
+  min-height: var(--page-h) !important;
+  max-height: var(--page-h) !important;
+}
+
+/* Use fixed halves with zero minimums so long words, tables, or large media
+   cannot expand either page beyond the book's width. */
+.flipbook-profile .flipbook-spread {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.flipbook-profile .flipbook-page {
+  box-sizing: border-box;
+  min-width: 0 !important;
+  max-width: var(--page-w) !important;
+}
+
+.flipbook-profile .flipbook-page-content,
+.flipbook-profile .flipbook-page-blank {
+  box-sizing: border-box;
+  min-width: 0 !important;
+  max-width: 100%;
+}
+
+.flipbook-profile .flipbook-page-content .bn-container,
+.flipbook-profile .flipbook-page-content .bn-editor,
+.flipbook-profile .flipbook-page-content .bn-block-outer,
+.flipbook-profile .flipbook-page-content .bn-block-content {
+  box-sizing: border-box;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+.flipbook-profile .flipbook-page-content img,
+.flipbook-profile .flipbook-page-content video,
+.flipbook-profile .flipbook-page-content iframe,
+.flipbook-profile .flipbook-page-content table,
+.flipbook-profile .flipbook-page-content pre {
+  max-width: 100% !important;
+}
+
+.flipbook-profile .flipbook-page-content img,
+.flipbook-profile .flipbook-page-content video {
+  height: auto;
 }
