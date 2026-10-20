@@ -1,0 +1,33 @@
+/* Thumbnails show the first image from that specific page; no text fallback. */
+.flipbook-thumbnail {
+  background: #fff !important;
+}
+
+.flipbook-thumbnail-image,
+.flipbook-thumbnail-blank {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.flipbook-thumbnail-image {
+  object-fit: cover;
+  object-position: center;
+}
+
+.flipbook-thumbnail-blank {
+  background: #fff;
+}
+
+/* Keep the book's responsive dimensions stable when opening a note adds
+   action buttons to the footer and changes the stage's available height. */
+.flipbook-stage > .flipbook-book {
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  width: var(--spread-w);
+  height: var(--page-h);
+  min-width: var(--spread-w);
+  max-width: var(--spread-w);
+  min-height: var(--page-h);
+  max-height: var(--page-h);
+}
