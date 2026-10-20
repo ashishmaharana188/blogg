@@ -921,7 +921,6 @@ export default function AccountPage() {
                                   ? <img src={ytmusicLeadSong.thumbnail} alt="" loading="lazy" />
                                   : <div className="showcase-mini-music-placeholder" aria-hidden="true">♪</div>}
                                 <div className="showcase-mini-music-copy">
-                                  <span className="showcase-mini-track-label">{ytmusicPublic.lastPlayed ? "LAST PLAYED" : ytmusicLeadSong ? "PUBLIC PICK" : "YOUTUBE MUSIC"}</span>
                                   <strong>{ytmusicLeadSong ? ytmusicLeadSong.title : "No public track shared yet"}</strong>
                                   {ytmusicLeadSong
                                     ? <span>{ytmusicLeadSong.artists.join(", ") || "Unknown artist"}{ytmusicLeadSong.album ? ` · ${ytmusicLeadSong.album}` : ""}</span>
