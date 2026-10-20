@@ -218,3 +218,16 @@
 .blogg-shared-header button {
   font-family: inherit;
 }
+
+/* Open-note page index: a subtle single number tucked against the page edge. */
+.flipbook-page-count {
+  right: 10px !important;
+  bottom: 8px !important;
+  margin: 0 !important;
+  color: #9ca3af !important;
+  font-size: 0.58rem !important;
+  line-height: 1 !important;
+  font-weight: 400 !important;
+  text-shadow: none !important;
+  pointer-events: none;
+}

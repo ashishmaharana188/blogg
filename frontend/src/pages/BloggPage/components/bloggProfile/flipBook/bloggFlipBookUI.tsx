@@ -229,6 +229,26 @@ const PagePane = ({
             )}
           </div>
 
+          {canSelect && (
+            <button
+              type="button"
+              className="flipbook-open-hint"
+              onClick={(event) => {
+                event.stopPropagation();
+                openBlogg();
+              }}
+              style={{
+                flex: "0 0 auto",
+                border: 0,
+                padding: "0.5rem 0 0",
+                background: "transparent",
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              Open note
+            </button>
+          )}
         </article>
       ) : page.pageKind === "detail-cover" ? (
         <article className="flipbook-page-content flipbook-detail-cover">
@@ -249,14 +269,14 @@ const PagePane = ({
             </div>
           )}
           <p className="flipbook-page-count">
-            Page {page.pageNumber} of {page.totalPages}
+            {page.pageNumber}
           </p>
         </article>
       ) : (
         <article className="flipbook-page-content flipbook-detail-page">
           <ReadOnlyBloggContent key={page.id} content={page.content} />
           <p className="flipbook-page-count">
-            Page {page.pageNumber} of {page.totalPages}
+            {page.pageNumber}
           </p>
         </article>
       )}
@@ -268,12 +288,10 @@ const TurningSheet = ({
   pages,
   turn,
   onDone,
-  stackOrder,
 }: {
   pages: FlipBookPageType[];
   turn: ActiveTurn;
   onDone: () => void;
-  stackOrder: number;
 }) => {
   const isNext = turn.direction === "next";
   const frontPage = pages[isNext ? turn.from + 1 : turn.from];
@@ -284,7 +302,6 @@ const TurningSheet = ({
       className={`flipbook-turning-sheet ${
         isNext ? "flipbook-turn-next" : "flipbook-turn-previous"
       } ${turn.isRapid ? "flipbook-rapid" : ""}`}
-      style={{ zIndex: stackOrder }}
       onAnimationEnd={(event) => {
         if (event.target !== event.currentTarget) return;
         onDone();
@@ -427,51 +444,35 @@ const BlogFlipBookUI = ({
   }, [activeTurns, settledSpread]);
 
   const completeTurn = useCallback(
-    (id: number, targetSpread: number, direction: TurnDirection) => {
-      // Multiple leaves may be turning at once. Keep the settled spread
-      // monotonic so an older animation finishing cannot pull the book back.
-      const nextSettled =
-        direction === "next"
-          ? Math.max(settledSpreadRef.current, targetSpread)
-          : Math.min(settledSpreadRef.current, targetSpread);
-      settledSpreadRef.current = nextSettled;
-      setSettledSpread((previous) =>
-        direction === "next"
-          ? Math.max(previous, targetSpread)
-          : Math.min(previous, targetSpread),
-      );
-      setActiveTurns((previous) => previous.filter((turn) => turn.id !== id));
+    (id: number, targetSpread: number, _direction: TurnDirection) => {
+      // There is now only ever one active turn, so the completed target is the
+      // canonical spread. Update the ref synchronously for a held-key interval.
+      settledSpreadRef.current = targetSpread;
+      setSettledSpread(targetSpread);
+      setActiveTurns((prev) => prev.filter((turn) => turn.id !== id));
     },
     [],
   );
 
   const startTurn = useCallback(
     (direction: TurnDirection, isRapid = false) => {
-      setActiveTurns((previous) => {
-        // Keep one direction per overlapping burst, but do not wait for the
-        // current sheet to finish. This restores the original rapid-stack feel.
-        if (previous.length > 0 && previous[0].direction !== direction) {
-          return previous;
-        }
+      setActiveTurns((prev) => {
+        // Animate exactly one leaf at a time. Queuing overlapping sheets mounts
+        // duplicate BlockNote editors and causes severe paint/layout jank.
+        // A held key/button will request the next turn after this leaf settles.
+        if (prev.length > 0) return prev;
 
-        let lastLogical = settledSpreadRef.current;
-        if (previous.length > 0) {
-          const targets = previous.map((turn) => turn.to);
-          lastLogical =
-            direction === "next"
-              ? Math.max(lastLogical, ...targets)
-              : Math.min(lastLogical, ...targets);
-        }
+        const lastLogical = settledSpreadRef.current;
 
         const to =
           direction === "next"
             ? Math.min(lastLogical + 2, maxSpread)
             : Math.max(lastLogical - 2, 0);
 
-        if (to === lastLogical) return previous;
+        if (to === lastLogical) return prev;
 
         return [
-          ...previous,
+          ...prev,
           {
             id: turnIdRef.current++,
             direction,
@@ -635,13 +636,11 @@ const BlogFlipBookUI = ({
             )}
           </div>
 
-          {activeTurns.map((turn, index) => (
+          {activeTurns.map((turn) => (
             <TurningSheet
               key={turn.id}
               pages={bookPages}
               turn={turn}
-              // Earliest leaf stays in front; newly started leaves turn behind it.
-              stackOrder={100 - index}
               onDone={() => completeTurn(turn.id, turn.to, turn.direction)}
             />
           ))}
