@@ -31,6 +31,39 @@ type CacheEntry<T> = { key: string; value: T; expiresAt: Date; updatedAt: Date }
 const cleanText = (value: unknown, maxLength = 180) => typeof value === "string"
   ? value.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim().slice(0, maxLength)
   : "";
+
+function sanitizeCompanionDetail(value: unknown, maxLength = 220): string {
+  if (typeof value !== "string") return "";
+  const safe = value
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, " ")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, " ")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\bBearer\s+[^\s,;]+/gi, "Bearer [redacted]")
+    .replace(/\b(cookie|authorization)\s*[:=]\s*[^,;]+/gi, "$1=[redacted]");
+  return cleanText(safe, maxLength);
+}
+
+async function companionResponseDetail(response: Response): Promise<string> {
+  const raw = await response.text().catch(() => "");
+  if (!raw) return "";
+  try {
+    const body = JSON.parse(raw) as {
+      detail?: unknown;
+      message?: unknown;
+      title?: unknown;
+      error?: unknown;
+    };
+    const errorValue = typeof body.error === "object" && body.error !== null
+      ? (body.error as { message?: unknown }).message
+      : body.error;
+    const detail = body.detail ?? body.message ?? errorValue ?? body.title;
+    if (typeof detail === "string") return sanitizeCompanionDetail(detail);
+    if (detail !== undefined) return sanitizeCompanionDetail(JSON.stringify(detail));
+  } catch {
+    // Render gateway errors are often plain-text or HTML, not JSON.
+  }
+  return sanitizeCompanionDetail(raw);
+}
 const frontendBase = () => (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/+$/, "");
 const apiBase = () => (process.env.API_PUBLIC_URL || "").replace(/\/+$/, "");
 const callbackUrl = (provider: "spotify" | "youtube") => `${apiBase()}/api/admin/integrations/${provider}/callback`;
@@ -548,7 +581,8 @@ async function ytmusicIntegrationStatus(): Promise<IntegrationStatus> {
       signal: AbortSignal.timeout(3000),
     });
     if (!response.ok) {
-      console.error(`[adminShowcase] YouTube Music health check failed; http_status=${response.status}`);
+      const detail = await companionResponseDetail(response);
+      console.error(`[adminShowcase] YouTube Music health check failed; http_status=${response.status}${detail ? `; upstream_detail=${detail}` : ""}`);
       return { configured: true, connected: false, message: "YouTube Music companion service is temporarily unavailable." };
     }
     const health = await response.json() as {
@@ -566,7 +600,8 @@ async function ytmusicIntegrationStatus(): Promise<IntegrationStatus> {
       message: ready ? "YouTube Music companion service is reachable." : "YouTube Music companion authentication is not ready.",
     };
   } catch (error) {
-    console.error(`[adminShowcase] YouTube Music health check failed; error_type=${error instanceof Error ? error.name : "unknown"}`);
+    const detail = error instanceof Error ? sanitizeCompanionDetail(error.message) : "";
+    console.error(`[adminShowcase] YouTube Music health check failed; error_type=${error instanceof Error ? error.name : "unknown"}${detail ? `; detail=${detail}` : ""}`);
     return { configured: true, connected: false, message: "YouTube Music companion service is temporarily unavailable." };
   }
 }
@@ -583,17 +618,14 @@ async function fetchYtmusicServiceItems(endpoint: "liked" | "history"): Promise<
       signal: AbortSignal.timeout(9000),
     });
   } catch (error) {
-    console.error(`[adminShowcase] YouTube Music ${endpoint} request failed; error_type=${error instanceof Error ? error.name : "unknown"}`);
-    throw new Error("YouTube Music companion request failed.");
+    const detail = error instanceof Error ? sanitizeCompanionDetail(error.message) : "";
+    console.error(`[adminShowcase] YouTube Music ${endpoint} request failed; error_type=${error instanceof Error ? error.name : "unknown"}${detail ? `; detail=${detail}` : ""}`);
+    throw new Error(`YouTube Music companion request failed${detail ? `: ${detail}` : "."}`);
   }
   if (!response.ok) {
-    let detail = "";
-    try {
-      const body = await response.json() as { detail?: unknown; message?: unknown };
-      detail = cleanText(body.detail ?? body.message, 180);
-    } catch { /* Non-JSON upstream errors need no UI exposure. */ }
-    console.error(`[adminShowcase] YouTube Music ${endpoint} request failed; http_status=${response.status}${detail ? `; detail=${detail}` : ""}`);
-    throw new Error(`YouTube Music companion returned HTTP ${response.status}.`);
+    const detail = await companionResponseDetail(response);
+    console.error(`[adminShowcase] YouTube Music ${endpoint} request failed; http_status=${response.status}${detail ? `; upstream_detail=${detail}` : ""}`);
+    throw new Error(`YouTube Music companion /${endpoint} returned HTTP ${response.status}${detail ? `: ${detail}` : "."}`);
   }
   const data = await response.json() as { items?: unknown };
   if (!Array.isArray(data.items)) {
@@ -880,7 +912,9 @@ router.get("/showcase/ytmusic/public", async (_req, res, next) => {
     try {
       await syncYtmusicHistorySnapshot();
     } catch (error) {
-      console.error(`[adminShowcase] Background YouTube Music history sync failed; error_type=${error instanceof Error ? error.name : "unknown"}`);
+      const detail = error instanceof Error ? sanitizeCompanionDetail(error.message) : "";
+      console.error("[adminShowcase] Background YouTube Music history sync failed; error_type="
+        + (error instanceof Error ? error.name : "unknown") + (detail ? "; detail=" + detail : ""));
     }
     const [enabled, saved] = await Promise.all([
       readSetting("ytmusic-enabled"),
@@ -921,8 +955,10 @@ router.post("/admin/showcase/ytmusic/sync-history", ...ADMIN_GUARD, async (_req,
     res.setHeader("Cache-Control", "private, no-store");
     return res.json({ lastPlayed });
   } catch (error) {
-    console.error(`[adminShowcase] YouTube Music history sync failed; error_type=${error instanceof Error ? error.name : "unknown"}`);
-    return res.status(502).json({ message: "Could not refresh YouTube Music history. Check backend logs." });
+    const detail = error instanceof Error ? sanitizeCompanionDetail(error.message) : "";
+    console.error("[adminShowcase] YouTube Music history sync failed; error_type="
+      + (error instanceof Error ? error.name : "unknown") + (detail ? "; detail=" + detail : ""));
+    return res.status(502).json({ message: "Could not refresh YouTube Music history" + (detail ? ": " + detail : ".") });
   }
 });
 
@@ -936,8 +972,10 @@ router.get("/showcase/ytmusic/liked", ...ADMIN_GUARD, async (_req, res, next) =>
     res.setHeader("Cache-Control", "private, no-store");
     return res.json({ items: items.slice(0, 50).map(ytmusicSong) });
   } catch (error) {
-    console.error(`[adminShowcase] YouTube Music liked songs failed; error_type=${error instanceof Error ? error.name : "unknown"}`);
-    return res.status(502).json({ message: "Could not load YouTube Music liked songs. Check backend logs." });
+    const detail = error instanceof Error ? sanitizeCompanionDetail(error.message) : "";
+    console.error("[adminShowcase] YouTube Music liked songs failed; error_type="
+      + (error instanceof Error ? error.name : "unknown") + (detail ? "; detail=" + detail : ""));
+    return res.status(502).json({ message: "Could not load YouTube Music liked songs" + (detail ? ": " + detail : ".") });
   }
 });
 
@@ -949,8 +987,11 @@ router.post("/admin/integrations/ytmusic/connect", ...ADMIN_GUARD, async (_req, 
     console.info("[adminShowcase] YouTube Music integration enabled by administrator");
     return res.json({ success: true, connected: true });
   } catch (error) {
-    console.error(`[adminShowcase] YouTube Music connect failed; error_type=${error instanceof Error ? error.name : "unknown"}`);
-    return res.status(502).json({ message: "Could not connect YouTube Music. Check backend logs and the companion service authentication." });
+    const detail = error instanceof Error ? sanitizeCompanionDetail(error.message) : "Unknown connection error.";
+    console.error(`[adminShowcase] YouTube Music connect failed; error_type=${error instanceof Error ? error.name : "unknown"}${detail ? `; detail=${detail}` : ""}`);
+    return res.status(502).json({
+      message: `Could not connect YouTube Music: ${detail || "the companion service returned an unknown error."}`,
+    });
   }
 });
 

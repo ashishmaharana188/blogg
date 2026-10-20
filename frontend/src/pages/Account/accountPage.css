@@ -694,3 +694,17 @@
     max-height: 60vh;
   }
 }
+
+
+.showcase-ytmusic-connect-error {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border: 1px solid #ebcccc;
+  border-radius: 8px;
+  background: #fff8f8;
+  color: #8f2c2c;
+  font-size: .72rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}

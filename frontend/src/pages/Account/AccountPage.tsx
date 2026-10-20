@@ -327,6 +327,7 @@ export default function AccountPage() {
   const [ytmusicPublic, setYtmusicPublic] = useState<YtMusicPublicState>({ connected: false, lastPlayed: null, tracks: [] });
   const [ytmusicPublicSaving, setYtmusicPublicSaving] = useState(false);
   const [integrationState, setIntegrationState] = useState<Record<string, IntegrationStatus>>({});
+  const [ytmusicConnectError, setYtmusicConnectError] = useState("");
 
   const refreshPresence = useCallback(async () => {
     try {
@@ -651,13 +652,16 @@ export default function AccountPage() {
   };
 
   const connectYtmusic = async () => {
+    setYtmusicConnectError("");
     try {
       await api("/api/admin/integrations/ytmusic/connect", { method: "POST" });
       await refreshIntegrations();
       await refreshLikedLibraries();
       await refreshYtmusicPublic();
-    } catch {
-      // Connection failures are recorded in backend logs.
+    } catch (error) {
+      setYtmusicConnectError(error instanceof Error
+        ? error.message
+        : "Could not connect YouTube Music. Check the companion service status and backend logs.");
     }
   };
 
@@ -809,6 +813,10 @@ export default function AccountPage() {
                 {integration("ytmusic").connected && <button type="button" className="showcase-outline-button" onClick={() => void refreshLikedLibraries()} disabled={likedMusicLoading}>{likedMusicLoading ? "Refreshing…" : "Refresh"}</button>}
               </div>}
             </div>
+
+            {ytmusicConnectError && isAdmin && (
+              <p className="showcase-ytmusic-connect-error" role="alert">{ytmusicConnectError}</p>
+            )}
 
             {ytmusicPublic.tracks.length > 0 && <div className="showcase-ytmusic-public-block">
               <div className="showcase-ytmusic-subsection-heading">
