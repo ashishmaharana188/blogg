@@ -7,6 +7,7 @@ import { fetchBloggByIdRequest, fetchStackAndGroup } from "./BloggPage/services/
 import BloggHeader from "./BloggPage/components/bloggHeader/BloggHeader";
 import ShareBloggButton from "./BloggPage/components/ShareBloggButton";
 import { useAuth } from "../context/authContext";
+import AssetStateBox from "../components/AssetStateBox";
 import { bloggEditorSchema } from "./BloggPage/components/bloggForm/bloggEditorSchema";
 import "@blocknote/mantine/style.css";
 import "./bloggReadPage.css";
@@ -80,9 +81,9 @@ export default function BloggReadPage() {
       <BloggHeader page="feed" onNewNote={() => navigate("/blog?newNote=1")} />
       <main className="blogg-reader-scroll">
         {status === "loading" ? (
-          <div className="blogg-reader-state" role="status">Loading note…</div>
+          <AssetStateBox status="loading" />
         ) : status === "error" ? (
-          <div className="blogg-reader-state" role="alert"><p>The note could not be loaded. Check the connection and try again.</p><button type="button" onClick={() => window.location.reload()}>Retry</button></div>
+          <AssetStateBox status="error" onRetry={() => window.location.reload()} />
         ) : status === "missing" || !blogg ? (
           <div className="blogg-reader-state" role="status"><h1>Note not found</h1><p>This link may be invalid or the note may have been removed.</p><Link to="/feed">Back to Blog Feed</Link></div>
         ) : (

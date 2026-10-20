@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { BloggItem } from "../../types/pageTypes";
+import AssetStateBox from "../../components/AssetStateBox";
 import { fetchBloggByIdRequest, fetchStackAndGroup } from "../BloggPage/services/canvasViewService";
 import { ReadOnlyBloggContent } from "../BloggPage/components/bloggProfile/flipBook/readOnlyBloggContent";
 import "./bloggEmbed.css";
@@ -47,11 +48,22 @@ export default function BloggEmbedPage() {
     return () => { cancelled = true; };
   }, [bloggId]);
 
-  if (status !== "ready" || !blogg) {
+  if (status === "loading" || status === "error") {
+    return (
+      <main className="blogg-embed-shell typewriter-font">
+        <AssetStateBox
+          status={status}
+          onRetry={status === "error" ? () => window.location.reload() : undefined}
+        />
+      </main>
+    );
+  }
+
+  if (status === "missing" || !blogg) {
     return (
       <main className="blogg-embed-shell typewriter-font">
         <div className="blogg-embed-card">
-          <p>{status === "loading" ? "Loading note preview…" : status === "missing" ? "This note could not be found." : "The note preview could not be loaded."}</p>
+          <p>This note could not be found.</p>
         </div>
       </main>
     );

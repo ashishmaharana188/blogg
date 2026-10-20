@@ -1,0 +1,93 @@
+.asset-state-stage {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  min-height: 128px;
+  padding: 16px 10px;
+}
+
+.asset-state-stage--compact {
+  min-height: 0;
+  padding: 6px 0;
+}
+
+.asset-state-square {
+  position: relative;
+  display: block;
+  flex: 0 1 auto;
+  overflow: hidden;
+  box-sizing: border-box;
+  aspect-ratio: 1 / 1;
+  max-width: 100%;
+  padding: 0;
+  border: 1px solid #d5dbe3;
+  border-radius: 0;
+  background: #f3f5f7;
+  appearance: none;
+}
+
+.asset-state-square--xs { width: min(40px, 100%); }
+.asset-state-square--sm { width: min(64px, 100%); }
+.asset-state-square--md { width: min(96px, 100%); }
+.asset-state-square--lg { width: min(160px, 100%); }
+.asset-state-square--xl { width: min(224px, 100%); }
+
+.asset-state-image,
+.asset-state-fallback {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.asset-state-image {
+  z-index: 1;
+  object-fit: cover;
+}
+
+.asset-state-fallback {
+  z-index: 0;
+  background-color: #f3f5f7;
+  background-image:
+    linear-gradient(135deg, transparent 48%, rgb(148 163 184 / 24%) 49%, rgb(148 163 184 / 24%) 51%, transparent 52%),
+    linear-gradient(45deg, transparent 48%, rgb(148 163 184 / 20%) 49%, rgb(148 163 184 / 20%) 51%, transparent 52%);
+  background-size: 18px 18px;
+}
+
+button.asset-state-square--retry {
+  width: auto;
+  cursor: pointer;
+  color: #374151;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+button.asset-state-square--retry.asset-state-square--xs { width: min(40px, 100%); }
+button.asset-state-square--retry.asset-state-square--sm { width: min(64px, 100%); }
+button.asset-state-square--retry.asset-state-square--md { width: min(96px, 100%); }
+button.asset-state-square--retry.asset-state-square--lg { width: min(160px, 100%); }
+button.asset-state-square--retry.asset-state-square--xl { width: min(224px, 100%); }
+
+button.asset-state-square--retry:hover {
+  border-color: #94a3b8;
+  box-shadow: 0 2px 8px rgb(15 23 42 / 10%);
+}
+
+.asset-state-retry-mark {
+  position: absolute;
+  z-index: 2;
+  right: 4px;
+  bottom: 4px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid #d5dbe3;
+  background: rgb(255 255 255 / 94%);
+  color: #334155;
+  font-size: 18px;
+  line-height: 1;
+}

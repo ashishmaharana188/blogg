@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEve
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/authContext";
 import { API_BASE_URL } from "../../services/apiBase";
+import AssetStateBox from "../../components/AssetStateBox";
 import {
   fetchAdminPresence,
   updateAdminPresence,
@@ -264,24 +265,18 @@ function YoutubePlaylistRows({
       </div>
       {playlist.description && <p className="showcase-youtube-playlist-description">{playlist.description}</p>}
       {!videos && <p className="showcase-empty showcase-playlist-loading">Videos load as this playlist comes into view.</p>}
-      {videos?.loading && videos.items.length === 0 && <p className="showcase-empty showcase-playlist-loading" role="status">Loading playlist videos…</p>}
+      {videos?.loading && videos.items.length === 0 && <AssetStateBox status="loading" compact />}
       {videos?.error && videos.items.length === 0 && (
-        <div className="showcase-youtube-load-error">
-          <p className="showcase-empty">{videos.error}</p>
-          <button type="button" className="showcase-youtube-load-retry" onClick={retry}>Retry</button>
-        </div>
+        <AssetStateBox status="error" compact onRetry={retry} />
       )}
       {Boolean(videos?.items.length) && (
         <div className="showcase-track-list">
           {videos!.items.map((song, index) => <MusicTrack song={song} key={song.videoId || `${playlist.id}-${index}`} onFeature={onFeature} />)}
         </div>
       )}
-      {videos?.loading && videos.items.length > 0 && <p className="showcase-youtube-scroll-status" role="status">Loading more videos…</p>}
+      {videos?.loading && videos.items.length > 0 && <AssetStateBox status="loading" compact />}
       {videos?.error && videos.items.length > 0 && (
-        <div className="showcase-youtube-load-error">
-          <p className="showcase-youtube-scroll-status">Could not load the next batch of videos.</p>
-          <button type="button" className="showcase-youtube-load-retry" onClick={retry}>Retry</button>
-        </div>
+        <AssetStateBox status="error" compact onRetry={retry} />
       )}
       {videos && !videos.loading && !videos.error && videos.items.length === 0 && !videos.nextPageToken && (
         <p className="showcase-empty">This playlist has no accessible videos.</p>
@@ -341,6 +336,7 @@ export default function AccountPage() {
   const [busy, setBusy] = useState(false);
   const [links, setLinks] = useState<ShowcaseLink[]>([]);
   const [linksLoading, setLinksLoading] = useState(true);
+  const [linksError, setLinksError] = useState(false);
   const [url, setUrl] = useState("");
   const [linkBusy, setLinkBusy] = useState(false);
   const [linkMessage, setLinkMessage] = useState("");
@@ -401,11 +397,13 @@ export default function AccountPage() {
   }, []);
 
   const refreshShowcase = useCallback(async () => {
+    setLinksError(false);
     try {
       const data = await api<{ items: ShowcaseLink[] }>("/api/showcase");
       setLinks(data.items || []);
-    } catch {
-      // The showcase can be unavailable during initial deployment.
+    } catch (error) {
+      console.error("Could not load featured links:", error);
+      setLinksError(true);
     } finally {
       setLinksLoading(false);
     }
@@ -484,8 +482,9 @@ export default function AccountPage() {
       setYoutubeConnected(Boolean(data.connected));
       setYoutubeConfigured(Boolean(data.configured));
     } catch (error) {
+      console.error("Could not load YouTube playlists:", error);
       setYoutubePlaylists([]);
-      setYoutubePlaylistsError("YouTube playlists are temporarily unavailable. Check backend logs.");
+      setYoutubePlaylistsError("unavailable");
     } finally {
       setYoutubePlaylistsLoading(false);
     }
@@ -505,14 +504,14 @@ export default function AccountPage() {
         ytmusic: { configured: true, connected: true },
       }));
     } catch (error) {
-      const message = "YouTube Music could not be refreshed. Check backend logs.";
-      setLikedMusicError(message);
+      console.error("Could not refresh YouTube Music liked songs:", error);
+      setLikedMusicError("unavailable");
       setIntegrationState((current) => ({
         ...current,
         ytmusic: {
           configured: current.ytmusic?.configured ?? false,
           connected: false,
-          message,
+          message: "unavailable",
         },
       }));
     } finally {
@@ -710,9 +709,8 @@ export default function AccountPage() {
       await refreshLikedLibraries();
       await refreshYtmusicPublic();
     } catch (error) {
-      setYtmusicConnectError(error instanceof Error
-        ? error.message
-        : "Could not connect YouTube Music. Check the companion service status and backend logs.");
+      console.error("Could not connect YouTube Music:", error);
+      setYtmusicConnectError("unavailable");
     }
   };
 
@@ -844,7 +842,7 @@ export default function AccountPage() {
                               <p className="showcase-admin-hint">Paste any public HTTP or HTTPS link. Links start hidden; publish each card when you want visitors to see it. Some sites block metadata previews, so a title and domain fallback may be used.</p>
                               {linkMessage && <p className="account-message" role="status">{linkMessage}</p>}
                             </form>}
-                            {linksLoading ? <p className="showcase-empty">Loading featured links…</p> : visibleLinks.length === 0 ? <p className="showcase-empty">No featured links have been published yet.</p> : null}
+                            {linksLoading ? <AssetStateBox status="loading" compact /> : linksError ? <AssetStateBox status="error" compact onRetry={() => void refreshShowcase()} /> : visibleLinks.length === 0 ? <p className="showcase-empty">No featured links have been published yet.</p> : null}
                           </section>
               </div>
           {featuredColumns[0].length > 0 && (
@@ -861,7 +859,7 @@ export default function AccountPage() {
                             {isAdmin && <button type="button" className="showcase-outline-button" onClick={() => connect("youtube")}>{integration("youtube").connected ? "Reconnect YouTube" : "Connect YouTube"}</button>}
                           </div>
                           <div className="showcase-youtube-library-scroll" role="region" aria-label="YouTube public library" tabIndex={0}>
-                          {youtubePlaylistsLoading ? <p className="showcase-empty">Loading public YouTube playlists…</p> : youtubePlaylistsError ? <p className="showcase-empty" role="status">YouTube playlists are temporarily unavailable. Check backend logs.</p> : !youtubeConnected ? (
+                          {youtubePlaylistsLoading ? <AssetStateBox status="loading" compact /> : youtubePlaylistsError ? <AssetStateBox status="error" compact onRetry={() => void refreshYoutubePlaylists()} /> : !youtubeConnected ? (
                             <p className="showcase-empty">{isAdmin ? youtubeConfigured ? "Connect YouTube to load public playlists from that account." : "YouTube is not configured yet." : "No public YouTube playlists are available right now."}</p>
                           ) : youtubePlaylists.length === 0 ? (
                             <p className="showcase-empty">No public playlists were found on the connected account. Set a playlist to Public on YouTube, then refresh this page.</p>
@@ -921,6 +919,7 @@ export default function AccountPage() {
                                   ? <img src={ytmusicLeadSong.thumbnail} alt="" loading="lazy" />
                                   : <div className="showcase-mini-music-placeholder" aria-hidden="true">♪</div>}
                                 <div className="showcase-mini-music-copy">
+                                  <span className="showcase-mini-track-label">{ytmusicPublic.lastPlayed ? "LAST PLAYED" : ytmusicLeadSong ? "PUBLIC PICK" : "YOUTUBE MUSIC"}</span>
                                   <strong>{ytmusicLeadSong ? ytmusicLeadSong.title : "No public track shared yet"}</strong>
                                   {ytmusicLeadSong
                                     ? <span>{ytmusicLeadSong.artists.join(", ") || "Unknown artist"}{ytmusicLeadSong.album ? ` · ${ytmusicLeadSong.album}` : ""}</span>
@@ -938,7 +937,7 @@ export default function AccountPage() {
                             </div>
                 
                             {ytmusicConnectError && isAdmin && (
-                              <p className="showcase-ytmusic-connect-error" role="alert">{ytmusicConnectError}</p>
+                              <AssetStateBox status="error" compact onRetry={() => void connectYtmusic()} />
                             )}
                 
                             {ytmusicPublic.tracks.length > 0 && <div className="showcase-ytmusic-public-block">
@@ -984,9 +983,9 @@ export default function AccountPage() {
                               {!pickerCollapsed && <>
                               <div className="showcase-ytmusic-picker-scroll" ref={ytmusicPickerScrollRef} role="region" aria-label="Choose public tracks from liked songs" tabIndex={0}>
                                 {likedMusicLoading
-                                  ? <p className="showcase-empty" role="status">Loading liked songs…</p>
+                                  ? <AssetStateBox status="loading" compact />
                                   : likedMusicError
-                                    ? <p className="showcase-empty" role="status">YouTube Music could not be refreshed. Check backend logs.</p>
+                                    ? <AssetStateBox status="error" compact onRetry={() => void refreshLikedLibraries()} />
                                     : likedMusic.length
                                       ? <div className="showcase-track-list">{likedMusic.slice(0, ytmusicPickerVisibleCount).map((song, index) => {
                                         const alreadySelected = Boolean(song.videoId) && ytmusicPublic.tracks.some((item) => item.videoId === song.videoId);
@@ -1000,7 +999,9 @@ export default function AccountPage() {
                                           }}
                                         />;
                                       })}</div>
-                                      : <p className="showcase-empty">{integration("ytmusic").connected ? "No liked songs were returned. Check backend logs if this seems wrong." : "Connect YouTube Music to load liked songs."}</p>}
+                                      : integration("ytmusic").connected
+                                        ? <AssetStateBox status="error" compact onRetry={() => void refreshLikedLibraries()} />
+                                        : <p className="showcase-empty">Connect YouTube Music to load liked songs.</p>}
                                 {!likedMusicLoading && !likedMusicError && ytmusicPickerVisibleCount < likedMusic.length && (
                                   <div ref={ytmusicPickerSentinelRef} className="showcase-ytmusic-picker-sentinel" aria-hidden="true" />
                                 )}
