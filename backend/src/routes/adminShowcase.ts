@@ -35,7 +35,7 @@ const frontendBase = () => (process.env.FRONTEND_URL || "http://localhost:5173")
 const apiBase = () => (process.env.API_PUBLIC_URL || "").replace(/\/+$/, "");
 const callbackUrl = (provider: "spotify" | "youtube") => `${apiBase()}/api/admin/integrations/${provider}/callback`;
 const spotifyConfigured = () => Boolean(process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET && apiBase());
-const googleConfigured = () => Boolean(process.env.GOOGLE_OAUTH_CLIENT_ID && process.env.GOOGLE_OAUTH_CLIENT_SECRET && process.env.YOUTUBE_API_KEY && apiBase());
+const googleConfigured = () => Boolean(process.env.GOOGLE_OAUTH_CLIENT_ID && process.env.GOOGLE_OAUTH_CLIENT_SECRET && apiBase());
 
 // Accept ordinary public HTTPS pages for rich previews, but never fetch local/private
 // network targets. Redirect targets are revalidated before every follow-up request.
@@ -167,7 +167,6 @@ async function getAccessToken(provider: "spotify" | "youtube"): Promise<string |
       ...(provider === "spotify" ? { Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}` } : {}),
     },
     body: new URLSearchParams({
-      grant_type: "refresh_token",
       refresh_token: decryptToken(String(record.refreshTokenEncrypted)),
       ...(provider === "youtube" ? { client_id: clientId, client_secret: clientSecret } : {}),
     }),
@@ -430,6 +429,13 @@ function isYoutubePlaylistId(value: string): boolean {
   return /^[A-Za-z0-9_-]{8,100}$/.test(value);
 }
 
+class YouTubeDataApiError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "YouTubeDataApiError";
+  }
+}
+
 async function fetchYoutubeJson(url: URL, token: string): Promise<any> {
   const response = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
@@ -437,8 +443,15 @@ async function fetchYoutubeJson(url: URL, token: string): Promise<any> {
   });
   if (!response.ok) {
     const body = await response.json().catch(() => ({})) as any;
-    const detail = cleanText(body?.error?.message, 180);
-    throw new Error(`YouTube Data API returned ${response.status}${detail ? `: ${detail}` : ""}. Check the Google OAuth connection and YouTube Data API configuration.`);
+    const detail = cleanText(body?.error?.message, 220);
+    const reason = cleanText(body?.error?.errors?.[0]?.reason, 80);
+    const isBlocked = /requests to this api.*blocked/i.test(detail);
+    const guidance = isBlocked
+      ? " The OAuth request is not using an API key. Confirm YouTube Data API v3 is enabled in the Google Cloud project associated with GOOGLE_OAUTH_CLIENT_ID, and check that the project has not been blocked."
+      : " Check the Google OAuth connection, granted youtube.readonly scope, and YouTube Data API v3 configuration.";
+    throw new YouTubeDataApiError(
+      `YouTube Data API returned HTTP ${response.status}${detail ? `: ${detail}` : ""}${reason ? ` (reason: ${reason})` : ""}.${guidance}`,
+    );
   }
   return response.json();
 }
@@ -448,7 +461,7 @@ async function fetchPublicYoutubePlaylists(token: string) {
   let pageToken = "";
   // Limit the returned list to 200 public playlists, but keep paging past private/unlisted ones.
   do {
-    const params = new URLSearchParams({ part: "snippet,contentDetails,status", mine: "true", maxResults: "50", key: process.env.YOUTUBE_API_KEY || "" });
+    const params = new URLSearchParams({ part: "snippet,contentDetails,status", mine: "true", maxResults: "50" });
     if (pageToken) params.set("pageToken", pageToken);
     const data = await fetchYoutubeJson(new URL(`${YOUTUBE_API}/playlists?${params.toString()}`), token);
     for (const item of data.items || []) {
@@ -474,7 +487,7 @@ async function fetchYoutubePlaylistVideos(token: string, playlistId: string): Pr
   let pageToken = "";
   // YouTube playlists can be large; paginate the playlist rather than silently taking only the first page.
   do {
-    const params = new URLSearchParams({ part: "snippet,contentDetails", playlistId, maxResults: "50", key: process.env.YOUTUBE_API_KEY || "" });
+    const params = new URLSearchParams({ part: "snippet,contentDetails", playlistId, maxResults: "50" });
     if (pageToken) params.set("pageToken", pageToken);
     const data = await fetchYoutubeJson(new URL(`${YOUTUBE_API}/playlistItems?${params.toString()}`), token);
     for (const entry of data.items || []) {
@@ -648,7 +661,12 @@ router.get("/showcase/youtube/playlists", async (_req, res, next) => {
     });
     res.setHeader("Cache-Control", "public, max-age=60");
     res.json({ configured: status.youtube.configured, connected: true, mode, playlists });
-  } catch (error) { next(error); }
+  } catch (error) {
+    if (error instanceof YouTubeDataApiError) {
+      return res.status(502).json({ code: "YOUTUBE_API_REQUEST_FAILED", message: error.message });
+    }
+    next(error);
+  }
 });
 
 router.get("/showcase/youtube/playlists/:playlistId/videos", async (req, res, next) => {
@@ -668,7 +686,12 @@ router.get("/showcase/youtube/playlists/:playlistId/videos", async (req, res, ne
     });
     res.setHeader("Cache-Control", "public, max-age=60");
     res.json({ items: videos });
-  } catch (error) { next(error); }
+  } catch (error) {
+    if (error instanceof YouTubeDataApiError) {
+      return res.status(502).json({ code: "YOUTUBE_API_REQUEST_FAILED", message: error.message });
+    }
+    next(error);
+  }
 });
 
 router.post("/admin/showcase/youtube/display-mode", ...ADMIN_GUARD, async (req, res, next) => {
@@ -689,13 +712,16 @@ router.get("/showcase/youtube/liked", ...ADMIN_GUARD, async (_req, res, next) =>
     const token = await getAccessToken("youtube");
     if (!token) return res.json({ items: [] });
     const endpoint = new URL("https://www.googleapis.com/youtube/v3/videos");
-    endpoint.search = new URLSearchParams({ part: "snippet", myRating: "like", maxResults: "25", key: process.env.YOUTUBE_API_KEY || "" }).toString();
-    const response = await fetch(endpoint, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
-    if (!response.ok) throw new Error(`YouTube Data API returned ${response.status}.`);
-    const data = await response.json() as any;
+    endpoint.search = new URLSearchParams({ part: "snippet", myRating: "like", maxResults: "25" }).toString();
+    const data = await fetchYoutubeJson(endpoint, token);
     res.setHeader("Cache-Control", "private, max-age=60");
     res.json({ items: (data.items || []).map(youtubeSong) });
-  } catch (error) { next(error); }
+  } catch (error) {
+    if (error instanceof YouTubeDataApiError) {
+      return res.status(502).json({ code: "YOUTUBE_API_REQUEST_FAILED", message: error.message });
+    }
+    next(error);
+  }
 });
 
 router.get("/showcase/ytmusic/liked", ...ADMIN_GUARD, async (_req, res, next) => {
