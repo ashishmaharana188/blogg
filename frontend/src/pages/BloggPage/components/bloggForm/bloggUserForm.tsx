@@ -181,11 +181,13 @@ const UserForm = ({
       }
 
       // Using BlockNote's inline-link schema ensures the URL is clickable when pasted into text.
-      pasteEditor.insertInlineContent({
-        type: "link",
-        content: pasted.label || pasted.url,
-        href: pasted.url,
-      });
+      pasteEditor.insertInlineContent([
+        {
+          type: "link",
+          content: pasted.label || pasted.url,
+          href: pasted.url,
+        },
+      ]);
       return true;
     },
   });
