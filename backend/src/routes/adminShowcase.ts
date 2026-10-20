@@ -167,11 +167,31 @@ async function getAccessToken(provider: "spotify" | "youtube"): Promise<string |
       ...(provider === "spotify" ? { Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}` } : {}),
     },
     body: new URLSearchParams({
+      grant_type: "refresh_token",
       refresh_token: decryptToken(String(record.refreshTokenEncrypted)),
       ...(provider === "youtube" ? { client_id: clientId, client_secret: clientSecret } : {}),
     }),
   });
-  if (!response.ok) throw new Error(`${provider} token refresh failed (${response.status}). Reconnect this integration if it persists.`);
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({})) as {
+      error?: string | { message?: string };
+      error_description?: string;
+      error_subtype?: string;
+    };
+    const providerError = typeof body.error === "string"
+      ? cleanText(body.error, 100)
+      : cleanText(body.error?.message, 160);
+    const description = cleanText(body.error_description, 220);
+    const details = [providerError, description, cleanText(body.error_subtype, 100)].filter(Boolean).join(": ");
+    const guidance = provider === "youtube" && providerError === "invalid_grant"
+      ? " Google rejected the stored refresh token. Reconnect YouTube, and verify GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET belong to the same OAuth client that issued the saved token."
+      : provider === "youtube" && providerError === "invalid_client"
+        ? " Verify GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET are the current matching credentials for the same OAuth client."
+        : " Reconnect this integration if the issue persists.";
+    throw new Error(
+      `${provider} token refresh failed (${response.status})${details ? `: ${details}` : ""}.${guidance}`,
+    );
+  }
   const payload = await response.json() as { access_token: string; refresh_token?: string };
   if (payload.refresh_token) {
     await saveSetting(provider, { refreshTokenEncrypted: encryptToken(payload.refresh_token), connectedAt: new Date() });
