@@ -128,20 +128,39 @@ function ShowcaseCard({
 }
 
 function MusicTrack({ song, onFeature, publicAction }: { song: Song; onFeature?: (song: Song) => void; publicAction?: { label: string; disabled?: boolean; onClick: () => void } }) {
+  const removingPublicTrack = publicAction?.label === "Remove from public";
+  const publicIcon = removingPublicTrack ? "×" : "✓";
   return (
     <div className="showcase-track">
-      {song.thumbnail ? (
-        <img src={song.thumbnail} alt="" loading="lazy" />
-      ) : (
-        <div className="showcase-track-empty" aria-hidden="true">♪</div>
-      )}
-      <div className="showcase-track-copy">
-        <strong>{song.title}</strong>
-        <span>{song.artists.join(", ") || "Unknown artist"}{song.album ? ` · ${song.album}` : ""}</span>
+      <div className="showcase-track-main">
+        {song.thumbnail ? (
+          <img src={song.thumbnail} alt="" loading="lazy" />
+        ) : (
+          <div className="showcase-track-empty" aria-hidden="true">♪</div>
+        )}
+        <div className="showcase-track-copy">
+          <strong>{song.title}</strong>
+          <span>{song.artists.join(", ") || "Unknown artist"}{song.album ? ` · ${song.album}` : ""}</span>
+        </div>
       </div>
-      {song.url && <a href={song.url} target="_blank" rel="noreferrer">Open ↗</a>}
-      {song.url && onFeature && <button type="button" className="showcase-track-feature" onClick={() => onFeature(song)}>Feature</button>}
-      {publicAction && <button type="button" className="showcase-track-feature" disabled={publicAction.disabled} onClick={publicAction.onClick}>{publicAction.label}</button>}
+      {(song.url || (publicAction && !onFeature)) && (
+        <div className="showcase-track-actions">
+          {song.url && <a href={song.url} target="_blank" rel="noreferrer">Open ↗</a>}
+          {song.url && onFeature && <button type="button" className="showcase-track-feature" onClick={() => onFeature(song)}>Feature</button>}
+          {publicAction && (
+            <button
+              type="button"
+              className={`showcase-track-feature showcase-public-toggle ${removingPublicTrack ? "is-remove" : "is-add"}`}
+              disabled={publicAction.disabled}
+              onClick={publicAction.onClick}
+              aria-label={publicAction.label}
+              title={publicAction.label}
+            >
+              <span aria-hidden="true">{publicIcon}</span>
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -303,6 +322,8 @@ export default function AccountPage() {
   const [likedMusicLoading, setLikedMusicLoading] = useState(true);
   const [likedMusicError, setLikedMusicError] = useState("");
   const [ytmusicPickerVisibleCount, setYtmusicPickerVisibleCount] = useState(10);
+  const [selectedTracksCollapsed, setSelectedTracksCollapsed] = useState(false);
+  const [pickerCollapsed, setPickerCollapsed] = useState(false);
   const ytmusicPickerScrollRef = useRef<HTMLDivElement | null>(null);
   const ytmusicPickerSentinelRef = useRef<HTMLDivElement | null>(null);
   const [ytmusicPublic, setYtmusicPublic] = useState<YtMusicPublicState>({ connected: false, lastPlayed: null, tracks: [] });
@@ -806,23 +827,47 @@ export default function AccountPage() {
             </div>
 
             {ytmusicPublic.tracks.length > 0 && <div className="showcase-ytmusic-public-block">
-              <h3>Selected for visitors</h3>
-              <div className="showcase-track-list">{ytmusicPublic.tracks.slice(0, 3).map((song, index) => <MusicTrack
-                song={song}
-                key={song.videoId || index}
-                onFeature={isAdmin ? featureSong : undefined}
-                publicAction={isAdmin ? {
-                  label: "Remove from public",
-                  disabled: ytmusicPublicSaving,
-                  onClick: () => void toggleYtmusicPublicTrack(song),
-                } : undefined}
-              />)}</div>
+              <div className="showcase-ytmusic-subsection-heading">
+                {isAdmin ? (
+                  <button
+                    type="button"
+                    className="showcase-ytmusic-collapse-toggle"
+                    aria-expanded={!selectedTracksCollapsed}
+                    onClick={() => setSelectedTracksCollapsed((collapsed) => !collapsed)}
+                  >
+                    <span className="showcase-ytmusic-section-title">Selected for visitors</span>
+                    <span className="showcase-ytmusic-collapse-mark" aria-hidden="true">{selectedTracksCollapsed ? "+" : "−"}</span>
+                  </button>
+                ) : <h3>Selected for visitors</h3>}
+              </div>
+              {(!isAdmin || !selectedTracksCollapsed) && (
+                <div className="showcase-track-list">{ytmusicPublic.tracks.slice(0, 3).map((song, index) => <MusicTrack
+                  song={song}
+                  key={song.videoId || index}
+                  onFeature={isAdmin ? featureSong : undefined}
+                  publicAction={isAdmin ? {
+                    label: "Remove from public",
+                    disabled: ytmusicPublicSaving,
+                    onClick: () => void toggleYtmusicPublicTrack(song),
+                  } : undefined}
+                />)}</div>
+              )}
             </div>}
 
             {isAdmin && <>
               <div className="showcase-ytmusic-admin-heading">
-                <h3>Choose public tracks</h3><span>{ytmusicPublic.tracks.length}/3 selected</span>
+                <button
+                  type="button"
+                  className="showcase-ytmusic-collapse-toggle"
+                  aria-expanded={!pickerCollapsed}
+                  onClick={() => setPickerCollapsed((collapsed) => !collapsed)}
+                >
+                  <span className="showcase-ytmusic-section-title">Choose public tracks</span>
+                  <span className="showcase-ytmusic-selected-count">{ytmusicPublic.tracks.length}/3 selected</span>
+                  <span className="showcase-ytmusic-collapse-mark" aria-hidden="true">{pickerCollapsed ? "+" : "−"}</span>
+                </button>
               </div>
+              {!pickerCollapsed && <>
               <div className="showcase-ytmusic-picker-scroll" ref={ytmusicPickerScrollRef} role="region" aria-label="Choose public tracks from liked songs" tabIndex={0}>
                 {likedMusicLoading
                   ? <p className="showcase-empty" role="status">Loading liked songs…</p>
@@ -848,6 +893,8 @@ export default function AccountPage() {
                 )}
               </div>
               <p className="showcase-admin-hint">The public card is visible without an admin session. Your last-played song is saved separately and stays public after disconnecting.</p>
+              </>}
+
             </>}
           </section>
 

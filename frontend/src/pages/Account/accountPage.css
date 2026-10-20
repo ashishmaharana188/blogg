@@ -318,7 +318,7 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
   }
-  .account-dashboard-media-stack .account-showcase-section { height: 100%; box-sizing: border-box; }
+  .account-dashboard-media-stack .account-showcase-section { height: auto; box-sizing: border-box; }
   .account-showcase-featured-section .showcase-links-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 720px) {
@@ -346,7 +346,7 @@
 
 /* Keep playlist growth inside the YouTube panel instead of stretching the dashboard row. */
 .account-dashboard-grid {
-  align-items: stretch;
+  align-items: start;
 }
 .account-dashboard-youtube {
   display: flex;
@@ -479,5 +479,199 @@
 @media (max-width: 720px) {
   .account-dashboard-media-stack .showcase-ytmusic-picker-scroll {
     max-height: min(42vh, 320px);
+  }
+}
+
+
+/* Readable music rows: keep metadata wide and group secondary actions below it. */
+.account-dashboard-media-stack .showcase-track {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 12px 0;
+}
+.showcase-track-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+}
+.showcase-track-main > img,
+.showcase-track-main > .showcase-track-empty {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  object-fit: cover;
+  border-radius: 7px;
+  background: #f0f2f4;
+}
+.showcase-track-main > .showcase-track-empty {
+  display: grid;
+  place-items: center;
+  color: #7d8794;
+  font-size: 1.35rem;
+}
+.showcase-track-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+  width: 100%;
+  flex: 1 1 auto;
+}
+.showcase-track-copy strong {
+  display: block;
+  width: 100%;
+  color: #253044;
+  font-size: .79rem;
+  line-height: 1.45;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.showcase-track-copy span {
+  display: block;
+  width: 100%;
+  color: #687586;
+  font-size: .71rem;
+  line-height: 1.45;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.showcase-track-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  width: 100%;
+  padding-left: 56px;
+  box-sizing: border-box;
+}
+.showcase-track-actions > a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 27px;
+  color: #29364a;
+  font-size: .69rem;
+  text-decoration: none;
+}
+.showcase-track-actions .showcase-track-feature {
+  min-width: 30px;
+  min-height: 27px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 5px 9px;
+  line-height: 1;
+}
+.showcase-track-actions .showcase-public-toggle {
+  width: 29px;
+  height: 29px;
+  min-width: 29px;
+  min-height: 29px;
+  padding: 0;
+  border-radius: 50%;
+  font-family: Arial, sans-serif !important;
+  font-size: 1rem;
+  font-weight: 700;
+}
+.showcase-public-toggle.is-add {
+  color: #176b43;
+  border-color: #b8ddc9;
+  background: #f1fbf5;
+}
+.showcase-public-toggle.is-remove {
+  color: #a33131;
+  border-color: #ebcccc;
+  background: #fff6f6;
+}
+.showcase-public-toggle:hover:not(:disabled) {
+  filter: brightness(.97);
+}
+.showcase-public-toggle:disabled {
+  opacity: .42;
+  cursor: not-allowed;
+}
+.showcase-ytmusic-subsection-heading {
+  margin-top: 12px;
+}
+.showcase-ytmusic-collapse-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.showcase-ytmusic-collapse-toggle .showcase-ytmusic-section-title {
+  min-width: 0;
+  color: #263247;
+  font-size: .86rem;
+  font-weight: 700;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.showcase-ytmusic-collapse-mark {
+  display: inline-flex;
+  flex: 0 0 24px;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid #d8dee6;
+  border-radius: 50%;
+  color: #344054;
+  background: #fff;
+  font-size: .95rem;
+  line-height: 1;
+}
+.showcase-ytmusic-collapse-toggle:focus-visible {
+  outline: 2px solid #273246;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.showcase-ytmusic-admin-heading .showcase-ytmusic-collapse-toggle {
+  flex: 1 1 auto;
+  justify-content: space-between;
+}
+.showcase-ytmusic-admin-heading .showcase-ytmusic-collapse-toggle .showcase-ytmusic-section-title {
+  flex: 1 1 auto;
+}
+.showcase-ytmusic-admin-heading .showcase-ytmusic-collapse-mark {
+  margin-left: 0;
+}
+.showcase-ytmusic-selected-count {
+  flex: 0 0 auto;
+  color: #687586;
+  font-size: .7rem;
+  white-space: nowrap;
+}
+.account-dashboard-media-stack .showcase-ytmusic-public-block > .showcase-ytmusic-subsection-heading {
+  margin: 0 0 4px;
+}
+.account-dashboard-media-stack .showcase-ytmusic-public-block .showcase-track-list {
+  margin-top: 4px;
+}
+@media (max-width: 720px) {
+  .showcase-track-actions {
+    padding-left: 56px;
+    justify-content: flex-start;
+  }
+  .showcase-ytmusic-admin-heading .showcase-ytmusic-collapse-toggle {
+    gap: 8px;
+  }
+  .showcase-ytmusic-selected-count {
+    font-size: .66rem;
   }
 }
