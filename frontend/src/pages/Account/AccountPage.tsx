@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/authContext";
 import { API_BASE_URL } from "../../services/apiBase";
@@ -305,8 +305,6 @@ export default function AccountPage() {
   const [linkBusy, setLinkBusy] = useState(false);
   const [linkMessage, setLinkMessage] = useState("");
   const [registrationEnabled, setRegistrationEnabled] = useState(false);
-  const [dashboardMediaStackHeight, setDashboardMediaStackHeight] = useState<number | null>(null);
-  const dashboardMediaStackRef = useRef<HTMLDivElement | null>(null);
   const youtubePlaylistRequests = useRef<Set<string>>(new Set());
   const [nowPlaying, setNowPlaying] = useState<IntegrationsResponse["spotify"]>({
     configured: false, connected: false, playing: false,
@@ -349,20 +347,6 @@ export default function AccountPage() {
       });
     return () => { cancelled = true; };
   }, []);
-
-  useEffect(() => {
-    const target = dashboardMediaStackRef.current;
-    if (!target) return;
-    const updateHeight = () => setDashboardMediaStackHeight(Math.round(target.getBoundingClientRect().height));
-    updateHeight();
-    if (typeof ResizeObserver === "undefined") {
-      window.addEventListener("resize", updateHeight);
-      return () => window.removeEventListener("resize", updateHeight);
-    }
-    const observer = new ResizeObserver(updateHeight);
-    observer.observe(target);
-    return () => observer.disconnect();
-  }, [isAdmin]);
 
   const refreshShowcase = useCallback(async () => {
     try {
@@ -750,7 +734,7 @@ export default function AccountPage() {
             )}
           </section>
 
-          <section className="account-showcase-section account-dashboard-youtube" style={{ "--dashboard-media-stack-height": dashboardMediaStackHeight ? `${dashboardMediaStackHeight}px` : "auto" } as CSSProperties}>
+          <section className="account-showcase-section account-dashboard-youtube">
             <div className="showcase-section-heading">
               <div><p className="account-eyebrow">YOUTUBE LIBRARY</p><h2>Public playlists</h2><p>Public playlists from your YouTube account.</p></div>
               {isAdmin && <button type="button" className="showcase-outline-button" onClick={() => connect("youtube")}>{integration("youtube").connected ? "Reconnect YouTube" : "Connect YouTube"}</button>}
@@ -775,7 +759,7 @@ export default function AccountPage() {
             </div>
           </section>
 
-            <div className="account-dashboard-media-stack" ref={dashboardMediaStackRef}>
+            <div className="account-dashboard-media-stack">
           <section className="account-showcase-section account-showcase-mini-section">
             <div className="showcase-mini-heading"><p className="account-eyebrow">NOW PLAYING</p><h2>Spotify</h2></div>
             <div className="showcase-mini-integration-layout">
@@ -844,7 +828,6 @@ export default function AccountPage() {
                 <div className="showcase-track-list">{ytmusicPublic.tracks.slice(0, 3).map((song, index) => <MusicTrack
                   song={song}
                   key={song.videoId || index}
-                  onFeature={isAdmin ? featureSong : undefined}
                   publicAction={isAdmin ? {
                     label: "Remove from public",
                     disabled: ytmusicPublicSaving,
@@ -879,7 +862,6 @@ export default function AccountPage() {
                         return <MusicTrack
                           song={song}
                           key={song.videoId || index}
-                          onFeature={featureSong}
                           publicAction={{
                             label: alreadySelected ? "Remove from public" : ytmusicPublic.tracks.length >= 3 ? "Limit reached" : "Show to visitors",
                             disabled: ytmusicPublicSaving || (!alreadySelected && ytmusicPublic.tracks.length >= 3),
