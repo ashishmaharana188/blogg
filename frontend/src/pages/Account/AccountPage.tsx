@@ -302,6 +302,9 @@ export default function AccountPage() {
   const [likedMusic, setLikedMusic] = useState<Song[]>([]);
   const [likedMusicLoading, setLikedMusicLoading] = useState(true);
   const [likedMusicError, setLikedMusicError] = useState("");
+  const [ytmusicPickerVisibleCount, setYtmusicPickerVisibleCount] = useState(10);
+  const ytmusicPickerScrollRef = useRef<HTMLDivElement | null>(null);
+  const ytmusicPickerSentinelRef = useRef<HTMLDivElement | null>(null);
   const [ytmusicPublic, setYtmusicPublic] = useState<YtMusicPublicState>({ connected: false, lastPlayed: null, tracks: [] });
   const [ytmusicPublicSaving, setYtmusicPublicSaving] = useState(false);
   const [integrationState, setIntegrationState] = useState<Record<string, IntegrationStatus>>({});
@@ -438,6 +441,7 @@ export default function AccountPage() {
     try {
       const data = await api<{ items: Song[] }>("/api/showcase/ytmusic/liked", { cache: "no-store" });
       const items = Array.isArray(data.items) ? data.items : [];
+      setYtmusicPickerVisibleCount(10);
       setLikedMusic(items);
       setIntegrationState((current) => ({
         ...current,
@@ -486,6 +490,21 @@ export default function AccountPage() {
     const pollId = window.setInterval(() => { void refreshIntegrations(); }, 30_000);
     return () => window.clearInterval(pollId);
   }, [refreshShowcase, refreshIntegrations, refreshYoutubePlaylists, isAdmin]);
+
+  useEffect(() => {
+    if (!isAdmin || likedMusicLoading || likedMusicError || ytmusicPickerVisibleCount >= likedMusic.length) return;
+    const root = ytmusicPickerScrollRef.current;
+    const sentinel = ytmusicPickerSentinelRef.current;
+    if (!root || !sentinel || typeof IntersectionObserver === "undefined") return;
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        setYtmusicPickerVisibleCount((current) => Math.min(current + 10, likedMusic.length));
+      }
+    }, { root, rootMargin: "100px 0px" });
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [isAdmin, likedMusic.length, likedMusicLoading, likedMusicError, ytmusicPickerVisibleCount]);
 
   const changeActivity = async (activity: AdminActivity) => {
     setBusy(true);
@@ -804,25 +823,30 @@ export default function AccountPage() {
               <div className="showcase-ytmusic-admin-heading">
                 <h3>Choose public tracks</h3><span>{ytmusicPublic.tracks.length}/3 selected</span>
               </div>
-              {likedMusicLoading
-                ? <p className="showcase-empty" role="status">Loading liked songs…</p>
-                : likedMusicError
-                  ? <p className="showcase-empty" role="status">YouTube Music could not be refreshed. Check backend logs.</p>
-                  : likedMusic.length
-                    ? <div className="showcase-track-list">{likedMusic.slice(0, 25).map((song, index) => {
-                      const alreadySelected = Boolean(song.videoId) && ytmusicPublic.tracks.some((item) => item.videoId === song.videoId);
-                      return <MusicTrack
-                        song={song}
-                        key={song.videoId || index}
-                        onFeature={featureSong}
-                        publicAction={{
-                          label: alreadySelected ? "Remove from public" : ytmusicPublic.tracks.length >= 3 ? "Limit reached" : "Show to visitors",
-                          disabled: ytmusicPublicSaving || (!alreadySelected && ytmusicPublic.tracks.length >= 3),
-                          onClick: () => void toggleYtmusicPublicTrack(song),
-                        }}
-                      />;
-                    })}</div>
-                    : <p className="showcase-empty">{integration("ytmusic").connected ? "No liked songs were returned. Check backend logs if this seems wrong." : "Connect YouTube Music to load liked songs."}</p>}
+              <div className="showcase-ytmusic-picker-scroll" ref={ytmusicPickerScrollRef} role="region" aria-label="Choose public tracks from liked songs" tabIndex={0}>
+                {likedMusicLoading
+                  ? <p className="showcase-empty" role="status">Loading liked songs…</p>
+                  : likedMusicError
+                    ? <p className="showcase-empty" role="status">YouTube Music could not be refreshed. Check backend logs.</p>
+                    : likedMusic.length
+                      ? <div className="showcase-track-list">{likedMusic.slice(0, ytmusicPickerVisibleCount).map((song, index) => {
+                        const alreadySelected = Boolean(song.videoId) && ytmusicPublic.tracks.some((item) => item.videoId === song.videoId);
+                        return <MusicTrack
+                          song={song}
+                          key={song.videoId || index}
+                          onFeature={featureSong}
+                          publicAction={{
+                            label: alreadySelected ? "Remove from public" : ytmusicPublic.tracks.length >= 3 ? "Limit reached" : "Show to visitors",
+                            disabled: ytmusicPublicSaving || (!alreadySelected && ytmusicPublic.tracks.length >= 3),
+                            onClick: () => void toggleYtmusicPublicTrack(song),
+                          }}
+                        />;
+                      })}</div>
+                      : <p className="showcase-empty">{integration("ytmusic").connected ? "No liked songs were returned. Check backend logs if this seems wrong." : "Connect YouTube Music to load liked songs."}</p>}
+                {!likedMusicLoading && !likedMusicError && ytmusicPickerVisibleCount < likedMusic.length && (
+                  <div ref={ytmusicPickerSentinelRef} className="showcase-ytmusic-picker-sentinel" aria-hidden="true" />
+                )}
+              </div>
               <p className="showcase-admin-hint">The public card is visible without an admin session. Your last-played song is saved separately and stays public after disconnecting.</p>
             </>}
           </section>
