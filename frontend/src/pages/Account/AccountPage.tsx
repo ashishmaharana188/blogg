@@ -229,6 +229,8 @@ export default function AccountPage() {
   const [youtubePlaylistsError, setYoutubePlaylistsError] = useState("");
   const [youtubePlaylistVideos, setYoutubePlaylistVideos] = useState<Record<string, PlaylistVideosState>>({});
   const [likedMusic, setLikedMusic] = useState<Song[]>([]);
+  const [likedMusicLoading, setLikedMusicLoading] = useState(true);
+  const [likedMusicError, setLikedMusicError] = useState("");
   const [integrationState, setIntegrationState] = useState<Record<string, IntegrationStatus>>({});
 
   const refreshPresence = useCallback(async () => {
@@ -297,11 +299,29 @@ export default function AccountPage() {
 
   const refreshLikedLibraries = useCallback(async () => {
     if (!isAdmin) return;
+    setLikedMusicLoading(true);
+    setLikedMusicError("");
     try {
-      const data = await api<{ items: Song[] }>("/api/showcase/ytmusic/liked");
-      setLikedMusic(data.items || []);
-    } catch {
-      setLikedMusic([]);
+      const data = await api<{ items: Song[] }>("/api/showcase/ytmusic/liked", { cache: "no-store" });
+      const items = Array.isArray(data.items) ? data.items : [];
+      setLikedMusic(items);
+      setIntegrationState((current) => ({
+        ...current,
+        ytmusic: { configured: true, connected: true },
+      }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not load YouTube Music liked songs.";
+      setLikedMusicError(message);
+      setIntegrationState((current) => ({
+        ...current,
+        ytmusic: {
+          configured: current.ytmusic?.configured ?? false,
+          connected: false,
+          message,
+        },
+      }));
+    } finally {
+      setLikedMusicLoading(false);
     }
   }, [isAdmin]);
 
@@ -536,9 +556,12 @@ export default function AccountPage() {
           <section className="account-showcase-section">
             <div className="showcase-section-heading">
               <div><p className="account-eyebrow">YOUTUBE MUSIC</p><h2>Liked songs</h2><p>Your YouTube Music liked songs through the separate ytmusicapi companion service.</p></div>
-              {isAdmin && <button type="button" className="showcase-outline-button" onClick={() => connect("ytmusic")}>{integration("ytmusic").connected ? "Refresh Music" : "Music setup"}</button>}
+              {isAdmin && <button type="button" className="showcase-outline-button" onClick={() => void refreshLikedLibraries()} disabled={likedMusicLoading}>{likedMusicLoading ? "Refreshing…" : "Refresh Music"}</button>}
             </div>
-            {isAdmin ? likedMusic.length ? <div className="showcase-track-list">{likedMusic.slice(0, 8).map((song, index) => <MusicTrack song={song} key={song.videoId || index} onFeature={featureSong} />)}</div> : <p className="showcase-empty">{integration("ytmusic").configured ? "No songs returned. Check the companion service and credentials." : "YouTube Music is not connected yet."}</p> : <p className="showcase-empty">Sign in as the administrator to manage this library.</p>}
+            {isAdmin ? likedMusicLoading ? <p className="showcase-empty" role="status">Loading liked songs from YouTube Music…</p> : likedMusicError ? <div className="showcase-empty"><p role="alert">Could not load liked songs: {likedMusicError}</p><button type="button" className="showcase-outline-button" onClick={() => void refreshLikedLibraries()}>Try again</button></div> : likedMusic.length ? <>
+              <p className="showcase-admin-hint" role="status">Loaded {likedMusic.length} liked {likedMusic.length === 1 ? "song" : "songs"}.</p>
+              <div className="showcase-track-list">{likedMusic.slice(0, 8).map((song, index) => <MusicTrack song={song} key={song.videoId || index} onFeature={featureSong} />)}</div>
+            </> : <p className="showcase-empty">{integration("ytmusic").connected ? "The companion service responded successfully but returned no liked songs." : integration("ytmusic").message || "YouTube Music is not connected. Check the companion service status and credentials."}</p> : <p className="showcase-empty">Sign in as the administrator to manage this library.</p>}
             {isAdmin && <p className="showcase-admin-hint">ytmusicapi uses YouTube Music’s unofficial web interface and may require re-authentication.</p>}
           </section>
 

@@ -488,12 +488,49 @@ async function fetchYoutubePlaylistVideos(token: string, playlistId: string): Pr
   return items.slice(0, 5000);
 }
 
+async function ytmusicIntegrationStatus(): Promise<IntegrationStatus> {
+  const serviceUrl = process.env.YTMUSIC_SERVICE_URL?.replace(/\/+$/, "");
+  const serviceToken = process.env.YTMUSIC_SERVICE_TOKEN;
+  if (!serviceUrl || !serviceToken) {
+    return { configured: false, connected: false, message: "YouTube Music companion service URL or service token is missing in the Node backend." };
+  }
+
+  try {
+    const response = await fetch(`${serviceUrl}/health`, {
+      headers: { Authorization: `Bearer ${serviceToken}` },
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!response.ok) {
+      return { configured: true, connected: false, message: `YouTube Music companion service health check returned HTTP ${response.status}.` };
+    }
+    const health = await response.json() as {
+      ok?: boolean;
+      authConfigured?: boolean;
+      tokenConfigured?: boolean;
+      oauthConfigured?: boolean;
+    };
+    const ready = Boolean(health.ok && health.authConfigured && health.tokenConfigured && health.oauthConfigured);
+    return {
+      configured: true,
+      connected: ready,
+      message: ready
+        ? "YouTube Music companion service is reachable and its required configuration is present."
+        : "YouTube Music companion service is reachable, but its auth file, service token, or OAuth credentials are not configured.",
+    };
+  } catch {
+    return { configured: true, connected: false, message: "Could not reach the YouTube Music companion service health endpoint." };
+  }
+}
+
 async function integrationStates() {
-  const [spotify, youtube, ytmusic] = await Promise.all(["spotify", "youtube", "ytmusic"].map(readSetting));
+  const [[spotify, youtube], ytmusic] = await Promise.all([
+    Promise.all([readSetting("spotify"), readSetting("youtube")]),
+    ytmusicIntegrationStatus(),
+  ]);
   return {
     spotify: { configured: spotifyConfigured(), connected: Boolean(spotify?.refreshTokenEncrypted) } satisfies IntegrationStatus,
     youtube: { configured: googleConfigured(), connected: Boolean(youtube?.refreshTokenEncrypted) } satisfies IntegrationStatus,
-    ytmusic: { configured: Boolean(process.env.YTMUSIC_SERVICE_URL && process.env.YTMUSIC_SERVICE_TOKEN), connected: Boolean(process.env.YTMUSIC_SERVICE_URL && process.env.YTMUSIC_SERVICE_TOKEN) } satisfies IntegrationStatus,
+    ytmusic,
   };
 }
 
@@ -665,14 +702,32 @@ router.get("/showcase/ytmusic/liked", ...ADMIN_GUARD, async (_req, res, next) =>
   try {
     const serviceUrl = process.env.YTMUSIC_SERVICE_URL?.replace(/\/+$/, "");
     const serviceToken = process.env.YTMUSIC_SERVICE_TOKEN;
-    if (!serviceUrl || !serviceToken) return res.json({ items: [] });
+    if (!serviceUrl || !serviceToken) {
+      return res.status(503).json({ message: "YouTube Music companion service URL or service token is missing in the Node backend." });
+    }
     const response = await fetch(`${serviceUrl}/liked`, {
       headers: { Authorization: `Bearer ${serviceToken}` }, signal: AbortSignal.timeout(9000),
     });
-    if (!response.ok) throw new Error(`YouTube Music companion service returned ${response.status}.`);
+    if (!response.ok) {
+      let detail = "";
+      try {
+        const upstream = await response.json() as { detail?: unknown; message?: unknown };
+        if (typeof upstream.detail === "string") detail = cleanText(upstream.detail, 180);
+        else if (typeof upstream.message === "string") detail = cleanText(upstream.message, 180);
+      } catch { /* The upstream may return a non-JSON error response. */ }
+      const reason = detail ? `: ${detail}` : "";
+      return res.status(502).json({ message: `YouTube Music companion service returned HTTP ${response.status}${reason}.` });
+    }
     const data = await response.json() as { items?: any[] };
-    res.json({ items: Array.isArray(data.items) ? data.items.slice(0, 50).map(ytmusicSong) : [] });
-  } catch (error) { next(error); }
+    if (!Array.isArray(data.items)) {
+      return res.status(502).json({ message: "YouTube Music companion service returned an invalid response: expected an items array." });
+    }
+    res.setHeader("Cache-Control", "private, no-store");
+    return res.json({ items: data.items.slice(0, 50).map(ytmusicSong) });
+  } catch (error) {
+    const reason = error instanceof Error ? cleanText(error.message, 180) : "Unknown error";
+    return res.status(502).json({ message: `Could not load YouTube Music liked songs${reason ? `: ${reason}` : "."}` });
+  }
 });
 
 router.get("/admin/integrations/:provider/connect", ...ADMIN_GUARD, async (req, res, next) => {
@@ -680,9 +735,12 @@ router.get("/admin/integrations/:provider/connect", ...ADMIN_GUARD, async (req, 
     const provider = String(req.params.provider);
     const wantsJson = (req.get("accept") || "").toLowerCase().includes("application/json");
     if (provider === "ytmusic") {
-      const message = "YouTube Music is configured through the companion Python service. See README_ADMIN_SHOWCASE_SETUP.md for the OAuth file, client credentials, and Render service setup. Then return to /account and refresh the page.";
-      if (wantsJson) return res.json({ message });
-      return res.status(200).type("text").send(message);
+      const status = await ytmusicIntegrationStatus();
+      const message = status.message || (status.connected
+        ? "YouTube Music companion service is reachable. Use Refresh Music on the account page to load liked songs."
+        : "YouTube Music companion service is not ready.");
+      if (wantsJson) return res.status(status.connected ? 200 : 503).json({ ...status, message });
+      return res.status(status.connected ? 200 : 503).type("text").send(message);
     }
     if (provider !== "spotify" && provider !== "youtube") return res.status(404).send("Unknown integration.");
     if (provider === "spotify" ? !spotifyConfigured() : !googleConfigured()) {

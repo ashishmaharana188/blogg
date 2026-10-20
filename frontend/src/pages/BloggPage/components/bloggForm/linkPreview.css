@@ -137,3 +137,88 @@
   background: #fff;
   color: #172033;
 }
+
+/*
+ * BlockNote can apply a blue focus/selection frame to the wrapper around an
+ * attachment. Because this stylesheet is loaded by the shared BlockNote
+ * schema, this reset applies to the editor, feed, reader, and flipbook.
+ *
+ * Clear the frame on attachment wrappers only. Keep the link preview's own
+ * neutral card border and the existing styling of the surrounding page intact.
+ */
+.bn-editor :is(.bn-block-outer, .bn-block, .bn-block-content):has(
+  .blogg-link-preview,
+  img,
+  video,
+  audio,
+  iframe,
+  object,
+  embed,
+  .bn-visual-media-wrapper,
+  .bn-file-block-content,
+  [data-content-type="image"],
+  [data-content-type="video"],
+  [data-content-type="audio"],
+  [data-content-type="file"],
+  [data-content-type="embed"],
+  [data-content-type="linkPreview"]
+) {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+
+/* Cover BlockNote attachment types whose wrappers identify themselves by type. */
+.bn-editor .bn-block-content:is(
+  [data-content-type="image"],
+  [data-content-type="video"],
+  [data-content-type="audio"],
+  [data-content-type="file"],
+  [data-content-type="embed"],
+  [data-content-type="linkPreview"]
+) {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+
+/* A focused link preview/media element must not reintroduce the blue frame. */
+.bn-editor .bn-block-outer:has(.blogg-link-preview) .blogg-link-preview-anchor:focus,
+.bn-editor .bn-block-outer:has(.blogg-link-preview) .blogg-link-preview-anchor:focus-visible,
+.bn-editor .bn-block-outer:has(img) img:focus,
+.bn-editor .bn-block-outer:has(img) img:focus-visible,
+.bn-editor .bn-block-outer:has(video) video:focus,
+.bn-editor .bn-block-outer:has(video) video:focus-visible,
+.bn-editor .bn-block-outer:has(audio) audio:focus,
+.bn-editor .bn-block-outer:has(audio) audio:focus-visible,
+.bn-editor .bn-block-outer:has(iframe) iframe:focus,
+.bn-editor .bn-block-outer:has(iframe) iframe:focus-visible,
+.bn-editor .bn-block-outer:has(.bn-file-block-content) :focus,
+.bn-editor .bn-block-outer:has(.bn-file-block-content) :focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+
+/* Also neutralize a frame attached directly to a media element or its wrapper. */
+.bn-editor :is(
+  .bn-visual-media-wrapper,
+  .bn-file-block-content,
+  img,
+  video,
+  audio,
+  iframe,
+  object,
+  embed
+) {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+
+/* Keep the neutral card border, but not a blue focus frame on the custom card. */
+.bn-editor .blogg-link-preview:focus,
+.bn-editor .blogg-link-preview:focus-within {
+  outline: none !important;
+  box-shadow: 0 2px 7px rgb(15 23 42 / 5%) !important;
+}
