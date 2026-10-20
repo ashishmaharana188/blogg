@@ -233,7 +233,7 @@ function YoutubePlaylistRows({
 
 export default function AccountPage() {
   const navigate = useNavigate();
-  const { user, isAdmin, loading, logout, refreshUser } = useAuth();
+  const { isAdmin, logout, refreshUser } = useAuth();
   const [presence, setPresence] = useState<AdminPresence>({ online: false, activity: "Offline", lastSeen: null });
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -242,6 +242,7 @@ export default function AccountPage() {
   const [url, setUrl] = useState("");
   const [linkBusy, setLinkBusy] = useState(false);
   const [linkMessage, setLinkMessage] = useState("");
+  const [registrationEnabled, setRegistrationEnabled] = useState(false);
   const [nowPlaying, setNowPlaying] = useState<IntegrationsResponse["spotify"]>({
     configured: false, connected: false, playing: false,
   });
@@ -265,6 +266,18 @@ export default function AccountPage() {
     } catch {
       // Presence is informational. A status failure must not break this page.
     }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void api<{ registrationEnabled: boolean }>("/api/auth/registration-status")
+      .then((status) => {
+        if (!cancelled) setRegistrationEnabled(status.registrationEnabled === true);
+      })
+      .catch(() => {
+        if (!cancelled) setRegistrationEnabled(false);
+      });
+    return () => { cancelled = true; };
   }, []);
 
   const refreshShowcase = useCallback(async () => {
@@ -566,21 +579,17 @@ export default function AccountPage() {
         </header>
 
         <main className="account-page-main account-page-main-stack">
-          {/* Existing status panel intentionally retains its behavior and choices. */}
-          <section className="account-status-card" aria-labelledby="account-status-heading">
-            <p className="account-eyebrow">SITE ACCOUNT</p>
+          <div className="account-dashboard-grid">
+          <section className="account-status-card account-dashboard-status" aria-labelledby="account-status-heading">
+            <p className="account-eyebrow">ADMIN</p>
             <h1 id="account-status-heading" className="account-status-title">Administrator status</h1>
             <div className="account-presence-row" aria-live="polite">
               <span className={`account-presence-pill ${presence.online ? "is-online" : "is-offline"}`}>
                 <span className="account-presence-dot" />{presence.online ? "Online" : "Offline"}
               </span>
-              {presence.online && <span className="account-activity-pill">{presence.activity}</span>}
             </div>
             {isAdmin ? <>
-              <p className="account-description">
-                Signed in as the site administrator{user?.email ? ` (${user.email})` : ""}. Public visitors can read the site; only this account can change its content.
-              </p>
-              <label className="account-field-label" htmlFor="admin-activity">Your current activity</label>
+              <label className="account-field-label" htmlFor="admin-activity">Activity</label>
               <select
                 id="admin-activity"
                 value={ACTIVITIES.includes(presence.activity as AdminActivity) ? presence.activity : "Reading"}
@@ -591,20 +600,43 @@ export default function AccountPage() {
                 {ACTIVITIES.map((activity) => <option key={activity} value={activity}>{activity}</option>)}
               </select>
               {message && <p className="account-message" role="status">{message}</p>}
-              <div className="account-card-footer">
+              <div className="account-card-footer account-status-actions">
                 <button type="button" disabled={busy} onClick={() => void handleLogout()} className="account-secondary-button">
                   {busy ? "Please wait…" : "Log out"}
                 </button>
               </div>
-            </> : <>
-              <p className="account-description">
-                The site is public and read-only for visitors. The administrator account is the only account that can create or edit notes, folders, and stacks.
-              </p>
-              <div className="account-card-footer"><Link to="/login" className="account-primary-link">Administrator login</Link></div>
-              {!loading && <p className="account-footnote">No public registration is available.</p>}
-            </>}
+            </> : (
+              <div className="account-status-actions">
+                <Link to="/login" className="account-primary-link">Admin login</Link>
+                {registrationEnabled && <Link to="/register" className="account-secondary-button">Create administrator</Link>}
+              </div>
+            )}
           </section>
 
+          <section className="account-showcase-section account-dashboard-youtube">
+            <div className="showcase-section-heading">
+              <div><p className="account-eyebrow">YOUTUBE LIBRARY</p><h2>Public playlists</h2><p>Public playlists from your YouTube account.</p></div>
+              {isAdmin && <button type="button" className="showcase-outline-button" onClick={() => connect("youtube")}>{integration("youtube").connected ? "Reconnect YouTube" : "Connect YouTube"}</button>}
+            </div>
+            {youtubePlaylistsLoading ? <p className="showcase-empty">Loading public YouTube playlists…</p> : youtubePlaylistsError ? <p className="showcase-empty" role="status">YouTube playlists are temporarily unavailable. Check backend logs.</p> : !youtubeConnected ? (
+              <p className="showcase-empty">{isAdmin ? youtubeConfigured ? "Connect YouTube to load public playlists from that account." : "YouTube is not configured yet." : "No public YouTube playlists are available right now."}</p>
+            ) : youtubePlaylists.length === 0 ? (
+              <p className="showcase-empty">No public playlists were found on the connected account. Set a playlist to Public on YouTube, then refresh this page.</p>
+            ) : (
+              <div className="showcase-youtube-playlist-grid">{youtubePlaylists.map((playlist) => (
+                <div className="showcase-youtube-playlist-entry" key={playlist.id}>
+                  <YoutubePlaylistCard
+                    playlist={playlist}
+                    expanded={Boolean(expandedYoutubePlaylists[playlist.id])}
+                    onToggle={(playlistId) => setExpandedYoutubePlaylists((current) => ({ ...current, [playlistId]: !current[playlistId] }))}
+                  />
+                  {expandedYoutubePlaylists[playlist.id] && <YoutubePlaylistRows playlist={playlist} videos={youtubePlaylistVideos[playlist.id]} onFeature={isAdmin ? featureSong : undefined} onLoad={loadYoutubePlaylistVideos} />}
+                </div>
+              ))}</div>
+            )}
+          </section>
+
+            <div className="account-dashboard-media-stack">
           <section className="account-showcase-section account-showcase-mini-section">
             <div className="showcase-mini-heading"><p className="account-eyebrow">NOW PLAYING</p><h2>Spotify</h2></div>
             <div className="showcase-mini-integration-layout">
@@ -625,29 +657,6 @@ export default function AccountPage() {
                 {integration("spotify").connected && <button type="button" className="showcase-outline-button is-danger" onClick={() => void disconnectIntegration("spotify")}>Disconnect</button>}
               </div>}
             </div>
-          </section>
-
-          <section className="account-showcase-section">
-            <div className="showcase-section-heading">
-              <div><p className="account-eyebrow">YOUTUBE LIBRARY</p><h2>Public playlists</h2><p>Public playlists owned by the connected YouTube account. Visitors only receive playlist metadata and videos from public playlists.</p></div>
-              {isAdmin && <button type="button" className="showcase-outline-button" onClick={() => connect("youtube")}>{integration("youtube").connected ? "Reconnect YouTube" : "Connect YouTube"}</button>}
-            </div>
-            {youtubePlaylistsLoading ? <p className="showcase-empty">Loading public YouTube playlists…</p> : youtubePlaylistsError ? <p className="showcase-empty" role="status">YouTube playlists are temporarily unavailable. Check backend logs.</p> : !youtubeConnected ? (
-              <p className="showcase-empty">{isAdmin ? youtubeConfigured ? "Connect YouTube to load public playlists from that account." : "YouTube is not configured yet." : "No public YouTube playlists are available right now."}</p>
-            ) : youtubePlaylists.length === 0 ? (
-              <p className="showcase-empty">No public playlists were found on the connected account. Set a playlist to Public on YouTube, then refresh this page.</p>
-            ) : (
-              <div className="showcase-youtube-playlist-grid">{youtubePlaylists.map((playlist) => (
-                <div className="showcase-youtube-playlist-entry" key={playlist.id}>
-                  <YoutubePlaylistCard
-                    playlist={playlist}
-                    expanded={Boolean(expandedYoutubePlaylists[playlist.id])}
-                    onToggle={(playlistId) => setExpandedYoutubePlaylists((current) => ({ ...current, [playlistId]: !current[playlistId] }))}
-                  />
-                  {expandedYoutubePlaylists[playlist.id] && <YoutubePlaylistRows playlist={playlist} videos={youtubePlaylistVideos[playlist.id]} onFeature={isAdmin ? featureSong : undefined} onLoad={loadYoutubePlaylistVideos} />}
-                </div>
-              ))}</div>
-            )}
           </section>
 
           <section className="account-showcase-section account-showcase-mini-section account-showcase-ytmusic-section">
@@ -719,7 +728,10 @@ export default function AccountPage() {
             </>}
           </section>
 
-          <section className="account-showcase-section">
+            </div>
+          </div>
+
+          <section className="account-showcase-section account-showcase-featured-section">
             <div className="showcase-section-heading"><div><p className="account-eyebrow">HAND-PICKED</p><h2>Featured links</h2><p>Share videos, songs, notes, articles, and links from any public website with rich preview cards.</p></div></div>
             {isAdmin && <form className="showcase-add-link-form" onSubmit={addLink}>
               <label htmlFor="showcase-url">Paste a link</label>

@@ -196,3 +196,149 @@
   .showcase-youtube-playlist-heading { align-items: flex-start; }
   .showcase-ytmusic-admin-heading { align-items: flex-start; flex-direction: column; }
 }
+
+
+/* Account dashboard: compact admin tile, YouTube library center, music stack right. */
+.account-page-main.account-page-main-stack {
+  display: block;
+  box-sizing: border-box;
+  width: min(100%, 1640px);
+  margin: 0 auto;
+  padding: clamp(20px, 2.6vw, 38px) clamp(14px, 2.5vw, 36px) 48px;
+}
+.account-dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(190px, .72fr) minmax(340px, 1.55fr) minmax(280px, 1fr);
+  align-items: start;
+  gap: 18px;
+  width: 100%;
+}
+.account-status-card.account-dashboard-status {
+  width: 100%;
+  min-width: 0;
+  padding: 20px;
+  border-width: 1px;
+  border-color: #dfe5e9;
+  border-radius: 12px;
+  box-shadow: none;
+}
+.account-dashboard-status .account-eyebrow { margin-bottom: 6px; }
+.account-dashboard-status .account-status-title {
+  font-size: clamp(1.05rem, 1.3vw, 1.3rem);
+  line-height: 1.35;
+}
+.account-dashboard-status .account-presence-row { margin-top: 14px; }
+.account-dashboard-status .account-field-label { margin-top: 18px; }
+.account-dashboard-status .account-card-footer { margin-top: 17px; padding-top: 14px; }
+.account-status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+  margin-top: 18px;
+}
+.account-status-actions .account-primary-link,
+.account-status-actions .account-secondary-button {
+  min-height: 36px;
+  padding: 7px 12px;
+  font-size: .72rem;
+}
+.account-dashboard-youtube,
+.account-dashboard-media-stack > .account-showcase-section,
+.account-showcase-featured-section {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: none;
+}
+.account-dashboard-youtube .showcase-section-heading { margin-bottom: 14px; }
+.account-dashboard-youtube .showcase-section-heading h2,
+.account-showcase-featured-section .showcase-section-heading h2 {
+  font-size: 1.15rem;
+}
+.account-dashboard-youtube .showcase-section-heading p:not(.account-eyebrow),
+.account-showcase-featured-section .showcase-section-heading p:not(.account-eyebrow) {
+  font-size: .74rem;
+  line-height: 1.55;
+}
+.account-dashboard-youtube .showcase-youtube-playlist-grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+.account-dashboard-youtube .showcase-youtube-playlist-card { padding: 9px; gap: 10px; }
+.account-dashboard-youtube .showcase-youtube-playlist-card > img,
+.account-dashboard-youtube .showcase-youtube-playlist-placeholder {
+  width: 96px;
+  flex-basis: 96px;
+}
+.account-dashboard-media-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+  min-width: 0;
+}
+.account-dashboard-media-stack .account-showcase-mini-section {
+  align-self: stretch;
+  width: 100%;
+  max-width: none;
+}
+.account-dashboard-media-stack .showcase-mini-integration-layout {
+  align-items: stretch;
+  flex-direction: column;
+}
+.account-dashboard-media-stack .showcase-mini-music-card {
+  width: 100%;
+  max-width: none;
+  flex-basis: auto;
+}
+.account-dashboard-media-stack .showcase-mini-actions { width: 100%; }
+.account-dashboard-media-stack .showcase-ytmusic-public-block { margin-top: 14px; }
+.account-dashboard-media-stack .showcase-ytmusic-admin-heading { margin-top: 17px; padding-top: 14px; }
+.account-dashboard-media-stack .showcase-track { gap: 9px; }
+.account-dashboard-media-stack .showcase-track > img,
+.account-dashboard-media-stack .showcase-track-empty {
+  width: 42px;
+  height: 42px;
+  flex-basis: 42px;
+}
+.account-dashboard-media-stack .showcase-track-feature { padding: 5px 7px; font-size: .63rem; }
+.account-showcase-featured-section { margin-top: 18px; }
+.account-showcase-featured-section .showcase-links-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.account-showcase-featured-section .showcase-add-link-form { margin-bottom: 16px; }
+@media (max-width: 1120px) {
+  .account-dashboard-grid {
+    grid-template-columns: minmax(190px, .75fr) minmax(0, 1.5fr);
+  }
+  .account-dashboard-media-stack {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+  .account-dashboard-media-stack .account-showcase-section { height: 100%; box-sizing: border-box; }
+  .account-showcase-featured-section .showcase-links-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+  .account-page-main.account-page-main-stack {
+    padding: 18px 12px 30px;
+  }
+  .account-dashboard-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .account-dashboard-status { order: 0; }
+  .account-dashboard-youtube { order: 1; }
+  .account-dashboard-media-stack {
+    order: 2;
+    grid-column: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .account-dashboard-media-stack .account-showcase-section { height: auto; }
+  .account-dashboard-youtube,
+  .account-dashboard-media-stack > .account-showcase-section,
+  .account-showcase-featured-section { padding: 17px 14px; }
+  .account-showcase-featured-section .showcase-links-grid { grid-template-columns: minmax(0, 1fr); }
+  .account-status-card.account-dashboard-status { padding: 18px 16px; }
+}
