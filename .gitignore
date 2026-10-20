@@ -12,6 +12,7 @@ backend/googleSecret.json
 backend/googleSecret1.json
 oauth.json
 commands.txt
+browser.json
 
 node_modules
 dist

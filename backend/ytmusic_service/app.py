@@ -228,7 +228,7 @@ def liked(authorization: Optional[str] = Header(default=None)):
         ) from exc
 
     try:
-        songs = client.get_liked_songs(limit=LIMIT)
+        liked_response = client.get_liked_songs(limit=LIMIT)
     except Exception as exc:
         logger.exception(
             "YouTube Music liked-song request failed; error_type=%s",
@@ -242,23 +242,87 @@ def liked(authorization: Optional[str] = Header(default=None)):
             ),
         ) from exc
 
+    # ytmusicapi's get_liked_songs() returns a playlist dictionary whose song
+    # entries are in `tracks`. Iterating the outer dictionary yields string
+    # keys, which is why calling .get() on each item previously crashed.
+    # Accept a list as well to remain compatible with alternate API versions.
+    if isinstance(liked_response, dict):
+        songs = liked_response.get("tracks")
+        if not isinstance(songs, list):
+            songs = liked_response.get("songs")
+    elif isinstance(liked_response, list):
+        songs = liked_response
+    else:
+        songs = None
+
+    if not isinstance(songs, list):
+        response_keys = sorted(liked_response.keys()) if isinstance(liked_response, dict) else []
+        logger.error(
+            "Unexpected YouTube Music liked-songs response shape; response_type=%s keys=%s",
+            type(liked_response).__name__,
+            response_keys,
+        )
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                "YouTube Music returned an unexpected liked-songs response shape. "
+                "Check the companion service logs for response diagnostics."
+            ),
+        )
+
     items = []
+    skipped_entries = 0
     for song in songs:
+        if not isinstance(song, dict):
+            skipped_entries += 1
+            continue
+
         video_id = song.get("videoId")
         thumbnails = song.get("thumbnails") or []
-        artists = [
-            artist.get("name", "")
-            for artist in (song.get("artists") or [])
-            if artist.get("name")
-        ]
+        if not isinstance(thumbnails, list):
+            thumbnails = []
+
+        artists_data = song.get("artists") or []
+        if not isinstance(artists_data, list):
+            artists_data = []
+        artists = []
+        for artist in artists_data:
+            if isinstance(artist, dict):
+                name = artist.get("name")
+                if isinstance(name, str) and name.strip():
+                    artists.append(name.strip())
+            elif isinstance(artist, str) and artist.strip():
+                artists.append(artist.strip())
+
+        album_data = song.get("album")
+        if isinstance(album_data, dict):
+            album_name = album_data.get("name")
+        elif isinstance(album_data, str):
+            album_name = album_data
+        else:
+            album_name = None
+
+        thumbnail_url = None
+        for thumbnail in reversed(thumbnails):
+            if isinstance(thumbnail, dict) and thumbnail.get("url"):
+                thumbnail_url = thumbnail["url"]
+                break
+
         items.append(
             Song(
                 title=song.get("title") or "Untitled track",
                 artists=artists,
-                album=(song.get("album") or {}).get("name"),
-                thumbnail=thumbnails[-1].get("url") if thumbnails else None,
+                album=album_name,
+                thumbnail=thumbnail_url,
                 url=f"https://music.youtube.com/watch?v={video_id}" if video_id else None,
                 videoId=video_id,
             )
         )
+
+    if skipped_entries:
+        logger.warning(
+            "Skipped malformed YouTube Music liked-song entries; skipped_count=%d",
+            skipped_entries,
+        )
+    logger.info("Retrieved YouTube Music liked songs; item_count=%d", len(items))
     return {"items": items}
