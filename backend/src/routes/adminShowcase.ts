@@ -299,8 +299,24 @@ router.get("/showcase/integrations", async (_req, res, next) => {
           }
 
           if (!response.ok) {
-            // Include the HTTP status for diagnosis, but never log or expose access tokens.
-            throw new Error(`Spotify playback API returned HTTP ${response.status}${usedPlaybackStateFallback ? " on the playback-state fallback" : ""}. Reconnect Spotify if this persists; the connection now also needs user-read-playback-state permission.`);
+            // Capture Spotify's response body to distinguish insufficient scope from
+            // Development Mode allowlist, account, and endpoint-access errors.
+            // Never log or expose Authorization headers or access tokens.
+            const responseText = await response.text().catch(() => "");
+            let providerDetail = responseText;
+            try {
+              const payload = JSON.parse(responseText);
+              const errorValue = payload?.error;
+              providerDetail = typeof errorValue === "string"
+                ? errorValue
+                : (errorValue?.message || payload?.message || payload?.error_description || responseText);
+            } catch { /* Some upstream errors are plain text. */ }
+            providerDetail = cleanText(providerDetail, 240);
+            throw new Error(
+              `Spotify playback API returned HTTP ${response.status}${usedPlaybackStateFallback ? " on the playback-state fallback" : ""}`
+              + (providerDetail ? `: ${providerDetail}` : "")
+              + ". Check Spotify OAuth permissions and the app's Development Mode user allowlist. Reconnect Spotify to grant user-read-playback-state.",
+            );
           }
           const playback = await response.json() as any;
           const track = spotifySong(playback.item);
@@ -383,7 +399,7 @@ router.get("/admin/integrations/:provider/connect", ...ADMIN_GUARD, async (req, 
       : new URL("https://accounts.google.com/o/oauth2/v2/auth");
     authUrl.search = new URLSearchParams(provider === "spotify" ? {
       client_id: process.env.SPOTIFY_CLIENT_ID!, response_type: "code", redirect_uri: callback,
-      scope: "user-read-currently-playing user-read-playback-state", state,
+      scope: "user-read-currently-playing user-read-playback-state", show_dialog: "true", state,
     } : {
       client_id: process.env.GOOGLE_OAUTH_CLIENT_ID!, redirect_uri: callback, response_type: "code",
       scope: "https://www.googleapis.com/auth/youtube.readonly", access_type: "offline", prompt: "consent", state,
@@ -425,10 +441,13 @@ router.get("/admin/integrations/:provider/callback", async (req, res, next) => {
       }),
     });
     if (!response.ok) throw new Error(`${provider} token exchange failed (${response.status}). Check the registered callback URL.`);
-    const tokens = await response.json() as { refresh_token?: string };
+    const tokens = await response.json() as { refresh_token?: string; scope?: string };
     const existing = await readSetting(provider);
     if (!tokens.refresh_token && !existing?.refreshTokenEncrypted) throw new Error(`${provider} returned no refresh token. Reconnect and grant offline access.`);
-    if (tokens.refresh_token) await saveSetting(provider, { refreshTokenEncrypted: encryptToken(tokens.refresh_token), connectedAt: new Date() });
+    const tokenSettings: Record<string, unknown> = { connectedAt: new Date() };
+    if (tokens.refresh_token) tokenSettings.refreshTokenEncrypted = encryptToken(tokens.refresh_token);
+    if (tokens.scope) tokenSettings.grantedScopes = tokens.scope.split(/\s+/).filter(Boolean);
+    await saveSetting(provider, tokenSettings);
     await getDB().collection("adminIntegrationSettings").deleteOne({ key: `oauth-state-${provider}` });
     res.redirect(`${frontendBase()}/account?integration=${encodeURIComponent(provider)}&connected=1`);
   } catch (error) { next(error); }
