@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/authContext";
 import { API_BASE_URL } from "../../services/apiBase";
@@ -38,7 +38,7 @@ type YoutubePlaylist = {
   url: string;
   itemCount: number;
 };
-type PlaylistVideosState = { loading: boolean; items: Song[]; error?: string };
+type PlaylistVideosState = { loading: boolean; items: Song[]; nextPageToken?: string; error?: string };
 type YoutubePlaylistsResponse = {
   configured: boolean;
   connected: boolean;
@@ -190,13 +190,15 @@ function YoutubePlaylistRows({
   playlist: YoutubePlaylist;
   videos?: PlaylistVideosState;
   onFeature?: (song: Song) => void;
-  onLoad: (playlistId: string) => void;
+  onLoad: (playlistId: string, pageToken?: string) => void;
 }) {
   const sectionRef = useRef<HTMLElement | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (videos || !sectionRef.current) return;
     const section = sectionRef.current;
+    const root = section.closest(".showcase-youtube-library-scroll");
     if (typeof IntersectionObserver === "undefined") {
       onLoad(playlist.id);
       return;
@@ -206,10 +208,28 @@ function YoutubePlaylistRows({
         observer.disconnect();
         onLoad(playlist.id);
       }
-    }, { rootMargin: "600px 0px" });
+    }, { root, rootMargin: "120px 0px" });
     observer.observe(section);
     return () => observer.disconnect();
   }, [onLoad, playlist.id, videos]);
+
+  useEffect(() => {
+    const pageToken = videos?.nextPageToken;
+    if (!pageToken || videos?.loading || videos?.error || !loadMoreRef.current) return;
+    if (typeof IntersectionObserver === "undefined") return;
+    const sentinel = loadMoreRef.current;
+    const root = sentinel.closest(".showcase-youtube-library-scroll");
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        observer.disconnect();
+        onLoad(playlist.id, pageToken);
+      }
+    }, { root, rootMargin: "180px 0px" });
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [onLoad, playlist.id, videos?.nextPageToken, videos?.loading, videos?.error]);
+
+  const retry = () => onLoad(playlist.id, videos?.nextPageToken);
 
   return (
     <section ref={sectionRef} className="showcase-youtube-playlist-rows" aria-label={playlist.title}>
@@ -224,9 +244,32 @@ function YoutubePlaylistRows({
         </div>
       </div>
       {playlist.description && <p className="showcase-youtube-playlist-description">{playlist.description}</p>}
-      {videos?.loading ? <p className="showcase-empty showcase-playlist-loading">Loading playlist videos…</p> : !videos ? <p className="showcase-empty showcase-playlist-loading">Videos load as this playlist comes into view.</p> : videos.error ? <p className="showcase-empty">{videos.error}</p> : videos.items.length ? (
-        <div className="showcase-track-list">{videos.items.map((song, index) => <MusicTrack song={song} key={song.videoId || `${playlist.id}-${index}`} onFeature={onFeature} />)}</div>
-      ) : <p className="showcase-empty">This playlist has no accessible videos.</p>}
+      {!videos && <p className="showcase-empty showcase-playlist-loading">Videos load as this playlist comes into view.</p>}
+      {videos?.loading && videos.items.length === 0 && <p className="showcase-empty showcase-playlist-loading" role="status">Loading playlist videos…</p>}
+      {videos?.error && videos.items.length === 0 && (
+        <div className="showcase-youtube-load-error">
+          <p className="showcase-empty">{videos.error}</p>
+          <button type="button" className="showcase-youtube-load-retry" onClick={retry}>Retry</button>
+        </div>
+      )}
+      {Boolean(videos?.items.length) && (
+        <div className="showcase-track-list">
+          {videos!.items.map((song, index) => <MusicTrack song={song} key={song.videoId || `${playlist.id}-${index}`} onFeature={onFeature} />)}
+        </div>
+      )}
+      {videos?.loading && videos.items.length > 0 && <p className="showcase-youtube-scroll-status" role="status">Loading more videos…</p>}
+      {videos?.error && videos.items.length > 0 && (
+        <div className="showcase-youtube-load-error">
+          <p className="showcase-youtube-scroll-status">Could not load the next batch of videos.</p>
+          <button type="button" className="showcase-youtube-load-retry" onClick={retry}>Retry</button>
+        </div>
+      )}
+      {videos && !videos.loading && !videos.error && videos.items.length === 0 && !videos.nextPageToken && (
+        <p className="showcase-empty">This playlist has no accessible videos.</p>
+      )}
+      {videos?.nextPageToken && !videos.loading && !videos.error && (
+        <div ref={loadMoreRef} className="showcase-youtube-load-more-sentinel" aria-hidden="true" />
+      )}
     </section>
   );
 }
@@ -243,6 +286,9 @@ export default function AccountPage() {
   const [linkBusy, setLinkBusy] = useState(false);
   const [linkMessage, setLinkMessage] = useState("");
   const [registrationEnabled, setRegistrationEnabled] = useState(false);
+  const [dashboardMediaStackHeight, setDashboardMediaStackHeight] = useState<number | null>(null);
+  const dashboardMediaStackRef = useRef<HTMLDivElement | null>(null);
+  const youtubePlaylistRequests = useRef<Set<string>>(new Set());
   const [nowPlaying, setNowPlaying] = useState<IntegrationsResponse["spotify"]>({
     configured: false, connected: false, playing: false,
   });
@@ -280,6 +326,20 @@ export default function AccountPage() {
     return () => { cancelled = true; };
   }, []);
 
+  useEffect(() => {
+    const target = dashboardMediaStackRef.current;
+    if (!target) return;
+    const updateHeight = () => setDashboardMediaStackHeight(Math.round(target.getBoundingClientRect().height));
+    updateHeight();
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", updateHeight);
+      return () => window.removeEventListener("resize", updateHeight);
+    }
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [isAdmin]);
+
   const refreshShowcase = useCallback(async () => {
     try {
       const data = await api<{ items: ShowcaseLink[] }>("/api/showcase");
@@ -301,19 +361,56 @@ export default function AccountPage() {
     }
   }, []);
 
-  const loadYoutubePlaylistVideos = useCallback(async (playlistId: string) => {
-    setYoutubePlaylistVideos((current) => ({
-      ...current,
-      [playlistId]: { loading: true, items: current[playlistId]?.items || [] },
-    }));
-    try {
-      const data = await api<{ items: Song[] }>(`/api/showcase/youtube/playlists/${encodeURIComponent(playlistId)}/videos`);
-      setYoutubePlaylistVideos((current) => ({ ...current, [playlistId]: { loading: false, items: data.items || [] } }));
-    } catch (error) {
-      setYoutubePlaylistVideos((current) => ({
+  const loadYoutubePlaylistVideos = useCallback(async (playlistId: string, pageToken?: string) => {
+    const requestKey = `${playlistId}:${pageToken || "first"}`;
+    if (youtubePlaylistRequests.current.has(requestKey)) return;
+    youtubePlaylistRequests.current.add(requestKey);
+    setYoutubePlaylistVideos((current) => {
+      const previous = current[playlistId];
+      return {
         ...current,
-        [playlistId]: { loading: false, items: [], error: "Playlist videos are temporarily unavailable. Check backend logs." },
-      }));
+        [playlistId]: {
+          loading: true,
+          items: previous?.items || [],
+          nextPageToken: previous?.nextPageToken,
+        },
+      };
+    });
+    try {
+      const query = pageToken ? `?pageToken=${encodeURIComponent(pageToken)}` : "";
+      const data = await api<{ items: Song[]; nextPageToken?: string }>(
+        `/api/showcase/youtube/playlists/${encodeURIComponent(playlistId)}/videos${query}`,
+        { cache: "no-store" },
+      );
+      setYoutubePlaylistVideos((current) => {
+        const previousItems = pageToken ? current[playlistId]?.items || [] : [];
+        const seen = new Set<string>();
+        const items = [...previousItems, ...(Array.isArray(data.items) ? data.items : [])].filter((song) => {
+          const key = song.videoId || `${song.title}|${song.artists.join(",")}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        return {
+          ...current,
+          [playlistId]: { loading: false, items, nextPageToken: data.nextPageToken || undefined },
+        };
+      });
+    } catch {
+      setYoutubePlaylistVideos((current) => {
+        const previous = current[playlistId];
+        return {
+          ...current,
+          [playlistId]: {
+            loading: false,
+            items: previous?.items || [],
+            nextPageToken: previous?.nextPageToken,
+            error: "Playlist videos are temporarily unavailable.",
+          },
+        };
+      });
+    } finally {
+      youtubePlaylistRequests.current.delete(requestKey);
     }
   }, []);
 
@@ -613,11 +710,12 @@ export default function AccountPage() {
             )}
           </section>
 
-          <section className="account-showcase-section account-dashboard-youtube">
+          <section className="account-showcase-section account-dashboard-youtube" style={{ "--dashboard-media-stack-height": dashboardMediaStackHeight ? `${dashboardMediaStackHeight}px` : "auto" } as CSSProperties}>
             <div className="showcase-section-heading">
               <div><p className="account-eyebrow">YOUTUBE LIBRARY</p><h2>Public playlists</h2><p>Public playlists from your YouTube account.</p></div>
               {isAdmin && <button type="button" className="showcase-outline-button" onClick={() => connect("youtube")}>{integration("youtube").connected ? "Reconnect YouTube" : "Connect YouTube"}</button>}
             </div>
+            <div className="showcase-youtube-library-scroll" role="region" aria-label="YouTube public library" tabIndex={0}>
             {youtubePlaylistsLoading ? <p className="showcase-empty">Loading public YouTube playlists…</p> : youtubePlaylistsError ? <p className="showcase-empty" role="status">YouTube playlists are temporarily unavailable. Check backend logs.</p> : !youtubeConnected ? (
               <p className="showcase-empty">{isAdmin ? youtubeConfigured ? "Connect YouTube to load public playlists from that account." : "YouTube is not configured yet." : "No public YouTube playlists are available right now."}</p>
             ) : youtubePlaylists.length === 0 ? (
@@ -634,9 +732,10 @@ export default function AccountPage() {
                 </div>
               ))}</div>
             )}
+            </div>
           </section>
 
-            <div className="account-dashboard-media-stack">
+            <div className="account-dashboard-media-stack" ref={dashboardMediaStackRef}>
           <section className="account-showcase-section account-showcase-mini-section">
             <div className="showcase-mini-heading"><p className="account-eyebrow">NOW PLAYING</p><h2>Spotify</h2></div>
             <div className="showcase-mini-integration-layout">

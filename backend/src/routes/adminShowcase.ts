@@ -506,23 +506,29 @@ async function fetchPublicYoutubePlaylists(token: string) {
   return playlists;
 }
 
-async function fetchYoutubePlaylistVideos(token: string, playlistId: string): Promise<Song[]> {
+async function fetchYoutubePlaylistVideoPage(
+  token: string,
+  playlistId: string,
+  pageToken?: string,
+): Promise<{ items: Song[]; nextPageToken?: string }> {
+  const params = new URLSearchParams({
+    part: "snippet,contentDetails",
+    playlistId,
+    maxResults: "50",
+  });
+  if (pageToken) params.set("pageToken", pageToken);
+  const data = await fetchYoutubeJson(new URL(`${YOUTUBE_API}/playlistItems?${params.toString()}`), token);
   const items: Song[] = [];
-  let pageToken = "";
-  // YouTube playlists can be large; paginate the playlist rather than silently taking only the first page.
-  do {
-    const params = new URLSearchParams({ part: "snippet,contentDetails", playlistId, maxResults: "50" });
-    if (pageToken) params.set("pageToken", pageToken);
-    const data = await fetchYoutubeJson(new URL(`${YOUTUBE_API}/playlistItems?${params.toString()}`), token);
-    for (const entry of data.items || []) {
-      const videoId = entry?.contentDetails?.videoId || entry?.snippet?.resourceId?.videoId;
-      const privacyTitle = String(entry?.snippet?.title || "").toLowerCase();
-      if (!videoId || privacyTitle === "private video" || privacyTitle === "deleted video") continue;
-      items.push(youtubeSong({ id: videoId, snippet: entry.snippet || {} }));
-    }
-    pageToken = items.length >= 5000 ? "" : String(data.nextPageToken || "");
-  } while (pageToken);
-  return items.slice(0, 5000);
+  for (const entry of data.items || []) {
+    const videoId = entry?.contentDetails?.videoId || entry?.snippet?.resourceId?.videoId;
+    const privacyTitle = String(entry?.snippet?.title || "").toLowerCase();
+    if (!videoId || privacyTitle === "private video" || privacyTitle === "deleted video") continue;
+    items.push(youtubeSong({ id: videoId, snippet: entry.snippet || {} }));
+  }
+  return {
+    items,
+    nextPageToken: typeof data.nextPageToken === "string" && data.nextPageToken ? data.nextPageToken : undefined,
+  };
 }
 
 async function ytmusicIntegrationStatus(): Promise<IntegrationStatus> {
@@ -791,6 +797,18 @@ router.get("/showcase/youtube/playlists/:playlistId/videos", async (req, res, ne
   try {
     const playlistId = String(req.params.playlistId || "");
     if (!isYoutubePlaylistId(playlistId)) return res.status(400).json({ message: "Invalid YouTube playlist ID." });
+
+    let pageToken: string | undefined;
+    if (req.query.pageToken !== undefined) {
+      if (typeof req.query.pageToken !== "string"
+        || !req.query.pageToken
+        || req.query.pageToken.length > 1000
+        || /[\x00-\x1f\x7f]/.test(req.query.pageToken)) {
+        return res.status(400).json({ message: "Invalid YouTube playlist page token." });
+      }
+      pageToken = req.query.pageToken;
+    }
+
     const playlists = await cached("youtube-public-playlists-v1", YOUTUBE_PUBLIC_CACHE_MS, async () => {
       const token = await getAccessToken("youtube");
       return token ? fetchPublicYoutubePlaylists(token) : [];
@@ -798,12 +816,24 @@ router.get("/showcase/youtube/playlists/:playlistId/videos", async (req, res, ne
     if (!playlists.some((playlist) => playlist.id === playlistId)) {
       return res.status(404).json({ message: "This playlist is not one of the connected account's public playlists." });
     }
-    const videos = await cached(`youtube-public-playlist-videos-v1-${playlistId}`, YOUTUBE_PUBLIC_CACHE_MS, async () => {
-      const token = await getAccessToken("youtube");
-      return token ? fetchYoutubePlaylistVideos(token, playlistId) : [];
-    });
+
+    // Cache each YouTube page independently; a large playlist never needs to be
+    // downloaded in full before the first videos can be displayed.
+    const pageKey = pageToken
+      ? createHash("sha256").update(pageToken).digest("hex").slice(0, 20)
+      : "first";
+    const page = await cached(
+      `youtube-public-playlist-page-v2-${playlistId}-${pageKey}`,
+      YOUTUBE_PUBLIC_CACHE_MS,
+      async () => {
+        const token = await getAccessToken("youtube");
+        return token
+          ? fetchYoutubePlaylistVideoPage(token, playlistId, pageToken)
+          : { items: [] as Song[], nextPageToken: undefined };
+      },
+    );
     res.setHeader("Cache-Control", "public, max-age=60");
-    res.json({ items: videos });
+    res.json(page);
   } catch (error) {
     if (error instanceof YouTubeDataApiError) {
       return res.status(502).json({ code: "YOUTUBE_API_REQUEST_FAILED", message: error.message });

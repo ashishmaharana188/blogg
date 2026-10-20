@@ -342,3 +342,98 @@
   .account-showcase-featured-section .showcase-links-grid { grid-template-columns: minmax(0, 1fr); }
   .account-status-card.account-dashboard-status { padding: 18px 16px; }
 }
+
+
+/* Keep playlist growth inside the YouTube panel instead of stretching the dashboard row. */
+.account-dashboard-grid {
+  align-items: stretch;
+}
+.account-dashboard-youtube {
+  display: flex;
+  flex-direction: column;
+  height: var(--dashboard-media-stack-height, auto);
+  min-height: 0;
+  overflow: hidden;
+}
+.account-dashboard-youtube > .showcase-section-heading {
+  flex: 0 0 auto;
+}
+.account-dashboard-youtube .showcase-youtube-library-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding-right: 3px;
+}
+.account-dashboard-youtube .showcase-youtube-playlist-grid {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+.account-dashboard-youtube .showcase-youtube-playlist-entry {
+  min-width: 0;
+}
+.account-dashboard-youtube .showcase-youtube-playlist-entry:has(.showcase-youtube-playlist-rows) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.account-dashboard-youtube .showcase-youtube-playlist-entry .showcase-youtube-playlist-rows {
+  min-width: 0;
+  margin-top: 8px;
+}
+.account-dashboard-youtube .showcase-youtube-playlist-entry .showcase-track-list {
+  min-width: 0;
+}
+.showcase-youtube-load-more-sentinel {
+  height: 1px;
+  width: 100%;
+  pointer-events: none;
+}
+.showcase-youtube-scroll-status {
+  margin: 10px 0 0;
+  color: #687586;
+  font-size: .72rem;
+  line-height: 1.5;
+  text-align: center;
+}
+.showcase-youtube-load-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+.showcase-youtube-load-error .showcase-empty {
+  padding: 6px 0;
+}
+.showcase-youtube-load-retry {
+  padding: 5px 10px;
+  border: 1px solid #ccd4de;
+  border-radius: 999px;
+  background: #fff;
+  color: #29364a;
+  font-size: .69rem;
+  cursor: pointer;
+}
+.showcase-youtube-load-retry:hover {
+  background: #f5f7f9;
+}
+@media (max-width: 1120px) {
+  .account-dashboard-youtube {
+    height: min(68vh, 720px);
+  }
+}
+@media (max-width: 720px) {
+  .account-dashboard-youtube {
+    height: min(70vh, 660px);
+  }
+  .account-dashboard-youtube .showcase-section-heading {
+    padding-bottom: 10px;
+    margin-bottom: 8px;
+  }
+}
