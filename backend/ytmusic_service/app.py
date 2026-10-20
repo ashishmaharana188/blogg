@@ -29,6 +29,22 @@ RUNTIME_BROWSER_FILE = RUNTIME_AUTH_DIR / "browser.json"
 
 LIMIT = max(1, min(int(os.getenv("YTMUSIC_LIKED_LIMIT", "25")), 50))
 _auth_lock = threading.Lock()
+_history_disabled_warned = False
+_history_disabled_lock = threading.Lock()
+
+
+def _log_history_disabled_once() -> None:
+    """Avoid repeated error tracebacks when YouTube watch history is disabled."""
+    global _history_disabled_warned
+    with _history_disabled_lock:
+        if _history_disabled_warned:
+            return
+        logger.warning(
+            "YouTube Music watch history is disabled for this account; "
+            "last-played sync is skipped until YouTube History is enabled."
+        )
+        _history_disabled_warned = True
+
 
 
 def _read_auth_file() -> dict:
@@ -337,6 +353,14 @@ def history(authorization: Optional[str] = Header(default=None)):
         client = get_client()
         history_songs = client.get_history()
     except Exception as exc:
+        # ytmusicapi raises YTMusicServerError when YouTube History is paused.
+        # This is an account preference, not a broken authentication session.
+        # Return a valid empty history page so the Node backend can retain the
+        # previous last-played snapshot without producing repeated 502 tracebacks.
+        if "Turn on your YouTube watch history" in str(exc):
+            _log_history_disabled_once()
+            return {"items": []}
+
         logger.exception(
             "YouTube Music history request failed; error_type=%s",
             type(exc).__name__,
