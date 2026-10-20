@@ -117,3 +117,100 @@
 .flipbook-profile .flipbook-page-content video {
   height: auto;
 }
+
+/*
+ * Keep one continuous flipbook shell and the same footer footprint in both
+ * overview and note-open modes. The action row replaces the thumbnail strip
+ * instead of being inserted above it, so the stage never loses height when a
+ * note opens.
+ */
+.flipbook-profile .flipbook-footer > .flipbook-controls {
+  order: 1;
+  flex: 0 0 auto;
+}
+
+.flipbook-profile .flipbook-footer > .flipbook-thumbnails {
+  order: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(100%, 1180px);
+  height: 50px;
+  min-height: 50px;
+  max-height: 50px;
+  flex: 0 0 50px;
+  margin: 0;
+  overflow: hidden;
+}
+
+/* Only a note-open view has the action row. Hide the thumbnail bar in that mode. */
+.flipbook-profile .flipbook-footer:has(> .flipbook-mode-actions) > .flipbook-thumbnails {
+  display: none !important;
+}
+
+.flipbook-profile .flipbook-footer > .flipbook-mode-actions {
+  order: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+  gap: clamp(4px, 1vw, 18px);
+  width: min(100%, 680px);
+  height: 50px;
+  min-height: 50px;
+  max-height: 50px;
+  flex: 0 0 50px;
+  margin: 0 auto;
+  padding: 0 4px;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.flipbook-profile .flipbook-footer > .flipbook-mode-actions > button {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: none;
+  height: 40px;
+  min-height: 40px;
+  margin: 0;
+  padding: 4px 8px;
+  text-align: center;
+  white-space: normal;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.flipbook-profile:has(.flipbook-mode-actions) .flipbook-book {
+  animation: flipbook-note-open-fade 220ms ease-out both;
+}
+
+@keyframes flipbook-note-open-fade {
+  from { opacity: 0.72; }
+  to { opacity: 1; }
+}
+
+@media (max-width: 760px) {
+  .flipbook-profile .flipbook-footer > .flipbook-thumbnails,
+  .flipbook-profile .flipbook-footer > .flipbook-mode-actions {
+    height: 44px;
+    min-height: 44px;
+    max-height: 44px;
+    flex-basis: 44px;
+  }
+
+  .flipbook-profile .flipbook-footer > .flipbook-mode-actions {
+    gap: 4px;
+    padding: 0 2px;
+  }
+
+  .flipbook-profile .flipbook-footer > .flipbook-mode-actions > button {
+    height: 40px;
+    min-height: 40px;
+    padding: 2px 3px;
+    font-size: clamp(0.62rem, 1.8vw, 0.74rem);
+    line-height: 1.1;
+  }
+}
