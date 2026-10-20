@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { BlockNoteView } from "@blocknote/mantine";
 import { useCreateBlockNote } from "@blocknote/react";
 import type { BloggItem } from "../../types/pageTypes";
+import { API_BASE_URL } from "../../services/apiBase";
 import { fetchAllBloggsRequest } from "../BloggPage/services/flipBookService";
 import { fetchStackAndGroup } from "../BloggPage/services/canvasViewService";
 import BloggHeader from "../BloggPage/components/bloggHeader/BloggHeader";
@@ -16,47 +17,96 @@ type CanvasGroup = { group_id: string; group_name: string; stack_id: string };
 const EMPTY_BLOCKS: any[] = [{ type: "paragraph", content: "" }];
 
 
-function findFirstImageUrl(value: unknown): string | undefined {
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      const found = findFirstImageUrl(item);
-      if (found) return found;
-    }
-    return undefined;
-  }
-  if (!value || typeof value !== "object") return undefined;
+type MusicTrack = {
+  title?: string;
+  artists?: string[];
+  thumbnail?: string;
+  url?: string;
+  album?: string;
+};
 
-  const record = value as Record<string, unknown>;
-  if (record.type === "image") {
-    const props = record.props && typeof record.props === "object"
-      ? record.props as Record<string, unknown>
-      : {};
-    const candidate = [props.url, props.src, record.url, record.src]
-      .find((entry): entry is string => typeof entry === "string" && entry.trim().length > 0);
-    if (candidate) return candidate;
-  }
+type IntegrationPlaybackResponse = {
+  spotify?: { playing?: boolean; track?: MusicTrack | null };
+};
 
-  for (const key of ["content", "children", "props"]) {
-    const found = findFirstImageUrl(record[key]);
-    if (found) return found;
-  }
-  return undefined;
+type YtMusicPublicResponse = {
+  connected?: boolean;
+  lastPlayed?: MusicTrack | null;
+  tracks?: MusicTrack[];
+};
+
+type FeedNowPlayingTrack = {
+  title: string;
+  artists: string[];
+  thumbnail?: string;
+  url?: string;
+  provider: "spotify" | "ytmusic";
+  label: "NOW PLAYING" | "LAST PLAYED" | "PUBLIC PICK";
+};
+
+async function fetchPublicJson<T>(path: string): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    credentials: "include",
+    cache: "no-store",
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) throw new Error(`Request failed (${response.status})`);
+  return response.json() as Promise<T>;
 }
 
-function BlogProfileTeaser({ imageUrl, stackName }: { imageUrl?: string; stackName: string }) {
+function validMusicTrack(
+  track: MusicTrack | null | undefined,
+  provider: FeedNowPlayingTrack["provider"],
+  label: FeedNowPlayingTrack["label"],
+): FeedNowPlayingTrack | null {
+  if (!track || typeof track.title !== "string" || !track.title.trim()) return null;
+  return {
+    title: track.title.trim(),
+    artists: Array.isArray(track.artists)
+      ? track.artists.filter((artist): artist is string => typeof artist === "string" && artist.trim().length > 0)
+      : [],
+    thumbnail: typeof track.thumbnail === "string" ? track.thumbnail : undefined,
+    url: typeof track.url === "string" ? track.url : undefined,
+    provider,
+    label,
+  };
+}
+
+function NowPlayingTeaser({ track }: { track: FeedNowPlayingTrack | null }) {
+  const songName = track?.title || "Nothing playing right now";
+  const artistName = track?.artists.join(", ") || (track?.provider === "ytmusic" ? "YouTube Music" : "Waiting for playback");
+  const scrollingText = track
+    ? `${track.label} · ${songName} · ${artistName} ·`
+    : "NOW PLAYING · NOTHING PLAYING RIGHT NOW ·";
+  const artwork = track?.thumbnail
+    ? <img className="blog-feed-now-playing-artwork" src={track.thumbnail} alt="" loading="lazy" />
+    : <span className="blog-feed-now-playing-placeholder" aria-hidden="true">♫</span>;
+
   return (
-    <aside className="blog-feed-profile-teaser" aria-label="Blog Profile shortcut">
-      <Link className="blog-feed-profile-preview" to="/blog" aria-label="Open Blog Profile">
-        {imageUrl
-          ? <img src={imageUrl} alt="" loading="lazy" />
-          : <span className="blog-feed-profile-placeholder" aria-hidden="true">BLOGG</span>}
-      </Link>
-      <Link className="blog-feed-profile-meta" to="/blog" aria-label={`Open Blog Profile, ${stackName}`}>
-        <span>BLOG PROFILE</span>
-        <span className="blog-feed-profile-dot" aria-hidden="true">·</span>
-        <span className="blog-feed-profile-stack">{stackName}</span>
-        <span className="blog-feed-profile-chevron" aria-hidden="true">›</span>
-      </Link>
+    <aside
+      className="blog-feed-now-playing-teaser"
+      aria-label={track ? `${track.label}: ${songName}, ${artistName}` : "Now playing: no active track"}
+    >
+      {track?.url ? (
+        <a
+          className="blog-feed-now-playing-artwork-frame"
+          href={track.url}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={`Open ${songName} on ${track.provider === "spotify" ? "Spotify" : "YouTube Music"}`}
+        >
+          {artwork}
+        </a>
+      ) : (
+        <div className="blog-feed-now-playing-artwork-frame">{artwork}</div>
+      )}
+      <div className="blog-feed-now-playing-marquee" aria-hidden="true">
+        <div className="blog-feed-now-playing-marquee-track">
+          <span className="blog-feed-now-playing-marquee-run">{scrollingText}</span>
+          <span className="blog-feed-now-playing-marquee-run">{scrollingText}</span>
+        </div>
+      </div>
+      <span className="blog-feed-now-playing-sr-only">{scrollingText}</span>
     </aside>
   );
 }
@@ -102,6 +152,22 @@ const HomePage = () => {
   const [groups, setGroups] = useState<CanvasGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [nowPlayingTrack, setNowPlayingTrack] = useState<FeedNowPlayingTrack | null>(null);
+
+  const refreshNowPlaying = useCallback(async () => {
+    const [integrationsResult, ytmusicResult] = await Promise.allSettled([
+      fetchPublicJson<IntegrationPlaybackResponse>("/api/showcase/integrations"),
+      fetchPublicJson<YtMusicPublicResponse>("/api/showcase/ytmusic/public"),
+    ]);
+    const integrations = integrationsResult.status === "fulfilled" ? integrationsResult.value : null;
+    const ytmusic = ytmusicResult.status === "fulfilled" ? ytmusicResult.value : null;
+    const spotifyTrack = integrations?.spotify?.playing
+      ? validMusicTrack(integrations.spotify.track, "spotify", "NOW PLAYING")
+      : null;
+    const lastPlayedTrack = validMusicTrack(ytmusic?.lastPlayed, "ytmusic", "LAST PLAYED");
+    const publicPick = validMusicTrack(ytmusic?.tracks?.[0], "ytmusic", "PUBLIC PICK");
+    setNowPlayingTrack(spotifyTrack || lastPlayedTrack || publicPick);
+  }, []);
 
   const loadFeed = useCallback(async () => {
     setIsLoading(true);
@@ -133,6 +199,11 @@ const HomePage = () => {
   }, []);
 
   useEffect(() => { void loadFeed(); }, [loadFeed]);
+  useEffect(() => {
+    void refreshNowPlaying();
+    const interval = window.setInterval(() => { void refreshNowPlaying(); }, 60_000);
+    return () => window.clearInterval(interval);
+  }, [refreshNowPlaying]);
   const stackById = useMemo(() => new Map(stacks.map((stack) => [stack.stack_id, stack])), [stacks]);
   const groupById = useMemo(() => new Map(groups.map((group) => [group.group_id, group])), [groups]);
   const getLocation = (blogg: BloggItem) => {
@@ -140,20 +211,12 @@ const HomePage = () => {
     const stack = stackById.get(blogg.stack_id) || (group ? stackById.get(group.stack_id) : undefined);
     return { stackName: stack?.stack_name || "Unsorted stack", groupName: group?.group_name || "Others" };
   };
-  const profileNote = useMemo(
-    () => bloggs.find((blogg) => Boolean(blogg.external_article?.cover_image || findFirstImageUrl(blogg.content))) || bloggs[0],
-    [bloggs],
-  );
-  const profileImage = profileNote?.external_article?.cover_image || findFirstImageUrl(profileNote?.content);
-  const profileStackName = profileNote
-    ? getLocation(profileNote).stackName
-    : stacks[0]?.stack_name || "stack1";
 
   return (
     <div className="blog-feed-page typewriter-font">
       <BloggHeader page="feed" onNewNote={() => navigate("/blog?newNote=1")} />
       <main className="blog-feed-content">
-        <BlogProfileTeaser imageUrl={profileImage} stackName={profileStackName} />
+        <NowPlayingTeaser track={nowPlayingTrack} />
         {isLoading ? <div className="blog-feed-state" role="status">Loading notes…</div> : loadError ? (
           <div className="blog-feed-state blog-feed-state-error"><p>{loadError}</p><button type="button" onClick={() => void loadFeed()}>Try again</button></div>
         ) : bloggs.length === 0 ? (
