@@ -9,9 +9,8 @@ const createPgPool = (): Pool => {
   const connectionString = process.env.DATABASE_URL?.trim();
   const isProduction = process.env.NODE_ENV === "production";
 
-  // Neon supplies a PostgreSQL connection URL. Prefer it when configured so
-  // its hostname, port, credentials, database, and TLS query parameters are
-  // handled by node-postgres in one place.
+  // Cloud deployments such as Neon provide a PostgreSQL connection URL.
+  // Keep the provider's TLS settings from that URL intact.
   if (connectionString) {
     const pool = new Pool({
       connectionString,
@@ -37,8 +36,10 @@ const createPgPool = (): Pool => {
     return pool;
   }
 
-  // Keep the existing split DB_* settings for local development and existing
-  // deployments. In production, don't silently fall back to local defaults.
+  // The split DB_* configuration is used for the local PostgreSQL instance.
+  // Cloud deployments should use DATABASE_URL (for example, Neon's URL).
+  // Explicit ssl:false prevents NODE_ENV=production or PGSSLMODE inherited
+  // from the shell from forcing TLS against a local server that has no SSL.
   if (
     isProduction &&
     (!process.env.DB_USER ||
@@ -57,9 +58,7 @@ const createPgPool = (): Pool => {
     database: process.env.DB_NAME ?? "blogg",
     password: process.env.DB_PASSWORD ?? "123456",
     port: Number(process.env.DB_PORT ?? 5432),
-    // Direct PostgreSQL providers generally require TLS. Local development
-    // remains unchanged; DATABASE_URL is preferred for Neon.
-    ssl: isProduction ? { rejectUnauthorized: false } : undefined,
+    ssl: false,
     max: 5,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,

@@ -35,6 +35,11 @@ const BloggPage = () => {
   );
   const [canvasRefreshKey, setCanvasRefreshKey] = useState(0);
 
+  // Keep an opened Flipbook note in the /blog route using a query parameter.
+  // This preserves the current React tree and book instance instead of
+  // switching between the sibling /blog and /blog/:bloggId routes.
+  const openedNoteId = bloggId || searchParams.get("noteId") || undefined;
+
   const closeFormAfterSave = useCallback(() => {
     setActiveForm({
       isOpen: false,
@@ -218,8 +223,11 @@ const BloggPage = () => {
           </div>
         ) : (
           <BlogFlipBookUI
-            initialBloggId={bloggId}
-            onOpenBlogg={(blogg) => navigate(`/blog/${encodeURIComponent(blogg.blogg_id || blogg._id)}`)}
+            initialBloggId={openedNoteId}
+            onOpenBlogg={(blogg) => {
+              const noteId = blogg.blogg_id || blogg._id;
+              navigate(`/blog?view=flipbook&noteId=${encodeURIComponent(noteId)}`);
+            }}
             onBackFromBlogg={() => navigate("/blog?view=flipbook")}
             onOpenInReader={(blogg) => navigate(`/blog?readNote=${encodeURIComponent(blogg.blogg_id || blogg._id)}`)}
             onEditBlogg={isAdmin ? handleEditFromFlipBook : undefined}
