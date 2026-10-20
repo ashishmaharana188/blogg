@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import Optional
 
@@ -6,6 +7,7 @@ from pydantic import BaseModel, Field
 from ytmusicapi import OAuthCredentials, YTMusic
 
 app = FastAPI(title="Blogg YouTube Music Bridge")
+logger = logging.getLogger("uvicorn.error")
 SERVICE_TOKEN = os.getenv("YTMUSIC_SERVICE_TOKEN", "").strip()
 AUTH_FILE = os.getenv("YTMUSIC_AUTH_FILE", "/etc/secrets/ytmusic-oauth.json")
 OAUTH_CLIENT_ID = os.getenv("YTMUSIC_OAUTH_CLIENT_ID", "").strip()
@@ -37,31 +39,62 @@ class SongList(BaseModel):
 
 @app.get("/health")
 def health():
-    # Never return a credential or any private account data from this endpoint.
-    return {"ok": True, "authConfigured": os.path.isfile(AUTH_FILE), "tokenConfigured": bool(SERVICE_TOKEN), "oauthConfigured": bool(OAUTH_CLIENT_ID and OAUTH_CLIENT_SECRET)}
+    # Report presence/configuration only; never return credentials or account data.
+    return {
+        "ok": True,
+        "authConfigured": os.path.isfile(AUTH_FILE),
+        "authReadable": os.path.isfile(AUTH_FILE) and os.access(AUTH_FILE, os.R_OK),
+        "tokenConfigured": bool(SERVICE_TOKEN),
+        "oauthConfigured": bool(OAUTH_CLIENT_ID and OAUTH_CLIENT_SECRET),
+    }
 
 
 @app.get("/liked", response_model=SongList)
 def liked(authorization: Optional[str] = Header(default=None)):
     if not SERVICE_TOKEN or authorization != f"Bearer {SERVICE_TOKEN}":
         raise HTTPException(status_code=401, detail="Unauthorized")
+
+    # Keep client construction separate from the upstream request. The old broad
+    # handler returned only "OSError", which made file/credential setup failures
+    # indistinguishable from DNS/TLS/network failures while fetching liked songs.
     try:
-        # get_liked_songs is deliberate: get_library_songs() does not include liked songs.
-        songs = get_client().get_liked_songs(limit=LIMIT)
-        items = []
-        for song in songs:
-            video_id = song.get("videoId")
-            thumbnails = song.get("thumbnails") or []
-            artists = [artist.get("name", "") for artist in (song.get("artists") or []) if artist.get("name")]
-            items.append(Song(
-                title=song.get("title") or "Untitled track",
-                artists=artists,
-                album=(song.get("album") or {}).get("name"),
-                thumbnail=thumbnails[-1].get("url") if thumbnails else None,
-                url=f"https://music.youtube.com/watch?v={video_id}" if video_id else None,
-                videoId=video_id,
-            ))
-        return {"items": items}
+        client = get_client()
     except Exception as exc:
-        # Avoid leaking cookies, headers, or authentication material through exception messages.
-        raise HTTPException(status_code=502, detail=f"YouTube Music request failed ({type(exc).__name__}).") from exc
+        logger.exception(
+            "YouTube Music client initialization failed; error_type=%s",
+            type(exc).__name__,
+        )
+        raise HTTPException(
+            status_code=502,
+            detail=f"YouTube Music client initialization failed ({type(exc).__name__}). Check the companion service logs.",
+        ) from exc
+
+    try:
+        # get_library_songs() does not include liked songs; this endpoint must use
+        # get_liked_songs(). ytmusicapi's network/auth exceptions are logged server-side
+        # for diagnosis, without logging request headers, tokens, or OAuth file contents.
+        songs = client.get_liked_songs(limit=LIMIT)
+    except Exception as exc:
+        logger.exception(
+            "YouTube Music liked-song request failed; error_type=%s",
+            type(exc).__name__,
+        )
+        raise HTTPException(
+            status_code=502,
+            detail=f"YouTube Music liked-song request failed ({type(exc).__name__}). Check the companion service logs for the traceback.",
+        ) from exc
+
+    items = []
+    for song in songs:
+        video_id = song.get("videoId")
+        thumbnails = song.get("thumbnails") or []
+        artists = [artist.get("name", "") for artist in (song.get("artists") or []) if artist.get("name")]
+        items.append(Song(
+            title=song.get("title") or "Untitled track",
+            artists=artists,
+            album=(song.get("album") or {}).get("name"),
+            thumbnail=thumbnails[-1].get("url") if thumbnails else None,
+            url=f"https://music.youtube.com/watch?v={video_id}" if video_id else None,
+            videoId=video_id,
+        ))
+    return {"items": items}
