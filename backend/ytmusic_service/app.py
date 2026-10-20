@@ -8,116 +8,107 @@ from typing import Optional
 
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
-from ytmusicapi import OAuthCredentials, YTMusic
+from ytmusicapi import YTMusic
 
 app = FastAPI(title="Blogg YouTube Music Bridge")
 logger = logging.getLogger("uvicorn.error")
 
 SERVICE_TOKEN = os.getenv("YTMUSIC_SERVICE_TOKEN", "").strip()
-AUTH_FILE = Path(os.getenv("YTMUSIC_AUTH_FILE", "/etc/secrets/ytmusic-oauth.json")).expanduser()
-# Render secret files are read-only. ytmusicapi refreshes OAuth tokens and writes
-# updated token data back to its auth file, so it must receive a writable copy.
-# Keep "oauth.json" in the filename because ytmusicapi uses the auth filename
-# when identifying OAuth credentials.
-RUNTIME_AUTH_FILE = Path(
-    os.getenv("YTMUSIC_RUNTIME_AUTH_FILE", "/tmp/ytmusic-oauth.json")
+AUTH_FILE = Path(
+    os.getenv("YTMUSIC_AUTH_FILE", "/etc/secrets/ytmusic-browser.json")
 ).expanduser()
-OAUTH_CLIENT_ID = os.getenv("YTMUSIC_OAUTH_CLIENT_ID", "").strip()
-OAUTH_CLIENT_SECRET = os.getenv("YTMUSIC_OAUTH_CLIENT_SECRET", "").strip()
+
+# ytmusicapi OAuth authentication currently fails with upstream HTTP 400 for
+# authenticated YouTube Music internal API calls. Browser-auth JSON is the
+# documented workaround. The runtime copy must be named browser.json because
+# ytmusicapi uses the filename to distinguish browser headers from oauth.json.
+RUNTIME_AUTH_DIR = Path(
+    os.getenv("YTMUSIC_RUNTIME_AUTH_DIR", "/tmp/ytmusic-auth")
+).expanduser()
+RUNTIME_BROWSER_FILE = RUNTIME_AUTH_DIR / "browser.json"
+
 LIMIT = max(1, min(int(os.getenv("YTMUSIC_LIKED_LIMIT", "25")), 50))
-
-_auth_file_lock = threading.Lock()
-_runtime_auth_initialized = False
+_auth_lock = threading.Lock()
 
 
-def _prepare_runtime_auth_file() -> str:
-    """Copy the mounted, read-only OAuth secret to a private writable file once per process."""
-    global _runtime_auth_initialized
-
+def _read_auth_file() -> dict:
     if not AUTH_FILE.is_file():
-        raise RuntimeError("YouTube Music auth file is missing.")
+        raise RuntimeError(
+            f"YouTube Music auth file is missing at {AUTH_FILE}. Configure "
+            "YTMUSIC_AUTH_FILE to point to the mounted browser-auth secret file."
+        )
     if not os.access(AUTH_FILE, os.R_OK):
         raise RuntimeError("YouTube Music auth file is not readable.")
 
-    source_path = AUTH_FILE.resolve()
-    runtime_path = RUNTIME_AUTH_FILE.resolve()
-    if source_path == runtime_path:
+    try:
+        data = json.loads(AUTH_FILE.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise RuntimeError(
-            "YTMUSIC_RUNTIME_AUTH_FILE must point to a writable path different "
-            "from YTMUSIC_AUTH_FILE; the mounted Render secret is read-only."
-        )
+            "YouTube Music auth file could not be read as valid UTF-8 JSON."
+        ) from exc
 
-    with _auth_file_lock:
-        if (
-            _runtime_auth_initialized
-            and RUNTIME_AUTH_FILE.is_file()
-            and os.access(RUNTIME_AUTH_FILE, os.R_OK | os.W_OK)
-        ):
-            return str(RUNTIME_AUTH_FILE)
+    if not isinstance(data, dict):
+        raise RuntimeError("YouTube Music auth file must contain a JSON object.")
+    return data
 
-        try:
-            raw_auth = AUTH_FILE.read_bytes()
-        except OSError as exc:
-            raise RuntimeError("Could not read the mounted YouTube Music auth file.") from exc
 
-        try:
-            auth_data = json.loads(raw_auth.decode("utf-8"))
-        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-            raise RuntimeError("The YouTube Music auth file is not valid UTF-8 JSON.") from exc
+def _header_value(headers: dict, target: str) -> str:
+    target_lower = target.lower()
+    for key, value in headers.items():
+        if str(key).lower() == target_lower and isinstance(value, str):
+            return value.strip()
+    return ""
 
-        if not isinstance(auth_data, dict) or not auth_data.get("refresh_token"):
-            raise RuntimeError(
-                "The YouTube Music OAuth file must contain a refresh_token. "
-                "Regenerate the OAuth file with the configured client credentials if necessary."
-            )
 
-        runtime_parent = RUNTIME_AUTH_FILE.parent
-        try:
-            runtime_parent.mkdir(parents=True, exist_ok=True)
-            temp_path = None
+def _browser_auth_missing_headers(data: dict) -> list[str]:
+    # Match the core fields in ytmusicapi's documented browser-auth setup.
+    required = ("cookie", "authorization", "x-goog-authuser", "x-origin")
+    return [name for name in required if not _header_value(data, name)]
+
+
+def _prepare_runtime_browser_file(data: dict) -> str:
+    # Never modify the mounted Render secret. Copy it atomically to writable
+    # runtime storage. Preserve the required basename "browser.json".
+    try:
+        RUNTIME_AUTH_DIR.mkdir(parents=True, exist_ok=True)
+        temporary_path: Optional[Path] = None
+        with _auth_lock:
             try:
                 with tempfile.NamedTemporaryFile(
-                    mode="wb",
-                    prefix=".ytmusic-oauth-",
+                    mode="w",
+                    encoding="utf-8",
+                    prefix=".browser-auth-",
                     suffix=".tmp",
-                    dir=str(runtime_parent),
+                    dir=str(RUNTIME_AUTH_DIR),
                     delete=False,
-                ) as runtime_temp:
-                    temp_path = Path(runtime_temp.name)
-                    os.fchmod(runtime_temp.fileno(), 0o600)
-                    runtime_temp.write(raw_auth)
-                    runtime_temp.flush()
-                    os.fsync(runtime_temp.fileno())
+                ) as temporary_file:
+                    temporary_path = Path(temporary_file.name)
+                    os.fchmod(temporary_file.fileno(), 0o600)
+                    json.dump(data, temporary_file, ensure_ascii=False)
+                    temporary_file.flush()
+                    os.fsync(temporary_file.fileno())
 
-                # Replace atomically so ytmusicapi never sees a partially copied file.
-                os.replace(temp_path, RUNTIME_AUTH_FILE)
-                os.chmod(RUNTIME_AUTH_FILE, 0o600)
+                os.replace(temporary_path, RUNTIME_BROWSER_FILE)
+                os.chmod(RUNTIME_BROWSER_FILE, 0o600)
             finally:
-                if temp_path is not None and temp_path.exists():
-                    temp_path.unlink()
-        except OSError as exc:
-            raise RuntimeError(
-                "Could not create a writable runtime OAuth file. Check "
-                "YTMUSIC_RUNTIME_AUTH_FILE and the service's writable filesystem."
-            ) from exc
+                if temporary_path is not None and temporary_path.exists():
+                    temporary_path.unlink()
+    except OSError as exc:
+        raise RuntimeError(
+            "Could not prepare the writable browser-auth file. Check the "
+            "YTMUSIC_RUNTIME_AUTH_DIR setting and runtime filesystem."
+        ) from exc
 
-        _runtime_auth_initialized = True
-        logger.info(
-            "YouTube Music OAuth file prepared in writable runtime storage; "
-            "the mounted secret was left unchanged."
-        )
-        return str(RUNTIME_AUTH_FILE)
+    return str(RUNTIME_BROWSER_FILE)
 
 
 def _runtime_directory_writable() -> bool:
-    """Test write access without writing any credentials."""
-    parent = RUNTIME_AUTH_FILE.parent
     try:
-        parent.mkdir(parents=True, exist_ok=True)
+        RUNTIME_AUTH_DIR.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(
-            prefix=".ytmusic-health-check-",
+            prefix=".health-check-",
             suffix=".tmp",
-            dir=str(parent),
+            dir=str(RUNTIME_AUTH_DIR),
             delete=True,
         ):
             return True
@@ -125,18 +116,65 @@ def _runtime_directory_writable() -> bool:
         return False
 
 
-def get_client() -> YTMusic:
-    if not OAUTH_CLIENT_ID or not OAUTH_CLIENT_SECRET:
-        raise RuntimeError("YouTube Music OAuth client credentials are missing.")
+def _auth_status(data: Optional[dict], auth_error: Optional[str] = None) -> dict:
+    if not data:
+        mode = "invalid" if auth_error else "missing"
+        missing = ["cookie", "authorization", "x-goog-authuser", "x-origin"]
+    elif data.get("refresh_token") and data.get("access_token"):
+        mode = "oauth"
+        missing = ["browser headers: Cookie, Authorization, X-Goog-AuthUser, x-origin"]
+    else:
+        missing = _browser_auth_missing_headers(data)
+        mode = "browser" if not missing else "invalid"
 
-    runtime_auth_file = _prepare_runtime_auth_file()
-    credentials = OAuthCredentials(
-        client_id=OAUTH_CLIENT_ID,
-        client_secret=OAUTH_CLIENT_SECRET,
+    return {
+        "ok": True,
+        "authConfigured": AUTH_FILE.is_file(),
+        "authReadable": AUTH_FILE.is_file() and os.access(AUTH_FILE, os.R_OK),
+        "authMode": mode,
+        "browserAuthReady": mode == "browser",
+        "missingBrowserHeaders": missing,
+        "runtimeAuthDirectoryWritable": _runtime_directory_writable(),
+        "runtimeBrowserAuthPrepared": (
+            RUNTIME_BROWSER_FILE.is_file()
+            and os.access(RUNTIME_BROWSER_FILE, os.R_OK | os.W_OK)
+        ),
+        "tokenConfigured": bool(SERVICE_TOKEN),
+    }
+
+
+def get_client() -> YTMusic:
+    auth_data = _read_auth_file()
+
+    # Do not retry OAuth setup or rotate credentials here: the upstream
+    # ytmusicapi OAuth path is currently rejected with HTTP 400 by YouTube
+    # Music's internal API. Fail with a useful message instructing the operator
+    # to configure the documented browser-header authentication instead.
+    if auth_data.get("refresh_token") and auth_data.get("access_token"):
+        raise RuntimeError(
+            "The configured auth file contains OAuth tokens. ytmusicapi OAuth "
+            "requests to YouTube Music are currently rejected with HTTP 400 "
+            "(upstream ytmusicapi issue #813). Create a browser-auth JSON file "
+            "using 'ytmusicapi browser', mount it as a Render secret file, and "
+            "set YTMUSIC_AUTH_FILE to that file."
+        )
+
+    missing = _browser_auth_missing_headers(auth_data)
+    if missing:
+        raise RuntimeError(
+            "The configured auth file is not a complete ytmusicapi browser-auth "
+            f"file. Missing required header fields: {', '.join(missing)}. "
+            "Create it with 'ytmusicapi browser' from a successful authenticated "
+            "YouTube Music POST request."
+        )
+
+    runtime_file = _prepare_runtime_browser_file(auth_data)
+    logger.info(
+        "Using YouTube Music browser-header authentication from a writable "
+        "runtime copy; the mounted secret was not modified."
     )
-    # Pass the writable copy, not /etc/secrets/ytmusic-oauth.json. On token
-    # refresh ytmusicapi may update this runtime file.
-    return YTMusic(runtime_auth_file, oauth_credentials=credentials)
+    # No OAuthCredentials here: browser.json contains the captured headers.
+    return YTMusic(runtime_file)
 
 
 class Song(BaseModel):
@@ -154,21 +192,19 @@ class SongList(BaseModel):
 
 @app.get("/health")
 def health():
-    # Report presence/configuration only; never return credentials or account data.
-    auth_exists = AUTH_FILE.is_file()
-    return {
-        "ok": True,
-        "authConfigured": auth_exists,
-        "authReadable": auth_exists and os.access(AUTH_FILE, os.R_OK),
-        "runtimeAuthDirectoryWritable": _runtime_directory_writable(),
-        "runtimeAuthPrepared": (
-            _runtime_auth_initialized
-            and RUNTIME_AUTH_FILE.is_file()
-            and os.access(RUNTIME_AUTH_FILE, os.R_OK | os.W_OK)
-        ),
+    # This endpoint reports presence and readiness only; never expose auth values.
+    try:
+        data = _read_auth_file()
+        status = _auth_status(data)
+    except Exception as exc:
+        status = _auth_status(None, str(exc))
+        logger.warning("YouTube Music auth health check failed; error_type=%s", type(exc).__name__)
+
+    status.update({
         "tokenConfigured": bool(SERVICE_TOKEN),
-        "oauthConfigured": bool(OAUTH_CLIENT_ID and OAUTH_CLIENT_SECRET),
-    }
+        "runtimeAuthDirectoryWritable": _runtime_directory_writable(),
+    })
+    return status
 
 
 @app.get("/liked", response_model=SongList)
@@ -184,15 +220,14 @@ def liked(authorization: Optional[str] = Header(default=None)):
             type(exc).__name__,
         )
         raise HTTPException(
-            status_code=502,
+            status_code=503,
             detail=(
-                f"YouTube Music client initialization failed ({type(exc).__name__}). "
-                "Check the companion service logs."
+                f"YouTube Music authentication setup failed ({type(exc).__name__}). "
+                "Check the Python companion service logs and /health diagnostics."
             ),
         ) from exc
 
     try:
-        # get_library_songs() does not include liked songs; use get_liked_songs().
         songs = client.get_liked_songs(limit=LIMIT)
     except Exception as exc:
         logger.exception(
@@ -203,7 +238,7 @@ def liked(authorization: Optional[str] = Header(default=None)):
             status_code=502,
             detail=(
                 f"YouTube Music liked-song request failed ({type(exc).__name__}). "
-                "Check the companion service logs for the traceback."
+                "Check the companion service logs for the upstream traceback."
             ),
         ) from exc
 
