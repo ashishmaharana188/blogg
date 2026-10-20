@@ -16,25 +16,48 @@ type CanvasGroup = { group_id: string; group_name: string; stack_id: string };
 const EMPTY_BLOCKS: any[] = [{ type: "paragraph", content: "" }];
 
 
-const FEED_TICKER_TEXT =
-  "NOTES, IDEAS, AND OBSERVATIONS · THINGS READ, HEARD, AND REMEMBERED · A QUIET ARCHIVE OF WHAT STAYS WITH US ·";
+function findFirstImageUrl(value: unknown): string | undefined {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findFirstImageUrl(item);
+      if (found) return found;
+    }
+    return undefined;
+  }
+  if (!value || typeof value !== "object") return undefined;
 
-function FeedTicker() {
+  const record = value as Record<string, unknown>;
+  if (record.type === "image") {
+    const props = record.props && typeof record.props === "object"
+      ? record.props as Record<string, unknown>
+      : {};
+    const candidate = [props.url, props.src, record.url, record.src]
+      .find((entry): entry is string => typeof entry === "string" && entry.trim().length > 0);
+    if (candidate) return candidate;
+  }
+
+  for (const key of ["content", "children", "props"]) {
+    const found = findFirstImageUrl(record[key]);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+function BlogProfileTeaser({ imageUrl, stackName }: { imageUrl?: string; stackName: string }) {
   return (
-    <section className="blog-feed-ticker" role="region" aria-label="Scrolling blog feed text">
-      <span className="blog-feed-ticker-sr-only">{FEED_TICKER_TEXT}</span>
-      <div className="blog-feed-ticker-window" aria-hidden="true">
-        <div className="blog-feed-ticker-track">
-          {[0, 1].map((group) => (
-            <div className="blog-feed-ticker-group" key={group}>
-              {[0, 1, 2].map((run) => (
-                <span className="blog-feed-ticker-item" key={run}>{FEED_TICKER_TEXT}</span>
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
+    <aside className="blog-feed-profile-teaser" aria-label="Blog Profile shortcut">
+      <Link className="blog-feed-profile-preview" to="/blog" aria-label="Open Blog Profile">
+        {imageUrl
+          ? <img src={imageUrl} alt="" loading="lazy" />
+          : <span className="blog-feed-profile-placeholder" aria-hidden="true">BLOGG</span>}
+      </Link>
+      <Link className="blog-feed-profile-meta" to="/blog" aria-label={`Open Blog Profile, ${stackName}`}>
+        <span>BLOG PROFILE</span>
+        <span className="blog-feed-profile-dot" aria-hidden="true">·</span>
+        <span className="blog-feed-profile-stack">{stackName}</span>
+        <span className="blog-feed-profile-chevron" aria-hidden="true">›</span>
+      </Link>
+    </aside>
   );
 }
 
@@ -117,12 +140,20 @@ const HomePage = () => {
     const stack = stackById.get(blogg.stack_id) || (group ? stackById.get(group.stack_id) : undefined);
     return { stackName: stack?.stack_name || "Unsorted stack", groupName: group?.group_name || "Others" };
   };
+  const profileNote = useMemo(
+    () => bloggs.find((blogg) => Boolean(blogg.external_article?.cover_image || findFirstImageUrl(blogg.content))) || bloggs[0],
+    [bloggs],
+  );
+  const profileImage = profileNote?.external_article?.cover_image || findFirstImageUrl(profileNote?.content);
+  const profileStackName = profileNote
+    ? getLocation(profileNote).stackName
+    : stacks[0]?.stack_name || "stack1";
 
   return (
     <div className="blog-feed-page typewriter-font">
       <BloggHeader page="feed" onNewNote={() => navigate("/blog?newNote=1")} />
-      <FeedTicker />
       <main className="blog-feed-content">
+        <BlogProfileTeaser imageUrl={profileImage} stackName={profileStackName} />
         {isLoading ? <div className="blog-feed-state" role="status">Loading notes…</div> : loadError ? (
           <div className="blog-feed-state blog-feed-state-error"><p>{loadError}</p><button type="button" onClick={() => void loadFeed()}>Try again</button></div>
         ) : bloggs.length === 0 ? (
