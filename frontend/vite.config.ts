@@ -5,13 +5,17 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
 const STATE_IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp", ".avif", ".gif", ".svg"]);
+const STATE_VIDEO_EXTENSIONS = new Set([".mp4", ".webm", ".ogg", ".mov", ".m4v"]);
+const STATE_MEDIA_EXTENSIONS = new Set([...STATE_IMAGE_EXTENSIONS, ...STATE_VIDEO_EXTENSIONS]);
 
 function publicStateAssetsPlugin(): Plugin {
   let publicDirectory = "";
   const virtualModuleId = "virtual:public-state-assets";
   const resolvedVirtualModuleId = `\0${virtualModuleId}`;
+  const virtualMediaModuleId = "virtual:public-state-media";
+  const resolvedVirtualMediaModuleId = `\0${virtualMediaModuleId}`;
 
-  const discoverAssets = (): string[] => {
+  const discoverAssets = (extensions: Set<string>): string[] => {
     if (!publicDirectory || !existsSync(publicDirectory)) return [];
     const assets: string[] = [];
     const walk = (directory: string) => {
@@ -23,7 +27,7 @@ function publicStateAssetsPlugin(): Plugin {
           entry.isFile() &&
           entry.name.toLowerCase() !== "og-default.png" &&
           entry.name.toLowerCase() !== "favicon.svg" &&
-          STATE_IMAGE_EXTENSIONS.has(extname(entry.name).toLowerCase())
+          extensions.has(extname(entry.name).toLowerCase())
         ) {
           assets.push(`/${relative(publicDirectory, filePath).split(sep).join("/")}`);
         }
@@ -39,11 +43,18 @@ function publicStateAssetsPlugin(): Plugin {
       publicDirectory = config.publicDir || resolve(config.root, "public");
     },
     resolveId(id) {
-      return id === virtualModuleId ? resolvedVirtualModuleId : null;
+      if (id === virtualModuleId) return resolvedVirtualModuleId;
+      if (id === virtualMediaModuleId) return resolvedVirtualMediaModuleId;
+      return null;
     },
     load(id) {
-      if (id !== resolvedVirtualModuleId) return null;
-      return `export const publicStateAssets = ${JSON.stringify(discoverAssets())};`;
+      if (id === resolvedVirtualModuleId) {
+        return `export const publicStateAssets = ${JSON.stringify(discoverAssets(STATE_IMAGE_EXTENSIONS))};`;
+      }
+      if (id === resolvedVirtualMediaModuleId) {
+        return `export const publicStateMedia = ${JSON.stringify(discoverAssets(STATE_MEDIA_EXTENSIONS))};`;
+      }
+      return null;
     },
     configureServer(server) {
       if (!publicDirectory || !existsSync(publicDirectory)) return;
@@ -51,9 +62,11 @@ function publicStateAssetsPlugin(): Plugin {
       const refreshAssetList = (changedPath: string) => {
         const filePath = resolve(changedPath);
         if (!filePath.startsWith(`${publicDirectory}${sep}`)) return;
-        if (!STATE_IMAGE_EXTENSIONS.has(extname(filePath).toLowerCase())) return;
-        const virtualModule = server.moduleGraph.getModuleById(resolvedVirtualModuleId);
-        if (virtualModule) server.moduleGraph.invalidateModule(virtualModule);
+        if (!STATE_MEDIA_EXTENSIONS.has(extname(filePath).toLowerCase())) return;
+        const imageModule = server.moduleGraph.getModuleById(resolvedVirtualModuleId);
+        const mediaModule = server.moduleGraph.getModuleById(resolvedVirtualMediaModuleId);
+        if (imageModule) server.moduleGraph.invalidateModule(imageModule);
+        if (mediaModule) server.moduleGraph.invalidateModule(mediaModule);
         server.ws.send({ type: "full-reload" });
       };
       server.watcher.on("add", refreshAssetList);

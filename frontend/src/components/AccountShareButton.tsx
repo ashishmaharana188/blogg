@@ -1,10 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { API_BASE_URL } from "../services/apiBase";
 import "./accountShareButton.css";
 
 const SHARE_TITLE = "Blogg · Public Dashboard";
 const SHARE_DESCRIPTION =
   "Explore the public Blogg dashboard: admin presence, music, public YouTube playlists, featured links, and Samsung Health metrics.";
+const SNAPSHOT_PROGRESS_MESSAGES = [
+  "Preparing the public dashboard snapshot…",
+  "Capturing the 1200 × 630 preview image…",
+  "Saving the new preview and replacing the previous snapshot…",
+];
 
 export default function AccountShareButton({
   canUpdateSnapshot = false,
@@ -13,10 +18,10 @@ export default function AccountShareButton({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [feedback, setFeedback] = useState("");
-  const [snapshotVersion, setSnapshotVersion] = useState(() =>
-    String(Date.now()),
-  );
+  const [snapshotVersion, setSnapshotVersion] = useState(() => String(Date.now()));
   const [canManageSnapshot, setCanManageSnapshot] = useState(canUpdateSnapshot);
+  const [snapshotCaptureUrl, setSnapshotCaptureUrl] = useState<string | null>(null);
+  const snapshotCaptureFrameRef = useRef<HTMLIFrameElement | null>(null);
   const shareUrl = `${window.location.origin}/share/account`;
   // The image endpoint belongs to the backend, not Vite. Use the configured API
   // origin so the preview works in localhost development as well as deployment.
@@ -34,50 +39,59 @@ export default function AccountShareButton({
     setCanManageSnapshot(canUpdateSnapshot);
   }, [canUpdateSnapshot]);
 
-  // Read the same session endpoint used by the main AuthProvider. The health
-  // summary endpoint is not an authentication API, and using it here caused the
-  // snapshot button to remain hidden when that separate health request failed.
-  // The snapshot write endpoint still independently enforces admin permissions.
+  // Use a hidden same-origin iframe to render the public view at the fixed landscape
+  // dimensions needed for social previews. Poll the capture status in the frame so
+  // this page can update the preview without opening a new tab or navigating away.
   useEffect(() => {
-    if (canManageSnapshot) return;
-    let active = true;
-    void fetch(`${API_BASE_URL}/api/auth/me`, {
-      credentials: "include",
-      cache: "no-store",
-      headers: { Accept: "application/json" },
-    })
-      .then(async (response) => {
-        if (!response.ok) return null;
-        return (await response.json()) as {
-          isAdmin?: boolean;
-          user?: { isAdmin?: boolean } | null;
-        };
-      })
-      .then((session) => {
-        if (
-          active &&
-          (session?.isAdmin === true || session?.user?.isAdmin === true)
-        ) {
-          setCanManageSnapshot(true);
-        }
-      })
-      .catch(() => {
-        // Public visitors should not see an admin snapshot action.
-      });
-    return () => {
-      active = false;
-    };
-  }, [canManageSnapshot]);
+    if (!snapshotCaptureUrl) return;
 
+    let attempts = 0;
+    const poll = window.setInterval(() => {
+      attempts += 1;
+      let statusElement: HTMLElement | null = null;
+      try {
+        statusElement = snapshotCaptureFrameRef.current?.contentDocument
+          ?.getElementById("account-share-snapshot-status") ?? null;
+      } catch {
+        // A navigation away from the same-origin account page is reported as a timeout below.
+      }
+
+      const message = statusElement?.textContent?.trim() || "";
+      if (message.startsWith("Snapshot saved.")) {
+        const version = String(Date.now());
+        setSnapshotVersion(version);
+        setPreviewImageUrl(`${API_BASE_URL}/share/account/og-image.png?v=${version}`);
+        setFeedback("Snapshot saved. The rich-preview image has been refreshed.");
+        setSnapshotCaptureUrl(null);
+        return;
+      }
+
+      // The capture routine uses these three messages while it is working. Any
+      // other non-empty message is its final error text and should be shown here.
+      const isProgress = SNAPSHOT_PROGRESS_MESSAGES.some((progress) => message === progress);
+      if (message && !isProgress) {
+        setFeedback(message);
+        setSnapshotCaptureUrl(null);
+        return;
+      }
+
+      if (attempts >= 120) {
+        setFeedback("Snapshot capture timed out. No new preview was confirmed; check the account page and try again.");
+        setSnapshotCaptureUrl(null);
+      }
+    }, 500);
+
+    return () => window.clearInterval(poll);
+  }, [snapshotCaptureUrl]);
+
+  // Keep compatibility with an already-open capture tab from an older version.
   useEffect(() => {
     const onSnapshotUpdated = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
       if (event.data?.type !== "blogg-account-snapshot-updated") return;
       const version = String(event.data.version || Date.now());
       setSnapshotVersion(version);
-      setPreviewImageUrl(
-        `${API_BASE_URL}/share/account/og-image.png?v=${version}`,
-      );
+      setPreviewImageUrl(`${API_BASE_URL}/share/account/og-image.png?v=${version}`);
       setFeedback("Snapshot saved. The rich-preview image has been refreshed.");
     };
     window.addEventListener("message", onSnapshotUpdated);
@@ -85,19 +99,12 @@ export default function AccountShareButton({
   }, []);
 
   const updateSnapshot = () => {
+    if (snapshotCaptureUrl) return;
     const captureUrl = new URL("/account", window.location.origin);
     captureUrl.searchParams.set("view", "public");
     captureUrl.searchParams.set("captureSnapshot", "1");
-    const captureWindow = window.open(captureUrl.toString(), "_blank");
-    if (!captureWindow) {
-      setFeedback(
-        "The snapshot tab was blocked. Allow pop-ups for this site and try again.",
-      );
-      return;
-    }
-    setFeedback(
-      "A public-view tab opened. It will replace the saved snapshot when capture finishes.",
-    );
+    setFeedback("Building the public-view snapshot in the background. This page will update when the capture finishes.");
+    setSnapshotCaptureUrl(captureUrl.toString());
   };
 
   const copyLink = async () => {
@@ -240,8 +247,9 @@ export default function AccountShareButton({
                   type="button"
                   className="account-share-snapshot-button"
                   onClick={updateSnapshot}
+                  disabled={Boolean(snapshotCaptureUrl)}
                 >
-                  Update rich-preview snapshot
+                  {snapshotCaptureUrl ? "Updating snapshot…" : "Update rich-preview snapshot"}
                 </button>
               </div>
             )}
@@ -252,6 +260,29 @@ export default function AccountShareButton({
             )}
           </section>
         </div>
+      )}
+
+      {snapshotCaptureUrl && (
+        <iframe
+          ref={snapshotCaptureFrameRef}
+          key={snapshotCaptureUrl}
+          src={snapshotCaptureUrl}
+          title="Background dashboard snapshot capture"
+          aria-hidden="true"
+          tabIndex={-1}
+          loading="eager"
+          style={{
+            position: "fixed",
+            left: "-1300px",
+            top: 0,
+            width: "1200px",
+            height: "630px",
+            border: 0,
+            opacity: 0,
+            pointerEvents: "none",
+            zIndex: -1,
+          }}
+        />
       )}
     </>
   );
