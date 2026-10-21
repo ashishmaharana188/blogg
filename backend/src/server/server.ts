@@ -18,6 +18,7 @@ import adminShowcaseRouter from "../routes/adminShowcase.ts";
 import youtubeMusicApiRouter from "../routes/youtubeMusicApi.ts";
 import linkPreviewRouter from "../routes/linkPreview.ts";
 import healthRouter from "../routes/health.ts";
+import currentReadingRouter from "../routes/currentReading.ts";
 
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
@@ -46,6 +47,7 @@ app.use("/api", linkPreviewRouter);
 // continues to provide Spotify playback, regular YouTube playlists, and featured links.
 app.use("/api", youtubeMusicApiRouter);
 app.use("/api", healthRouter);
+app.use("/api", currentReadingRouter);
 app.use("/api", adminShowcaseRouter);
 app.use(canvasViewInterceptor);
 app.use(blogInterceptRouter);
