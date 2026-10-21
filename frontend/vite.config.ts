@@ -85,6 +85,12 @@ export default defineConfig({
         target: "http://localhost:3000",
         changeOrigin: true,
       },
+      // The rich preview and snapshot image are backend-rendered. Without this
+      // local proxy, Vite returns the SPA HTML for a PNG request, so the img is blank.
+      "/share": {
+        target: "http://localhost:3000",
+        changeOrigin: true,
+      },
     },
   },
 });

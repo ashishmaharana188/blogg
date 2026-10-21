@@ -4,10 +4,12 @@ import HealthAdminPanel from "./pages/Account/HealthAdminPanel";
 import HealthWidget from "./pages/BloggFeed/HealthWidget";
 import AccountShareButton from "./components/AccountShareButton";
 import { API_BASE_URL } from "./services/apiBase";
+import { capturePublicDashboardPngBase64 } from "./utils/domSnapshot";
 
 const mountedRoots = new Map<HTMLElement, Root>();
 type AdminAccessState = "pending" | "allowed" | "denied" | "public";
 const adminAccessByMain = new WeakMap<HTMLElement, AdminAccessState>();
+let snapshotCaptureLocation = "";
 
 function mountRoot(host: HTMLElement, element: ReactNode) {
   if (mountedRoots.has(host)) return;
@@ -177,7 +179,7 @@ function ensureAdminPanel(main: HTMLElement) {
   });
 }
 
-function ensureAccountShareButton(statusCard: HTMLElement) {
+function ensureAccountShareButton(statusCard: HTMLElement, canUpdateSnapshot: boolean) {
   let host = statusCard.querySelector<HTMLDivElement>(
     ":scope > [data-account-share-host='true']",
   );
@@ -196,7 +198,15 @@ function ensureAccountShareButton(statusCard: HTMLElement) {
     statusCard.append(host);
   }
 
-  mountRoot(host, <AccountShareButton />);
+  const permissionValue = String(canUpdateSnapshot);
+  const permissionChanged = host.dataset.canUpdateSnapshot !== permissionValue;
+  host.dataset.canUpdateSnapshot = permissionValue;
+  const existingRoot = mountedRoots.get(host);
+  if (existingRoot && permissionChanged) {
+    existingRoot.render(<AccountShareButton canUpdateSnapshot={canUpdateSnapshot} />);
+  } else if (!existingRoot) {
+    mountRoot(host, <AccountShareButton canUpdateSnapshot={canUpdateSnapshot} />);
+  }
 }
 
 function ensurePublicWidget(rail: HTMLElement) {
@@ -204,6 +214,81 @@ function ensurePublicWidget(rail: HTMLElement) {
   const host = createHost("blog-feed-health-widget-root", "data-health-widget-host");
   rail.append(host);
   mountRoot(host, <HealthWidget />);
+}
+
+function showSnapshotCaptureStatus(message: string, isError = false) {
+  let status = document.getElementById("account-share-snapshot-status");
+  if (!status) {
+    status = document.createElement("div");
+    status.id = "account-share-snapshot-status";
+    status.setAttribute("role", "status");
+    status.style.cssText = "position:fixed;right:18px;bottom:18px;z-index:10000;max-width:min(440px,calc(100vw - 36px));box-sizing:border-box;padding:12px 15px;border:1px solid #d7dee7;border-radius:12px;background:#fff;color:#273246;box-shadow:0 8px 28px rgb(15 23 42 / 16%);font:13px/1.5 Arial,sans-serif";
+    document.body.appendChild(status);
+  }
+  status.textContent = message;
+  status.style.borderColor = isError ? "#e4a2a2" : "#d7dee7";
+  status.style.color = isError ? "#9b2c2c" : "#273246";
+}
+
+const wait = (milliseconds: number) => new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds));
+
+async function waitForPublicDashboardToSettle(root: HTMLElement) {
+  const startedAt = Date.now();
+  let lastMutationAt = startedAt;
+  const observer = new MutationObserver(() => { lastMutationAt = Date.now(); });
+  observer.observe(root, { childList: true, subtree: true, characterData: true });
+  try {
+    // Give the public API calls and injected Samsung Health panels time to render,
+    // then wait for a short quiet period (bounded so the capture cannot hang).
+    const minimumTime = startedAt + 2800;
+    const maximumTime = startedAt + 14000;
+    while (Date.now() < maximumTime) {
+      await wait(250);
+      const hasAllHealthPanels = root.querySelectorAll("[data-health-admin-host='true']").length >= 3;
+      if (Date.now() >= minimumTime && hasAllHealthPanels && Date.now() - lastMutationAt >= 1100) break;
+    }
+  } finally {
+    observer.disconnect();
+  }
+
+  const frame = root.getBoundingClientRect();
+  const visibleImages = Array.from(root.querySelectorAll("img")).filter((image) => {
+    const rect = image.getBoundingClientRect();
+    return rect.right > frame.left && rect.left < frame.right && rect.bottom > frame.top && rect.top < frame.bottom;
+  });
+  await Promise.race([
+    Promise.all(visibleImages.map((image) => image.decode().catch(() => undefined))),
+    wait(2500),
+  ]);
+}
+
+async function captureAndSavePublicDashboardSnapshot() {
+  showSnapshotCaptureStatus("Preparing the public dashboard snapshot…");
+  try {
+    const page = document.querySelector<HTMLElement>(".account-page");
+    if (!page) throw new Error("The account dashboard was not found.");
+    await waitForPublicDashboardToSettle(page);
+    showSnapshotCaptureStatus("Capturing the 1200 × 630 preview image…");
+    const pngBase64 = await capturePublicDashboardPngBase64(page);
+    showSnapshotCaptureStatus("Saving the new preview and replacing the previous snapshot…");
+    const response = await fetch(`${API_BASE_URL}/api/admin/share/account-snapshot`, {
+      method: "PUT",
+      credentials: "include",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ pngBase64 }),
+    });
+    const result = await response.json().catch(() => ({})) as { message?: string; updatedAt?: number };
+    if (!response.ok) throw new Error(result.message || `Snapshot upload failed (${response.status}).`);
+    const version = String(result.updatedAt || Date.now());
+    showSnapshotCaptureStatus("Snapshot saved. This replaces the previous image; no snapshot history is kept.");
+    if (window.opener && !window.opener.closed) {
+      window.opener.postMessage({ type: "blogg-account-snapshot-updated", version }, window.location.origin);
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not update the preview snapshot.";
+    showSnapshotCaptureStatus(message, true);
+  }
 }
 
 function syncHealthWidgets() {
@@ -216,10 +301,39 @@ function syncHealthWidgets() {
 
   const path = window.location.pathname.replace(/\/+$/, "") || "/";
   if (path === "/account") {
+    const params = new URLSearchParams(window.location.search);
+    const forcePublicView = params.get("view") === "public";
+    const wantsSnapshot = forcePublicView && params.get("captureSnapshot") === "1";
+    const accountPage = document.querySelector<HTMLElement>(".account-page");
+    accountPage?.classList.toggle("account-share-public-view", forcePublicView);
     const statusCard = document.querySelector<HTMLElement>(".account-dashboard-status");
-    if (statusCard) ensureAccountShareButton(statusCard);
+    if (forcePublicView) {
+      if (statusCard) {
+        const shareHost = statusCard.querySelector<HTMLElement>(":scope > [data-account-share-host='true']");
+        if (shareHost) {
+          const shareRoot = mountedRoots.get(shareHost);
+          if (shareRoot) {
+            shareRoot.unmount();
+            mountedRoots.delete(shareHost);
+          }
+          shareHost.remove();
+        }
+      }
+    }
     const main = document.querySelector<HTMLElement>(".account-page-main");
     if (main) ensureAdminPanel(main);
+    if (!forcePublicView && statusCard) {
+      ensureAccountShareButton(statusCard, main ? adminAccessByMain.get(main) === "allowed" : false);
+    }
+    if (wantsSnapshot && main) {
+      const captureLocation = `${window.location.pathname}${window.location.search}`;
+      if (snapshotCaptureLocation !== captureLocation) {
+        snapshotCaptureLocation = captureLocation;
+        void captureAndSavePublicDashboardSnapshot();
+      }
+    } else if (!wantsSnapshot) {
+      snapshotCaptureLocation = "";
+    }
   }
   if (path === "/feed") {
     const rail = document.querySelector<HTMLElement>(".blog-feed-widget-rail");

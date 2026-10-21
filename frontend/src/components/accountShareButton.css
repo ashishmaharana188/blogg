@@ -87,3 +87,59 @@
   .account-share-url-row input { width: 100%; min-height: 39px; }
   .account-share-url-row button { align-self: flex-end; }
 }
+
+.account-share-snapshot-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 15px;
+  padding-top: 13px;
+  border-top: 1px solid #edf0f4;
+}
+.account-share-snapshot-button {
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid #cbd4de;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #273246;
+  font-family: inherit;
+  font-size: .72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.account-share-snapshot-button:hover { background: #eef2f7; }
+.account-share-snapshot-actions small {
+  color: #7b8794;
+  font-family: Arial, sans-serif;
+  font-size: .68rem;
+  line-height: 1.45;
+}
+
+
+/* When the account dashboard is opened as a public share/capture, an active
+   administrator cookie must not expose editing, connection, or import controls. */
+.account-page.account-share-public-view .account-dashboard-status .account-field-label,
+.account-page.account-share-public-view .account-dashboard-status .account-activity-select,
+.account-page.account-share-public-view .account-dashboard-status .account-message,
+.account-page.account-share-public-view .account-dashboard-status .account-status-actions,
+.account-page.account-share-public-view .showcase-add-link-form,
+.account-page.account-share-public-view .health-import-form,
+.account-page.account-share-public-view .health-import-actions,
+.account-page.account-share-public-view .showcase-link-actions,
+.account-page.account-share-public-view .account-dashboard-youtube .showcase-section-heading > button,
+.account-page.account-share-public-view .account-dashboard-media-stack .showcase-mini-actions,
+.account-page.account-share-public-view .account-dashboard-media-stack .showcase-ytmusic-admin-heading,
+.account-page.account-share-public-view .account-dashboard-media-stack .showcase-ytmusic-picker-scroll,
+.account-page.account-share-public-view .account-dashboard-media-stack .showcase-ytmusic-public-block .showcase-ytmusic-subsection-heading button,
+.account-page.account-share-public-view .showcase-track-feature {
+  display: none !important;
+}
+
+.account-page.account-share-public-view .account-dashboard-status,
+.account-page.account-share-public-view .account-showcase-featured-section,
+.account-page.account-share-public-view .account-dashboard-youtube,
+.account-page.account-share-public-view .account-dashboard-media-stack > .account-showcase-section {
+  box-shadow: none;
+}
