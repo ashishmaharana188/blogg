@@ -1029,24 +1029,6 @@ export default function AccountPage() {
     }
   };
 
-  const syncYtmusicHistory = useCallback(async () => {
-    if (!isAdmin || !integrationState.ytmusic?.connected) return;
-    try {
-      const data = await api<{ lastPlayed: Song | null }>(
-        "/api/admin/showcase/ytmusic/sync-history",
-        { method: "POST" },
-      );
-      setYtmusicPublic((current) => ({
-        ...current,
-        connected: true,
-        lastPlayed: data.lastPlayed || current.lastPlayed,
-      }));
-      await refreshYtmusicPublic();
-    } catch {
-      // The last successful track remains visible until a newer one is found.
-    }
-  }, [isAdmin, integrationState.ytmusic?.connected, refreshYtmusicPublic]);
-
   useEffect(() => {
     void refreshYtmusicPublic();
     const pollId = window.setInterval(() => {
@@ -1058,17 +1040,7 @@ export default function AccountPage() {
   useEffect(() => {
     if (!isAdmin || !integrationState.ytmusic?.connected) return;
     void refreshLikedLibraries();
-    void syncYtmusicHistory();
-    const historyPoll = window.setInterval(() => {
-      void syncYtmusicHistory();
-    }, 60_000);
-    return () => window.clearInterval(historyPoll);
-  }, [
-    isAdmin,
-    integrationState.ytmusic?.connected,
-    refreshLikedLibraries,
-    syncYtmusicHistory,
-  ]);
+  }, [isAdmin, integrationState.ytmusic?.connected, refreshLikedLibraries]);
 
   const integration = (provider: string): IntegrationStatus =>
     integrationState[provider] || { configured: false, connected: false };

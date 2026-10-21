@@ -267,9 +267,8 @@ async function getYtmusicStatus(): Promise<IntegrationStatus> {
   };
 }
 
-// Patch the existing integrations response without replacing Spotify playback logic.
-// The legacy service URL is disabled in server.ts, so the old integration-status
-// helper cannot make calls to the retired Python companion.
+// Add OAuth-backed YouTube Music status to the existing Spotify/YouTube response
+// without replacing the Spotify playback logic.
 router.get("/showcase/integrations", async (_req, res, next) => {
   try {
     const status = await getYtmusicStatus();

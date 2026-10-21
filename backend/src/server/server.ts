@@ -20,12 +20,6 @@ import linkPreviewRouter from "../routes/linkPreview.ts";
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
 
-// YouTube Music now uses the existing YouTube Data API OAuth token. Clear legacy
-// companion settings so older integration-status helpers cannot call the retired
-// Python service while still serving unrelated YouTube Library routes.
-process.env.YTMUSIC_SERVICE_URL = "";
-process.env.YTMUSIC_SERVICE_TOKEN = "";
-
 app.use(
   cors({
     origin: process.env.FRONTEND_URL ?? "http://localhost:5173",
@@ -44,8 +38,8 @@ app.use(sharePreviewRouter);
 app.use("/api/auth", authenticationRouter);
 app.use("/api/admin", adminStatusRouter);
 app.use("/api", linkPreviewRouter);
-// Mount replacement routes before the legacy showcase router so the Python
-// YouTube Music companion is no longer used by any active YT Music endpoint.
+// Mount the OAuth-backed YouTube Music routes first. The general showcase router
+// continues to provide Spotify playback, regular YouTube playlists, and featured links.
 app.use("/api", youtubeMusicApiRouter);
 app.use("/api", adminShowcaseRouter);
 app.use(canvasViewInterceptor);
