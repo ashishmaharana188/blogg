@@ -207,13 +207,7 @@ export default function HealthAdminPanel({
         >
           <div className="health-panel-heading">
             <div>
-              <p className="account-eyebrow">PERSONAL METRICS</p>
-              <h2 id="health-panel-title">Samsung Health</h2>
-              <p>
-                {isAdmin
-                  ? "Import selected CSV and JSON files. Re-imports update existing records instead of duplicating them."
-                  : "Daily steps, recent running sessions and heart-rate summaries."}
-              </p>
+              <p className="account-eyebrow">HEALTH METRICS</p>
             </div>
             <button
               type="button"
@@ -227,9 +221,6 @@ export default function HealthAdminPanel({
 
           {isAdmin && (
             <form className="health-import-form" onSubmit={importFiles}>
-              <label htmlFor="health-samsung-files">
-                Samsung Health export files
-              </label>
               <input
                 id="health-samsung-files"
                 type="file"
@@ -240,14 +231,7 @@ export default function HealthAdminPanel({
                 }
                 disabled={uploading}
               />
-              <p className="health-import-hint">
-                Choose <strong>activity.day_summary</strong> or{" "}
-                <strong>tracker.pedometer_day_summary</strong> for steps;{" "}
-                <strong>exercise CSV</strong> plus its matching{" "}
-                <strong>live_data JSON</strong> for running/BPM; and{" "}
-                <strong>tracker.heart_rate CSV</strong> for standalone
-                heart-rate history. No ZIP required.
-              </p>
+
               {files.length > 0 && (
                 <p className="health-selected-files">
                   {files.length} file(s) selected:{" "}
