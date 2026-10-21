@@ -13,46 +13,93 @@ type ReadingBook = {
 };
 
 type SearchResponse = { results: ReadingBook[]; total: number };
+type ReadingTarget = "current" | "other";
+type WidgetVariant = "account" | "feed";
 
 async function parseResponse<T>(response: Response): Promise<T> {
   const payload = await response.json().catch(() => ({})) as T & { message?: string };
-  if (!response.ok) {
-    throw new Error(payload.message || `Request failed (${response.status}).`);
-  }
+  if (!response.ok) throw new Error(payload.message || `Request failed (${response.status}).`);
   return payload;
 }
 
 function BookCover({ book }: { book: ReadingBook }) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [book.identifier, book.coverUrl]);
+
   return (
-    <a className="current-reading-cover" href={book.itemUrl} target="_blank" rel="noreferrer" aria-label={`Open ${book.title} on Internet Archive`}>
-      <img
-        src={book.coverUrl}
-        alt={`Cover of ${book.title}`}
-        loading="lazy"
-        onError={(event) => event.currentTarget.parentElement?.classList.add("has-no-cover")}
-      />
+    <a className={`current-reading-cover${failed ? " has-no-cover" : ""}`} href={book.itemUrl} target="_blank" rel="noreferrer" aria-label={`Open ${book.title} on Internet Archive`}>
+      {!failed && <img src={book.coverUrl} alt={`Cover of ${book.title}`} loading="lazy" onError={() => setFailed(true)} />}
       <span className="current-reading-cover-fallback" aria-hidden="true">BOOK</span>
     </a>
   );
 }
 
-export default function CurrentReadingWidget({ isAdmin }: { isAdmin: boolean }) {
+function BookDetails({ book }: { book: ReadingBook }) {
+  return (
+    <div className="current-reading-book">
+      <BookCover book={book} />
+      <div className="current-reading-book-copy">
+        <a className="current-reading-title" href={book.itemUrl} target="_blank" rel="noreferrer">{book.title}</a>
+        <p>{book.author}</p>
+        {book.year && <span>{book.year}</span>}
+        <a className="current-reading-source" href={book.itemUrl} target="_blank" rel="noreferrer">Internet Archive ↗</a>
+      </div>
+    </div>
+  );
+}
+
+function FeedReadingWidget({ book }: { book: ReadingBook | null }) {
+  const [coverFailed, setCoverFailed] = useState(false);
+  useEffect(() => setCoverFailed(false), [book?.identifier, book?.coverUrl]);
+  const title = book?.title || "NO CURRENT READING";
+  const artwork = book?.coverUrl && !coverFailed
+    ? <img className="blog-feed-now-playing-artwork" src={book.coverUrl} alt="" loading="lazy" onError={() => setCoverFailed(true)} />
+    : <span className="blog-feed-now-playing-placeholder" aria-hidden="true">▤</span>;
+
+  return (
+    <aside className="blog-feed-now-playing-teaser blog-feed-current-reading-teaser" aria-label={`Current reading: ${title}`}>
+      {book ? (
+        <a className="blog-feed-now-playing-artwork-frame" href={book.itemUrl} target="_blank" rel="noreferrer" aria-label={`Open ${book.title} on Internet Archive`}>
+          {artwork}
+        </a>
+      ) : (
+        <div className="blog-feed-now-playing-artwork-frame">{artwork}</div>
+      )}
+      <div className="blog-feed-now-playing-marquee" aria-hidden="true">
+        <div className="blog-feed-now-playing-marquee-track">
+          <span className="blog-feed-now-playing-marquee-run">{title}</span>
+          <span className="blog-feed-now-playing-marquee-run">{title}</span>
+        </div>
+      </div>
+      <span className="blog-feed-now-playing-sr-only">{title}</span>
+    </aside>
+  );
+}
+
+export default function CurrentReadingWidget({
+  isAdmin,
+  variant = "account",
+}: {
+  isAdmin: boolean;
+  variant?: WidgetVariant;
+}) {
+  const idPrefix = "account-current-reading";
   const [book, setBook] = useState<ReadingBook | null>(null);
+  const [otherBook, setOtherBook] = useState<ReadingBook | null>(null);
   const [loadingBook, setLoadingBook] = useState(true);
+  const [loadingOtherBook, setLoadingOtherBook] = useState(variant === "account");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ReadingBook[]>([]);
   const [searching, setSearching] = useState(false);
-  const [savingIdentifier, setSavingIdentifier] = useState("");
-  const [clearing, setClearing] = useState(false);
+  const [saving, setSaving] = useState("");
+  const [clearing, setClearing] = useState<ReadingTarget | "">("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
   useEffect(() => {
     let cancelled = false;
     void fetch(`${API_BASE_URL}/api/current-reading`, {
-      credentials: "omit",
-      cache: "no-store",
-      headers: { Accept: "application/json" },
+      credentials: "omit", cache: "no-store", headers: { Accept: "application/json" },
     })
       .then(parseResponse<{ book: ReadingBook | null }>)
       .then((payload) => { if (!cancelled) setBook(payload.book); })
@@ -60,8 +107,20 @@ export default function CurrentReadingWidget({ isAdmin }: { isAdmin: boolean }) 
         if (!cancelled) setError(reason instanceof Error ? reason.message : "Could not load the current book.");
       })
       .finally(() => { if (!cancelled) setLoadingBook(false); });
+
+    if (variant === "account") {
+      void fetch(`${API_BASE_URL}/api/other-reading`, {
+        credentials: "omit", cache: "no-store", headers: { Accept: "application/json" },
+      })
+        .then(parseResponse<{ book: ReadingBook | null }>)
+        .then((payload) => { if (!cancelled) setOtherBook(payload.book); })
+        .catch((reason: unknown) => {
+          if (!cancelled) setError(reason instanceof Error ? reason.message : "Could not load other reading.");
+        })
+        .finally(() => { if (!cancelled) setLoadingOtherBook(false); });
+    }
     return () => { cancelled = true; };
-  }, []);
+  }, [variant]);
 
   const searchBooks = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -76,9 +135,7 @@ export default function CurrentReadingWidget({ isAdmin }: { isAdmin: boolean }) 
     setResults([]);
     try {
       const response = await fetch(`${API_BASE_URL}/api/admin/current-reading/search?q=${encodeURIComponent(trimmed)}`, {
-        credentials: "include",
-        cache: "no-store",
-        headers: { Accept: "application/json" },
+        credentials: "include", cache: "no-store", headers: { Accept: "application/json" },
       });
       const payload = await parseResponse<SearchResponse>(response);
       setResults(payload.results || []);
@@ -90,94 +147,91 @@ export default function CurrentReadingWidget({ isAdmin }: { isAdmin: boolean }) 
     }
   };
 
-  const selectBook = async (candidate: ReadingBook) => {
-    setSavingIdentifier(candidate.identifier);
+  const selectBook = async (candidate: ReadingBook, target: ReadingTarget) => {
+    setSaving(`${target}:${candidate.identifier}`);
     setError("");
     setMessage("");
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/current-reading`, {
-        method: "PUT",
-        credentials: "include",
-        cache: "no-store",
+      const response = await fetch(`${API_BASE_URL}/api/admin/${target}-reading`, {
+        method: "PUT", credentials: "include", cache: "no-store",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({ book: candidate }),
       });
       const payload = await parseResponse<{ book: ReadingBook }>(response);
-      setBook(payload.book);
+      if (target === "current") setBook(payload.book);
+      else setOtherBook(payload.book);
       setResults([]);
       setQuery("");
-      setMessage("Current reading updated.");
+      setMessage(target === "current" ? "Current reading updated." : "Other reading updated.");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Could not save the selected book.");
+      setError(reason instanceof Error ? reason.message : `Could not save ${target} reading.`);
     } finally {
-      setSavingIdentifier("");
+      setSaving("");
     }
   };
 
-  const clearBook = async () => {
-    setClearing(true);
+  const clearBook = async (target: ReadingTarget) => {
+    setClearing(target);
     setError("");
     setMessage("");
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/current-reading`, {
-        method: "DELETE",
-        credentials: "include",
-        cache: "no-store",
-        headers: { Accept: "application/json" },
+      const response = await fetch(`${API_BASE_URL}/api/admin/${target}-reading`, {
+        method: "DELETE", credentials: "include", cache: "no-store", headers: { Accept: "application/json" },
       });
       await parseResponse<{ book: null }>(response);
-      setBook(null);
-      setMessage("Current reading cleared.");
+      if (target === "current") setBook(null);
+      else setOtherBook(null);
+      setMessage(target === "current" ? "Current reading cleared." : "Other reading cleared.");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Could not clear the current book.");
+      setError(reason instanceof Error ? reason.message : `Could not clear ${target} reading.`);
     } finally {
-      setClearing(false);
+      setClearing("");
     }
   };
 
+  if (variant === "feed") return <FeedReadingWidget book={book} />;
+
   return (
-    <section className="current-reading-panel" aria-labelledby="current-reading-heading">
+    <section className="current-reading-panel" aria-labelledby={`${idPrefix}-heading`}>
       <div className="current-reading-heading">
         <div>
           <p className="current-reading-eyebrow">READING</p>
-          <h2 id="current-reading-heading">Currently reading</h2>
+          <h2 id={`${idPrefix}-heading`}>Currently reading</h2>
         </div>
         {isAdmin && book && (
-          <button type="button" className="current-reading-clear" onClick={() => void clearBook()} disabled={clearing}>
-            {clearing ? "Clearing…" : "Clear"}
+          <button type="button" className="current-reading-clear" onClick={() => void clearBook("current")} disabled={Boolean(clearing)}>
+            {clearing === "current" ? "Clearing…" : "Clear"}
           </button>
         )}
       </div>
 
-      {loadingBook ? (
-        <p className="current-reading-muted">Loading current book…</p>
-      ) : book ? (
-        <div className="current-reading-book">
-          <BookCover book={book} />
-          <div className="current-reading-book-copy">
-            <a className="current-reading-title" href={book.itemUrl} target="_blank" rel="noreferrer">{book.title}</a>
-            <p>{book.author}</p>
-            {book.year && <span>{book.year}</span>}
-            <a className="current-reading-source" href={book.itemUrl} target="_blank" rel="noreferrer">Internet Archive ↗</a>
-          </div>
+      {loadingBook ? <p className="current-reading-muted">Loading current book…</p>
+        : book ? <BookDetails book={book} />
+          : <p className="current-reading-muted">No current book selected.</p>}
+
+      <section className="current-reading-other-section" aria-labelledby={`${idPrefix}-other-heading`}>
+        <div className="current-reading-heading current-reading-other-heading">
+          <h3 id={`${idPrefix}-other-heading`}>Other reading</h3>
+          {isAdmin && otherBook && (
+            <button type="button" className="current-reading-clear" onClick={() => void clearBook("other")} disabled={Boolean(clearing)}>
+              {clearing === "other" ? "Clearing…" : "Clear"}
+            </button>
+          )}
         </div>
-      ) : (
-        <p className="current-reading-muted">No current book selected.</p>
-      )}
+        {loadingOtherBook ? <p className="current-reading-muted">Loading…</p>
+          : otherBook ? <BookDetails book={otherBook} />
+            : <p className="current-reading-muted">No other reading selected.</p>}
+      </section>
 
       {isAdmin && (
         <div className="current-reading-admin">
           <form className="current-reading-search-form" onSubmit={(event) => void searchBooks(event)}>
-            <label htmlFor="current-reading-query">Find a book by title or author</label>
+            <label htmlFor={`${idPrefix}-admin-query`}>Find a book by title or author</label>
             <div className="current-reading-search-row">
               <input
-                id="current-reading-query"
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                maxLength={150}
-                placeholder="Book title or author"
-                autoComplete="off"
+                id={`${idPrefix}-admin-query`} type="search" value={query}
+                onChange={(event) => setQuery(event.target.value)} maxLength={150}
+                placeholder="Book title or author" autoComplete="off"
               />
               <button type="submit" disabled={searching || query.trim().length < 2}>
                 {searching ? "Searching…" : "Search"}
@@ -193,9 +247,14 @@ export default function CurrentReadingWidget({ isAdmin }: { isAdmin: boolean }) 
                   <div className="current-reading-result-copy">
                     <strong>{result.title}</strong>
                     <span>{result.author}{result.year ? ` · ${result.year}` : ""}</span>
-                    <button type="button" onClick={() => void selectBook(result)} disabled={Boolean(savingIdentifier) || clearing}>
-                      {savingIdentifier === result.identifier ? "Saving…" : "Set as current reading"}
-                    </button>
+                    <div className="current-reading-result-actions">
+                      <button type="button" onClick={() => void selectBook(result, "current")} disabled={Boolean(saving) || Boolean(clearing)}>
+                        {saving === `current:${result.identifier}` ? "Saving…" : "Set as current reading"}
+                      </button>
+                      <button type="button" onClick={() => void selectBook(result, "other")} disabled={Boolean(saving) || Boolean(clearing)}>
+                        {saving === `other:${result.identifier}` ? "Saving…" : "Set as other reading"}
+                      </button>
+                    </div>
                   </div>
                 </article>
               ))}
