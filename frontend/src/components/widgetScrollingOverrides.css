@@ -28,7 +28,8 @@
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-gutter: stable;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none;
   padding: 0 5px 4px 0;
   -webkit-overflow-scrolling: touch;
 }
@@ -44,4 +45,11 @@
   font-size: .68rem;
   line-height: 1.5;
   text-align: center;
+}
+
+/* Hide only the visual scrollbar for Current Reading results; keep wheel, touch, and keyboard scrolling. */
+.current-reading-results::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }

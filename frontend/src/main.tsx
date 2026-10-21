@@ -11,6 +11,8 @@ import "./mobile.css";
 import "./healthWidgetsBootstrap.tsx";
 import "./currentReadingBootstrap.tsx";
 import "./widgetVisibilityBootstrap.ts";
+import "./responsiveHealthDashboard.css";
+import "./responsiveFeedWidgetFlow.css";
 
 installUiConsoleDiagnostics();
 

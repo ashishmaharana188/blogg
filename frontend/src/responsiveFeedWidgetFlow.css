@@ -1,0 +1,304 @@
+/*
+ * Mobile/tablet Blog Feed widget group.
+ * Keep Now Playing, Current Reading, Health and future sibling widgets in one
+ * flex-wrap flow. Every widget gets the same outer height; Health switches to a
+ * horizontal, compact grid so it does not make the other cards grow vertically.
+ */
+@media (max-width: 1248px) {
+  .blog-feed-page .blog-feed-widget-rail {
+    position: static !important;
+    display: flex !important;
+    flex-flow: row wrap !important;
+    align-items: stretch !important;
+    align-content: flex-start !important;
+    justify-content: flex-start !important;
+    gap: 16px 24px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 8px 0 24px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Future widget hosts get the same natural flow unless a specific widget needs more width. */
+  .blog-feed-page .blog-feed-widget-rail > * {
+    box-sizing: border-box !important;
+    min-width: 0 !important;
+    align-self: stretch !important;
+    flex: 1 1 160px !important;
+  }
+
+  .blog-feed-page .blog-feed-widget-rail > .blog-feed-now-playing-teaser,
+  .blog-feed-page .blog-feed-widget-rail > .current-reading-feed-bootstrap-host {
+    display: flex !important;
+    flex: 1 1 160px !important;
+    width: 184px !important;
+    min-width: 0 !important;
+    max-width: 184px !important;
+    height: 196px !important;
+    min-height: 196px !important;
+    max-height: 196px !important;
+    margin: 0 !important;
+    align-self: stretch !important;
+  }
+
+  .blog-feed-page .blog-feed-widget-rail > .blog-feed-now-playing-teaser {
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+  }
+
+  .blog-feed-page .blog-feed-widget-rail > .current-reading-feed-bootstrap-host > .blog-feed-current-reading-teaser {
+    display: flex !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 196px !important;
+    min-height: 196px !important;
+    max-height: 196px !important;
+    margin: 0 !important;
+    align-self: stretch !important;
+    justify-content: flex-start !important;
+  }
+
+  /*
+   * A 340px minimum is deliberate: if the two artwork cards plus Health do not
+   * fit together, flex-wrap sends Health to its own full-width row. That prevents
+   * a tall narrow Health panel beside two short cards.
+   */
+  .blog-feed-page .blog-feed-widget-rail > .blog-feed-health-widget-root {
+    display: flex !important;
+    flex: 1 1 340px !important;
+    width: auto !important;
+    min-width: min(100%, 340px) !important;
+    max-width: 100% !important;
+    height: 196px !important;
+    min-height: 196px !important;
+    max-height: 196px !important;
+    margin: 0 !important;
+    align-self: stretch !important;
+    container-type: inline-size;
+  }
+
+  .blog-feed-page .blog-feed-health-widget-root > .blog-feed-health-widget {
+    box-sizing: border-box !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr) !important;
+    grid-template-rows: auto auto auto minmax(0, 1fr) !important;
+    grid-template-areas:
+      "heading heading"
+      "primary secondary"
+      "chart secondary"
+      "run exercise" !important;
+    align-items: start !important;
+    align-content: stretch !important;
+    gap: 0 10px !important;
+    width: 100% !important;
+    height: 196px !important;
+    min-width: 0 !important;
+    min-height: 196px !important;
+    max-width: 100% !important;
+    max-height: 196px !important;
+    padding: 10px !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-heading {
+    grid-area: heading;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #edf0f4;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-primary {
+    grid-area: primary;
+    min-width: 0;
+    padding: 6px 0 2px;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-primary strong {
+    font-size: 1.08rem;
+    line-height: 1.15;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-step-chart {
+    grid-area: chart;
+    align-self: stretch;
+    min-width: 0;
+    height: 22px;
+    margin: 0 0 4px;
+    padding-bottom: 3px;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-secondary {
+    grid-area: secondary;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+    align-self: stretch;
+    gap: 6px;
+    min-width: 0;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 7px 0 5px 9px;
+    border-bottom: 0;
+    border-left: 1px solid #edf0f4;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-secondary > div {
+    min-width: 0;
+    gap: 3px;
+    overflow-wrap: anywhere;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-secondary strong {
+    font-size: .68rem;
+    line-height: 1.2;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-run {
+    grid-area: run;
+    align-self: stretch;
+    box-sizing: border-box;
+    min-width: 0;
+    margin: 0;
+    padding: 7px 4px 0 0;
+    border-top: 1px solid #edf0f4;
+    overflow: hidden;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-run-symbol {
+    display: none;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-run > div:last-child {
+    min-width: 0;
+    gap: 2px;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-run strong {
+    font-size: .7rem;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-run small {
+    font-size: .55rem;
+    line-height: 1.25;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-exercises {
+    grid-area: exercise;
+    align-self: stretch;
+    box-sizing: border-box;
+    min-width: 0;
+    margin: 0;
+    padding: 7px 0 0 8px;
+    border-top: 1px solid #edf0f4;
+    overflow: hidden;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-exercises-heading {
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-exercises-heading > span {
+    min-width: 0;
+    font-size: .45rem;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-exercises-heading time {
+    flex: 0 0 auto;
+    font-size: .45rem;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-exercise-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px 7px;
+    min-width: 0;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-exercise-metric {
+    min-width: 0;
+    gap: 2px;
+    overflow: hidden;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-exercise-metric > span {
+    font-size: .43rem;
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-exercise-metric strong {
+    font-size: .61rem;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-empty,
+  .blog-feed-page .blog-feed-health-widget > :not(.blog-feed-health-heading):not(.blog-feed-health-primary):not(.blog-feed-health-step-chart):not(.blog-feed-health-secondary):not(.blog-feed-health-run):not(.blog-feed-health-exercises) {
+    grid-column: 1 / -1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* When Health wraps below the smaller widgets, use the full row to lay out all its data. */
+@container (min-width: 500px) {
+  .blog-feed-page .blog-feed-health-widget-root > .blog-feed-health-widget {
+    grid-template-columns: minmax(0, .8fr) minmax(0, 1fr) minmax(0, 1.2fr) !important;
+    grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr) !important;
+    grid-template-areas:
+      "heading heading heading"
+      "primary secondary run"
+      "chart secondary exercise" !important;
+    column-gap: 14px !important;
+    padding: 11px 13px !important;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-secondary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding-left: 12px;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-run {
+    padding: 7px 0 0 10px;
+    border-top: 0;
+    border-left: 1px solid #edf0f4;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-run-symbol {
+    display: grid;
+    width: 20px;
+    height: 20px;
+    flex-basis: 20px;
+    font-size: .7rem;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-exercises {
+    padding: 7px 0 0 10px;
+    border-top: 1px solid #edf0f4;
+    border-left: 1px solid #edf0f4;
+  }
+}
+
+@media (max-width: 480px) {
+  .blog-feed-page .blog-feed-widget-rail {
+    gap: 14px 12px !important;
+    margin-bottom: 20px !important;
+  }
+
+  .blog-feed-page .blog-feed-widget-rail > .blog-feed-now-playing-teaser,
+  .blog-feed-page .blog-feed-widget-rail > .current-reading-feed-bootstrap-host {
+    flex-basis: 160px !important;
+  }
+
+  .blog-feed-page .blog-feed-widget-rail > .blog-feed-health-widget-root {
+    flex-basis: 340px !important;
+  }
+}

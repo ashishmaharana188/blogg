@@ -1,0 +1,246 @@
+/*
+ * Responsive profile dashboard flow.
+ * The existing three column wrappers keep their desktop layout. At tablet and
+ * phone widths we flatten those wrappers so their cards become items in one
+ * shared responsive grid instead of each column trapping its own Health card.
+ */
+.account-page .account-dashboard-grid {
+  align-items: start;
+  grid-auto-flow: row;
+  min-width: 0;
+}
+
+@media (min-width: 721px) and (max-width: 1120px) {
+  .account-page .account-dashboard-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    align-items: start !important;
+    gap: 16px !important;
+  }
+
+  .account-page .account-dashboard-grid > .account-dashboard-left-column,
+  .account-page .account-dashboard-grid > .account-dashboard-youtube-column,
+  .account-page .account-dashboard-grid > .account-dashboard-media-column,
+  .account-page .account-dashboard-left-column > .account-dashboard-left-base {
+    display: contents !important;
+  }
+
+  /* Base flow for cards added to any of the flattened dashboard columns. */
+  .account-page .account-dashboard-left-base > *,
+  .account-page .account-dashboard-youtube-column > *,
+  .account-page .account-dashboard-media-column > * {
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+    grid-column: 1 / -1;
+    order: 30;
+  }
+
+  /* The two primary showcase areas share a row; Health follows as one group. */
+  .account-page .account-dashboard-grid .account-dashboard-status {
+    grid-column: 1 / -1 !important;
+    order: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .account-page .account-dashboard-grid .account-dashboard-youtube {
+    grid-column: 1 / 2 !important;
+    order: 1 !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+  }
+
+  .account-page .account-dashboard-grid .account-dashboard-media-stack {
+    grid-column: 2 / 3 !important;
+    order: 2 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 16px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;
+  }
+
+  .account-page .account-dashboard-grid .current-reading-bootstrap-host {
+    grid-column: 1 / -1 !important;
+    order: 3 !important;
+  }
+
+  /* Treat all three Health sections as a single full-width dashboard group. */
+  .account-page .account-dashboard-grid .health-admin-bootstrap-root[data-health-section="overview"] {
+    grid-column: 1 / -1 !important;
+    order: 10 !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .account-page .account-dashboard-grid .health-admin-bootstrap-root[data-health-section="steps"] {
+    grid-column: 1 / -1 !important;
+    order: 11 !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  /* BPM and Exercise are side-by-side when a tablet has room for both. */
+  .account-page .account-dashboard-grid .health-admin-bootstrap-root[data-health-section="running"] {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    align-items: start !important;
+    gap: 16px !important;
+    grid-column: 1 / -1 !important;
+    order: 12 !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+  }
+
+  .account-page .health-admin-bootstrap-root[data-health-section="running"] > .health-admin-running,
+  .account-page .health-admin-bootstrap-root[data-health-section="running"] > .health-admin-steps {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .account-page .account-dashboard-grid .account-dashboard-featured-header {
+    grid-column: 1 / -1 !important;
+    order: 20 !important;
+  }
+
+  .account-page .account-dashboard-grid .account-dashboard-featured-card-list {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    grid-column: 1 / -1 !important;
+    order: 21 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .account-page .account-dashboard-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+
+  .account-page .account-dashboard-grid > .account-dashboard-left-column,
+  .account-page .account-dashboard-grid > .account-dashboard-youtube-column,
+  .account-page .account-dashboard-grid > .account-dashboard-media-column,
+  .account-page .account-dashboard-left-column > .account-dashboard-left-base {
+    display: contents !important;
+  }
+
+  .account-page .account-dashboard-left-base > *,
+  .account-page .account-dashboard-youtube-column > *,
+  .account-page .account-dashboard-media-column > * {
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+    grid-column: 1 / -1;
+    order: 30;
+  }
+
+  .account-page .account-dashboard-grid .account-dashboard-status {
+    grid-column: 1 / -1 !important;
+    order: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .account-page .account-dashboard-grid .account-dashboard-youtube {
+    grid-column: 1 / -1 !important;
+    order: 1 !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .account-page .account-dashboard-grid .account-dashboard-media-stack {
+    grid-column: 1 / -1 !important;
+    order: 2 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;
+  }
+
+  .account-page .account-dashboard-grid .current-reading-bootstrap-host {
+    grid-column: 1 / -1 !important;
+    order: 3 !important;
+  }
+
+  .account-page .account-dashboard-grid .health-admin-bootstrap-root[data-health-section="overview"] {
+    grid-column: 1 / -1 !important;
+    order: 10 !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .account-page .account-dashboard-grid .health-admin-bootstrap-root[data-health-section="steps"] {
+    grid-column: 1 / -1 !important;
+    order: 11 !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  /* Full-width cards on phones avoid forcing graphs and labels into narrow tiles. */
+  .account-page .account-dashboard-grid .health-admin-bootstrap-root[data-health-section="running"] {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    grid-column: 1 / -1 !important;
+    order: 12 !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+  }
+
+  .account-page .health-admin-bootstrap-root[data-health-section="running"] > .health-admin-running,
+  .account-page .health-admin-bootstrap-root[data-health-section="running"] > .health-admin-steps {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .account-page .account-dashboard-grid .account-dashboard-featured-header {
+    grid-column: 1 / -1 !important;
+    order: 20 !important;
+  }
+
+  .account-page .account-dashboard-grid .account-dashboard-featured-card-list {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    grid-column: 1 / -1 !important;
+    order: 21 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .account-page .account-dashboard-grid .account-showcase-section,
+  .account-page .account-dashboard-grid .account-status-card {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}
