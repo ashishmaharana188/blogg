@@ -794,3 +794,8 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Distinguish the independent Now Playing selection from visitor promotion. */
+.showcase-now-playing-toggle { white-space: normal; line-height: 1.35; }
+.showcase-now-playing-toggle.is-active { border-color: #b8dfc8; background: #f1faf4; color: #236347; font-weight: 700; }
+.showcase-now-playing-toggle:disabled { opacity: .72; cursor: default; }

@@ -335,17 +335,21 @@ router.post("/admin/integrations/ytmusic/disconnect", ...ADMIN_GUARD, async (_re
 
 router.get("/showcase/ytmusic/public", async (_req, res, next) => {
   try {
-    const [enabled, saved, youtube] = await Promise.all([
+    const [enabled, saved, youtube, selectedNowPlaying] = await Promise.all([
       readSetting("ytmusic-enabled"),
       readSetting("ytmusic-public-showcase"),
       readSetting("youtube"),
+      readSetting("ytmusic-now-playing"),
     ]);
     const connected = enabled?.enabled === true && Boolean(youtube?.refreshTokenEncrypted);
     const tracks = Array.isArray(saved?.tracks)
       ? saved.tracks.map(normalizePublicSong).filter((track: Song | null): track is Song => Boolean(track)).slice(0, 3)
       : [];
+    const nowPlaying = normalizePublicSong(selectedNowPlaying?.track);
     let fallbackTrack: Song | null = null;
-    if (connected && tracks.length === 0) {
+    // Now Playing is independent from the visitor-promoted list. If no manual
+    // selection exists, the feed may still use a liked Music-category fallback.
+    if (connected && !nowPlaying) {
       try {
         fallbackTrack = (await cachedLikedMusicSongs())[0] || null;
       } catch (error) {
@@ -353,13 +357,40 @@ router.get("/showcase/ytmusic/public", async (_req, res, next) => {
         console.warn(`[youtubeMusicApi] Public liked-track fallback unavailable: ${detail}`);
       }
     }
-    res.setHeader("Cache-Control", "public, max-age=30");
+    res.setHeader("Cache-Control", "public, max-age=5, s-maxage=5");
     return res.json({
       connected,
+      nowPlaying,
       lastPlayed: null,
       tracks,
       fallbackTrack,
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// A single, persistent Now Playing selection. It is intentionally separate
+// from the up-to-three tracks promoted to visitors in ytmusic-public-showcase.
+router.post("/admin/showcase/ytmusic/now-playing", ...ADMIN_GUARD, async (req, res, next) => {
+  try {
+    const track = normalizePublicSong(req.body?.track);
+    if (!track) {
+      return res.status(400).json({ message: "Choose a valid YouTube Music track." });
+    }
+    await saveSetting("ytmusic-now-playing", { track, selectedAt: new Date() });
+    res.setHeader("Cache-Control", "no-store");
+    return res.json({ nowPlaying: track });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/admin/showcase/ytmusic/now-playing", ...ADMIN_GUARD, async (_req, res, next) => {
+  try {
+    await getDB().collection("adminIntegrationSettings").deleteOne({ key: "ytmusic-now-playing" });
+    res.setHeader("Cache-Control", "no-store");
+    return res.json({ nowPlaying: null });
   } catch (error) {
     next(error);
   }

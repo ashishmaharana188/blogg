@@ -32,6 +32,7 @@ type IntegrationPlaybackResponse = {
 
 type YtMusicPublicResponse = {
   connected?: boolean;
+  nowPlaying?: MusicTrack | null;
   lastPlayed?: MusicTrack | null;
   tracks?: MusicTrack[];
   fallbackTrack?: MusicTrack | null;
@@ -43,7 +44,7 @@ type FeedNowPlayingTrack = {
   thumbnail?: string;
   url?: string;
   provider: "spotify" | "ytmusic";
-  label: "NOW PLAYING" | "LAST PLAYED" | "PUBLIC PICK" | "LIKED TRACK";
+  label: "NOW PLAYING" | "LIKED TRACK";
 };
 
 async function fetchPublicJson<T>(path: string): Promise<T> {
@@ -163,13 +164,14 @@ const HomePage = () => {
     ]);
     const integrations = integrationsResult.status === "fulfilled" ? integrationsResult.value : null;
     const ytmusic = ytmusicResult.status === "fulfilled" ? ytmusicResult.value : null;
+    const selectedTrack = validMusicTrack(ytmusic?.nowPlaying, "ytmusic", "NOW PLAYING");
     const spotifyTrack = integrations?.spotify?.playing
       ? validMusicTrack(integrations.spotify.track, "spotify", "NOW PLAYING")
       : null;
-    const lastPlayedTrack = validMusicTrack(ytmusic?.lastPlayed, "ytmusic", "LAST PLAYED");
-    const publicPick = validMusicTrack(ytmusic?.tracks?.[0], "ytmusic", "PUBLIC PICK");
     const likedMusicFallback = validMusicTrack(ytmusic?.fallbackTrack, "ytmusic", "LIKED TRACK");
-    setNowPlayingTrack(spotifyTrack || lastPlayedTrack || publicPick || likedMusicFallback);
+    // An explicit administrator selection takes precedence. Visitor-promo tracks
+    // remain independent and are never promoted by their list position.
+    setNowPlayingTrack(selectedTrack || spotifyTrack || likedMusicFallback);
   }, []);
 
   const loadFeed = useCallback(async () => {

@@ -59,6 +59,7 @@ type YoutubePlaylistsResponse = {
 };
 type YtMusicPublicState = {
   connected: boolean;
+  nowPlaying: Song | null;
   lastPlayed: Song | null;
   tracks: Song[];
 };
@@ -190,10 +191,12 @@ function MusicTrack({
   song,
   onFeature,
   publicAction,
+  nowPlayingAction,
 }: {
   song: Song;
   onFeature?: (song: Song) => void;
   publicAction?: { label: string; disabled?: boolean; onClick: () => void };
+  nowPlayingAction?: { label: string; active?: boolean; disabled?: boolean; onClick: () => void };
 }) {
   const removingPublicTrack = publicAction?.label === "Remove from public";
   const publicIcon = removingPublicTrack ? "×" : "✓";
@@ -215,7 +218,7 @@ function MusicTrack({
           </span>
         </div>
       </div>
-      {(song.url || (publicAction && !onFeature)) && (
+      {(song.url || (publicAction && !onFeature) || nowPlayingAction) && (
         <div className="showcase-track-actions">
           {song.url && (
             <a href={song.url} target="_blank" rel="noreferrer">
@@ -241,6 +244,18 @@ function MusicTrack({
               title={publicAction.label}
             >
               <span aria-hidden="true">{publicIcon}</span>
+            </button>
+          )}
+          {nowPlayingAction && (
+            <button
+              type="button"
+              className={`showcase-track-feature showcase-now-playing-toggle ${nowPlayingAction.active ? "is-active" : ""}`}
+              disabled={nowPlayingAction.disabled}
+              onClick={nowPlayingAction.onClick}
+              aria-label={nowPlayingAction.label}
+              title={nowPlayingAction.label}
+            >
+              {nowPlayingAction.label}
             </button>
           )}
         </div>
@@ -568,10 +583,13 @@ export default function AccountPage() {
   const ytmusicPickerSentinelRef = useRef<HTMLDivElement | null>(null);
   const [ytmusicPublic, setYtmusicPublic] = useState<YtMusicPublicState>({
     connected: false,
+    nowPlaying: null,
     lastPlayed: null,
     tracks: [],
   });
   const [ytmusicPublicSaving, setYtmusicPublicSaving] = useState(false);
+  const [ytmusicNowPlayingSaving, setYtmusicNowPlayingSaving] = useState(false);
+  const [ytmusicNowPlayingMessage, setYtmusicNowPlayingMessage] = useState("");
   const [integrationState, setIntegrationState] = useState<
     Record<string, IntegrationStatus>
   >({});
@@ -945,6 +963,7 @@ export default function AccountPage() {
       );
       setYtmusicPublic({
         connected: Boolean(data.connected),
+        nowPlaying: data.nowPlaying || null,
         lastPlayed: data.lastPlayed || null,
         tracks: Array.isArray(data.tracks) ? data.tracks.slice(0, 3) : [],
       });
@@ -952,6 +971,45 @@ export default function AccountPage() {
       // Public playback and selections are optional. Detailed errors stay in backend logs.
     }
   }, []);
+
+  const setYtmusicNowPlaying = async (song: Song) => {
+    if (!song.videoId) return;
+    setYtmusicNowPlayingSaving(true);
+    setYtmusicNowPlayingMessage("");
+    try {
+      const data = await api<{ nowPlaying: Song }>(
+        "/api/admin/showcase/ytmusic/now-playing",
+        { method: "POST", body: JSON.stringify({ track: song }) },
+      );
+      setYtmusicPublic((current) => ({
+        ...current,
+        nowPlaying: data.nowPlaying || song,
+      }));
+      setYtmusicNowPlayingMessage(`Now Playing set to “${song.title}”.`);
+    } catch (error) {
+      setYtmusicNowPlayingMessage(
+        error instanceof Error ? error.message : "Could not set Now Playing.",
+      );
+    } finally {
+      setYtmusicNowPlayingSaving(false);
+    }
+  };
+
+  const clearYtmusicNowPlaying = async () => {
+    setYtmusicNowPlayingSaving(true);
+    setYtmusicNowPlayingMessage("");
+    try {
+      await api("/api/admin/showcase/ytmusic/now-playing", { method: "DELETE" });
+      setYtmusicPublic((current) => ({ ...current, nowPlaying: null }));
+      setYtmusicNowPlayingMessage("Now Playing cleared.");
+    } catch (error) {
+      setYtmusicNowPlayingMessage(
+        error instanceof Error ? error.message : "Could not clear Now Playing.",
+      );
+    } finally {
+      setYtmusicNowPlayingSaving(false);
+    }
+  };
 
   const toggleYtmusicPublicTrack = async (song: Song) => {
     if (!song.videoId) return;
@@ -1009,7 +1067,8 @@ export default function AccountPage() {
             connected: false,
           },
         }));
-        // Keep the saved public snapshot, especially the last-played track, after disconnect.
+        // Disconnecting disables the picker, but preserves the independent Now Playing
+        // selection and the visitor-promoted tracks.
       }
     } catch {
       // Disconnect failures are recorded in backend logs.
@@ -1101,8 +1160,8 @@ export default function AccountPage() {
       window.removeEventListener("resize", updateMetrics);
     };
   }, []);
-  const ytmusicLeadSong =
-    ytmusicPublic.lastPlayed || ytmusicPublic.tracks[0] || null;
+  // This card represents the explicit Now Playing selection, never the first visitor-promo track.
+  const ytmusicLeadSong = ytmusicPublic.nowPlaying;
 
   return (
     <div className="account-page typewriter-font">
@@ -1486,7 +1545,7 @@ export default function AccountPage() {
                         <strong>
                           {ytmusicLeadSong
                             ? ytmusicLeadSong.title
-                            : "No public track shared yet"}
+                            : "No track selected"}
                         </strong>
                         {ytmusicLeadSong ? (
                           <span>
@@ -1499,8 +1558,8 @@ export default function AccountPage() {
                         ) : (
                           <span>
                             {isAdmin
-                              ? "Connect YouTube Music and select up to three songs for visitors."
-                              : "Public tracks appear here when selected by the administrator."}
+                              ? "Choose a liked song below and set it as Now Playing. This is separate from Show to visitors."
+                              : "No YouTube Music Now Playing track has been selected."}
                           </span>
                         )}
                       </div>
@@ -1555,9 +1614,23 @@ export default function AccountPage() {
                             {likedMusicLoading ? "Refreshing…" : "Refresh"}
                           </button>
                         )}
+                        {isAdmin && ytmusicLeadSong && (
+                          <button
+                            type="button"
+                            className="showcase-outline-button is-danger"
+                            onClick={() => void clearYtmusicNowPlaying()}
+                            disabled={ytmusicNowPlayingSaving}
+                          >
+                            Clear Now Playing
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
+
+                  {ytmusicNowPlayingMessage && isAdmin && (
+                    <p className="account-message" role="status">{ytmusicNowPlayingMessage}</p>
+                  )}
 
                   {ytmusicConnectError && isAdmin && (
                     <AssetStateBox
@@ -1688,6 +1761,14 @@ export default function AccountPage() {
                                               ytmusicPublic.tracks.length >= 3),
                                           onClick: () =>
                                             void toggleYtmusicPublicTrack(song),
+                                        }}
+                                        nowPlayingAction={{
+                                          label: song.videoId && song.videoId === ytmusicPublic.nowPlaying?.videoId
+                                            ? "Now Playing ✓"
+                                            : "Set as Now Playing",
+                                          active: Boolean(song.videoId && song.videoId === ytmusicPublic.nowPlaying?.videoId),
+                                          disabled: ytmusicNowPlayingSaving || !song.videoId,
+                                          onClick: () => void setYtmusicNowPlaying(song),
                                         }}
                                       />
                                     );
