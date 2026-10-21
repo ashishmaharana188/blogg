@@ -302,3 +302,74 @@
     flex-basis: 340px !important;
   }
 }
+
+
+/* Accessibility refinement: enlarge the compact health typography and center
+   fixed-width sibling cards when the responsive flex row has spare space. */
+@media (max-width: 1248px) {
+  .blog-feed-page .blog-feed-widget-rail {
+    justify-content: center !important;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-eyebrow {
+    font-size: .68rem !important;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-heading strong {
+    font-size: .9rem !important;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-live-mark {
+    font-size: .69rem !important;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-primary > span,
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-secondary > div > span,
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-run > div:last-child > span {
+    font-size: .56rem !important;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-primary strong {
+    font-size: 1.24rem !important;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-step-chart .blog-feed-health-no-bars {
+    font-size: .6rem !important;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-secondary strong {
+    font-size: .78rem !important;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-secondary small {
+    font-size: .55rem !important;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-run strong {
+    font-size: .81rem !important;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-run small {
+    font-size: .63rem !important;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-empty {
+    font-size: .75rem !important;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-exercises-heading > span {
+    font-size: .52rem !important;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-exercises-heading time {
+    font-size: .52rem !important;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-exercise-metric > span {
+    font-size: .495rem !important;
+  }
+
+  .blog-feed-page .blog-feed-health-widget .blog-feed-health-exercise-metric strong {
+    font-size: .70rem !important;
+  }
+}
