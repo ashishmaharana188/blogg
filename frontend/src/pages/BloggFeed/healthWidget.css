@@ -1,34 +1,196 @@
 .blog-feed-health-widget {
-  box-sizing:border-box; display:flex; flex-direction:column; width:184px; min-width:0; max-width:100%;
-  padding:13px; border:1px solid #d7dee7; border-radius:15px; background:#fff; color:#172033;
-  box-shadow:0 2px 5px rgb(15 23 42 / 3%);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 184px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 9px;
+  border: 1px solid #d7dee7;
+  border-radius: 15px;
+  background: #fff;
+  color: #172033;
+  box-shadow: 0 2px 5px rgb(15 23 42 / 3%);
 }
-.blog-feed-health-heading { display:flex; align-items:center; gap:8px; min-width:0; }
-.blog-feed-health-icon { display:grid; place-items:center; width:27px; height:27px; flex:0 0 27px; border:1px solid #dfe5eb; border-radius:8px; color:#667085; font-size:1rem; font-weight:700; }
-.blog-feed-health-heading > div { display:flex; flex-direction:column; min-width:0; gap:2px; }
-.blog-feed-health-eyebrow { color:#8a94a2; font-size:.48rem; font-weight:700; letter-spacing:.13em; }
-.blog-feed-health-heading strong { color:#273246; font-size:.78rem; line-height:1.3; }
-.blog-feed-health-live-mark { margin-left:auto; color:#7b9a82; font-size:.52rem; }
-.blog-feed-health-primary { display:flex; flex-direction:column; gap:4px; padding:14px 0 9px; }
-.blog-feed-health-primary > span, .blog-feed-health-secondary > div > span, .blog-feed-health-run > div:last-child > span { color:#8792a0; font-size:.49rem; font-weight:700; letter-spacing:.1em; }
-.blog-feed-health-primary strong { color:#182230; font-size:1.38rem; font-weight:700; line-height:1.25; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
-.blog-feed-health-step-chart { display:flex; align-items:flex-end; gap:4px; height:33px; padding:0 0 5px; border-bottom:1px solid #edf0f4; }
-.blog-feed-health-step-chart > span { display:flex; align-items:flex-end; justify-content:center; flex:1 1 0; min-width:0; height:100%; }
-.blog-feed-health-step-chart i { display:block; width:100%; min-height:3px; border-radius:3px 3px 1px 1px; background:#8499b3; }
-.blog-feed-health-step-chart .blog-feed-health-no-bars { flex:1; align-self:center; color:#a0a8b3; font-size:.52rem; text-align:center; }
-.blog-feed-health-secondary { display:grid; grid-template-columns:1fr 1fr; gap:9px; padding:10px 0; border-bottom:1px solid #edf0f4; }
-.blog-feed-health-secondary > div { display:flex; min-width:0; flex-direction:column; gap:4px; }
-.blog-feed-health-secondary strong { color:#273246; font-size:.73rem; line-height:1.3; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
-.blog-feed-health-secondary small { color:#9aa3af; font-size:.48rem; line-height:1.35; overflow-wrap:anywhere; }
-.blog-feed-health-run { display:flex; align-items:flex-start; gap:8px; padding-top:11px; }
-.blog-feed-health-run-symbol { display:grid; place-items:center; width:25px; height:25px; flex:0 0 25px; border-radius:8px; background:#f1f4f7; color:#64748b; font-size:.82rem; }
-.blog-feed-health-run > div:last-child { display:flex; flex-direction:column; gap:3px; min-width:0; }
-.blog-feed-health-run strong { color:#344054; font-size:.67rem; line-height:1.3; overflow-wrap:anywhere; }
-.blog-feed-health-run small { color:#909aa8; font-size:.49rem; line-height:1.4; overflow-wrap:anywhere; }
-.blog-feed-health-empty { margin:12px 0 2px; color:#8a94a2; font-size:.65rem; line-height:1.55; overflow-wrap:anywhere; }
-@media (max-width:1248px) { .blog-feed-health-widget { width:min(184px,100%); } }
-@media (max-width:380px) { .blog-feed-health-widget { width:min(184px,calc(100vw - 40px)); } }
+.blog-feed-health-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.blog-feed-health-icon {
+  display: grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  flex: 0 0 27px;
+  border: 1px solid #dfe5eb;
+  border-radius: 8px;
+  color: #667085;
+  font-size: 1rem;
+  font-weight: 700;
+}
+.blog-feed-health-heading > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+.blog-feed-health-eyebrow {
+  color: #8a94a2;
+  font-size: 0.59rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+}
+.blog-feed-health-heading strong {
+  color: #273246;
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+.blog-feed-health-live-mark {
+  margin-left: auto;
+  color: #7b9a82;
+  font-size: 0.6rem;
+}
+.blog-feed-health-primary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 0 9px;
+}
+.blog-feed-health-primary > span,
+.blog-feed-health-secondary > div > span,
+.blog-feed-health-run > div:last-child > span {
+  color: #8792a0;
+  font-size: 0.49rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+.blog-feed-health-primary strong {
+  color: #182230;
+  font-size: 1.38rem;
+  font-weight: 700;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.blog-feed-health-step-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 33px;
+  padding: 0 0 5px;
+  border-bottom: 1px solid #edf0f4;
+}
+.blog-feed-health-step-chart > span {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+}
+.blog-feed-health-step-chart i {
+  display: block;
+  width: 100%;
+  min-height: 3px;
+  border-radius: 3px 3px 1px 1px;
+  background: #8499b3;
+}
+.blog-feed-health-step-chart .blog-feed-health-no-bars {
+  flex: 1;
+  align-self: center;
+  color: #a0a8b3;
+  font-size: 0.52rem;
+  text-align: center;
+}
+.blog-feed-health-secondary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  padding: 10px 0;
+  border-bottom: 1px solid #edf0f4;
+}
+.blog-feed-health-secondary > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+.blog-feed-health-secondary strong {
+  color: #273246;
+  font-size: 0.73rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.blog-feed-health-secondary small {
+  color: #9aa3af;
+  font-size: 0.48rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.blog-feed-health-run {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding-top: 11px;
+}
+.blog-feed-health-run-symbol {
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  flex: 0 0 25px;
+  border-radius: 8px;
+  background: #f1f4f7;
+  color: #64748b;
+  font-size: 0.82rem;
+}
+.blog-feed-health-run > div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.blog-feed-health-run strong {
+  color: #344054;
+  font-size: 0.79rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.blog-feed-health-run small {
+  color: #909aa8;
+  font-size: 0.69rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.blog-feed-health-empty {
+  margin: 12px 0 2px;
+  color: #8a94a2;
+  font-size: 0.65rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 1248px) {
+  .blog-feed-health-widget {
+    width: min(184px, 100%);
+  }
+}
+@media (max-width: 380px) {
+  .blog-feed-health-widget {
+    width: min(184px, calc(100vw - 40px));
+  }
+}
 
 /* Host inserted into the existing responsive Blog Feed widget rail. */
-.blog-feed-health-widget-root { width: min(184px, 100%); min-width: 0; max-width: 100%; }
-@media (max-width: 380px) { .blog-feed-health-widget-root { width: min(184px, calc(100vw - 40px)); } }
+.blog-feed-health-widget-root {
+  width: min(184px, 100%);
+  min-width: 0;
+  max-width: 100%;
+}
+@media (max-width: 380px) {
+  .blog-feed-health-widget-root {
+    width: min(184px, calc(100vw - 40px));
+  }
+}
