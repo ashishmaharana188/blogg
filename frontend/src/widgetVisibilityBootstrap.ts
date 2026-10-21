@@ -63,35 +63,53 @@ async function loadHealthAvailability(force = false): Promise<HealthAvailability
   if (healthPromise) return healthPromise;
 
   healthPromise = (async () => {
-    const [summaryResult, exerciseResult] = await Promise.allSettled([
+    const [summaryResult, exerciseResult, sleepResult] = await Promise.allSettled([
       fetchJson<Record<string, any>>("/api/health/public-summary", { credentials: "omit" }),
       fetchJson<Record<string, any>>("/api/health/exercises/public", { credentials: "omit" }),
+      fetchJson<{ sleep?: Record<string, any> | null }>("/api/health/sleep-summary", { credentials: "omit" }),
     ]);
     const summary = summaryResult.status === "fulfilled" ? summaryResult.value : null;
     const exercise = exerciseResult.status === "fulfilled" ? exerciseResult.value : null;
+    const sleep = sleepResult.status === "fulfilled" ? sleepResult.value.sleep : null;
     const steps = summary?.steps;
-    const hasSteps = Boolean(
+    const hasStepRecords = Boolean(
       steps?.today != null ||
       Number(steps?.observedDays7d || 0) > 0 ||
-      (Array.isArray(steps?.recentDays) && steps.recentDays.length > 0) ||
-      summary?.latestHeartRate ||
-      summary?.latestRun ||
-      (Array.isArray(summary?.recentRuns) && summary.recentRuns.length > 0) ||
-      (Array.isArray(summary?.recentHeartRates) && summary.recentHeartRates.length > 0)
+      (Array.isArray(steps?.recentDays) && steps.recentDays.length > 0)
     );
-    const hasExercise = Boolean(
-      exercise?.latestSession ||
-      (Array.isArray(exercise?.sessions) && exercise.sessions.length > 0) ||
-      (Array.isArray(exercise?.recentSessions) && exercise.recentSessions.length > 0)
-    );
-    const hasRunning = Boolean(
+    const hasRunRecords = Boolean(
       summary?.latestRun ||
-      (Array.isArray(summary?.recentRuns) && summary.recentRuns.length > 0) ||
+      (Array.isArray(summary?.recentRuns) && summary.recentRuns.length > 0)
+    );
+    const exerciseSessions = Array.isArray(exercise?.sessions) && exercise.sessions.length
+      ? exercise.sessions
+      : Array.isArray(exercise?.recentSessions) ? exercise.recentSessions : [];
+    const selectedExerciseMetrics = Array.isArray(exercise?.selectedMetrics) ? exercise.selectedMetrics : [];
+    const hasSelectedExerciseMetrics = selectedExerciseMetrics.some((id: unknown) => typeof id === "string" && id !== "heart_rate");
+    const hasSelectedExerciseHeartRate = selectedExerciseMetrics.includes("heart_rate") && exerciseSessions.some((session: Record<string, any>) => {
+      const raw = session?.values?.heartRate;
+      const direct = [session?.avgHeartRate, session?.minHeartRate, session?.maxHeartRate].some((value) => typeof value === "number" && Number.isFinite(value));
+      const selected = raw && typeof raw === "object" && [raw.average, raw.minimum, raw.maximum].some((value) => typeof value === "number" && Number.isFinite(value));
+      return direct || selected;
+    });
+    const hasHeartRecords = Boolean(
       summary?.latestHeartRate ||
       (Array.isArray(summary?.recentHeartRates) && summary.recentHeartRates.length > 0) ||
-      hasExercise
+      hasSelectedExerciseHeartRate
     );
-    const value = { hasAny: hasSteps || hasExercise, hasSteps, hasRunning };
+    const hasExercise = Boolean(
+      hasSelectedExerciseMetrics && (
+        exercise?.latestSession || exerciseSessions.length > 0
+      )
+    );
+    // Daily Activity owns step and running-session information; the other
+    // profile panel owns heart-rate measurements and exercise-specific records.
+    const hasSleepRecords = Boolean(
+      sleep && Number(sleep.observedNights7d || 0) > 0 && Array.isArray(sleep.recentDays) && sleep.recentDays.length > 0
+    );
+    const hasSteps = hasStepRecords || hasRunRecords || hasSleepRecords;
+    const hasRunning = hasHeartRecords || hasExercise;
+    const value = { hasAny: hasSteps || hasRunning, hasSteps, hasRunning };
     healthAvailability = value;
     healthUpdatedAt = Date.now();
     return value;
@@ -141,8 +159,8 @@ function ensureToggleStyles(): void {
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 28px;
-      height: 28px;
+      width: 18px;
+      height: 18px;
       margin: 0;
       padding: 0;
       transform: translate(-50%, -50%);
@@ -153,11 +171,11 @@ function ensureToggleStyles(): void {
       display: grid;
       place-items: center;
       box-sizing: border-box;
-      width: 23px;
-      height: 23px;
+      width: 14px;
+      height: 14px;
       margin: 0;
       padding: 0;
-      border: 1.5px solid #9aa4b2;
+      border: 1.25px solid #9aa4b2;
       border-radius: 50%;
       background: #fff;
       box-shadow: 0 1px 5px rgb(15 23 42 / 18%);
@@ -167,8 +185,8 @@ function ensureToggleStyles(): void {
     .showcase-widget-dot-toggle::after {
       content: "";
       display: block;
-      width: 8px;
-      height: 8px;
+      width: 4px;
+      height: 4px;
       border-radius: 50%;
       background: #9aa4b2;
       transition: width .15s ease, height .15s ease, background .15s ease;
@@ -178,13 +196,13 @@ function ensureToggleStyles(): void {
       background: #e9f8f0;
     }
     .showcase-widget-dot-toggle[aria-checked="true"]::after {
-      width: 12px;
-      height: 12px;
+      width: 6px;
+      height: 6px;
       background: #14845b;
     }
     .showcase-widget-dot-toggle:hover:not(:disabled) { transform: scale(1.06); }
     .showcase-widget-dot-toggle:focus-visible {
-      outline: 3px solid #8fd4b5;
+      outline: 2px solid #8fd4b5;
       outline-offset: 2px;
     }
     .showcase-widget-dot-toggle:disabled { opacity: .55; cursor: wait; }
@@ -203,6 +221,111 @@ function ensureToggleStyles(): void {
       font: 11px/1.4 Arial, sans-serif;
     }
     .showcase-widget-dot-status:empty { display: none; }
+
+    /* Responsive dashboard flow. The legacy column wrappers become transparent
+       to the grid so Health cards can share a full-width, predictable flow. */
+    @media (max-width: 1120px) {
+      .account-page-main.account-page-main-stack .account-dashboard-grid {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        align-items: start;
+        gap: 14px !important;
+      }
+      .account-dashboard-grid > .account-dashboard-left-column,
+      .account-dashboard-grid > .account-dashboard-youtube-column,
+      .account-dashboard-grid > .account-dashboard-media-column,
+      .account-dashboard-left-base,
+      .health-admin-bootstrap-root {
+        display: contents !important;
+      }
+      .account-dashboard-status {
+        order: 0;
+        grid-column: 1 / -1;
+        min-width: 0;
+      }
+      .account-dashboard-youtube {
+        order: 1;
+        grid-column: auto;
+        min-width: 0;
+        height: auto;
+      }
+      /* Keep the music cards as a single responsive unit beside YouTube. */
+      .account-dashboard-media-stack {
+        order: 2;
+        grid-column: auto;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch;
+        align-self: start;
+        gap: 12px !important;
+        min-width: 0;
+      }
+      .account-dashboard-media-stack > .account-showcase-section {
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+        box-sizing: border-box;
+      }
+      /* All Health cards form one consecutive group after the primary widgets. */
+      .health-admin-overview {
+        order: 10;
+        grid-column: 1 / -1;
+        min-width: 0;
+      }
+      .health-admin-steps {
+        order: 11;
+        grid-column: 1 / -1;
+        min-width: 0;
+      }
+      .health-admin-running {
+        order: 12;
+        grid-column: 1;
+        min-width: 0;
+      }
+      .health-admin-exercise {
+        order: 13;
+        grid-column: 2;
+        min-width: 0;
+      }
+      /* Feature cards and future standard showcase cards use the same auto-flow. */
+      .account-dashboard-grid .account-dashboard-featured-card-list,
+      .account-dashboard-grid .account-showcase-featured-section,
+      .account-dashboard-grid .account-showcase-section:not(.account-dashboard-youtube):not(.account-showcase-mini-section):not(.account-showcase-ytmusic-section):not(.account-health-card) {
+        order: 40;
+        grid-column: 1 / -1;
+        min-width: 0;
+      }
+    }
+    @media (max-width: 720px) {
+      .account-page-main.account-page-main-stack .account-dashboard-grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 12px !important;
+      }
+      .account-dashboard-status,
+      .account-dashboard-youtube,
+      .account-dashboard-media-stack,
+      .health-admin-overview,
+      .health-admin-steps,
+      .health-admin-running,
+      .health-admin-exercise,
+      .account-dashboard-grid .account-dashboard-featured-card-list,
+      .account-dashboard-grid .account-showcase-featured-section,
+      .account-dashboard-grid .account-showcase-section:not(.account-dashboard-youtube):not(.account-showcase-mini-section):not(.account-showcase-ytmusic-section):not(.account-health-card) {
+        grid-column: 1 / -1;
+      }
+      .account-dashboard-status { order: 0; }
+      .account-dashboard-youtube { order: 1; }
+      .account-dashboard-media-stack { order: 2; }
+      .health-admin-overview { order: 10; }
+      .health-admin-steps { order: 11; }
+      .health-admin-running { order: 12; }
+      .health-admin-exercise { order: 13; }
+      .account-dashboard-grid .account-dashboard-featured-card-list,
+      .account-dashboard-grid .account-showcase-featured-section,
+      .account-dashboard-grid .account-showcase-section:not(.account-dashboard-youtube):not(.account-showcase-mini-section):not(.account-showcase-ytmusic-section):not(.account-health-card) {
+        order: 40;
+      }
+    }
   `;
   document.head.append(style);
 }

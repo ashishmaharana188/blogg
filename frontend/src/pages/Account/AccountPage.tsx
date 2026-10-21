@@ -1307,10 +1307,6 @@ export default function AccountPage() {
                       compact
                       onRetry={() => void refreshShowcase()}
                     />
-                  ) : visibleLinks.length === 0 ? (
-                    <p className="showcase-empty">
-                      No featured links have been published yet.
-                    </p>
                   ) : null}
                 </section>
               </div>
@@ -1446,7 +1442,6 @@ export default function AccountPage() {
               >
                 <section className="account-showcase-section account-showcase-mini-section">
                   <div className="showcase-mini-heading">
-                    <p className="account-eyebrow">NOW PLAYING</p>
                     <h2>Spotify</h2>
                   </div>
                   <div className="showcase-mini-integration-layout">
@@ -1524,7 +1519,6 @@ export default function AccountPage() {
 
                 <section className="account-showcase-section account-showcase-mini-section account-showcase-ytmusic-section">
                   <div className="showcase-mini-heading">
-                    <p className="account-eyebrow">NOW PLAYING</p>
                     <h2>YouTube Music</h2>
                   </div>
                   <div className="showcase-mini-integration-layout">

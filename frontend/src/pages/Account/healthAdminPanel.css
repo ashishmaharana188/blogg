@@ -168,6 +168,7 @@
   font-size: 0.66rem;
   text-align: right;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .health-step-bar {
   height: 7px;
@@ -300,11 +301,7 @@
   opacity: 0.85;
 }
 
-/*
- * Health forms the second layer of each dashboard column. Featured Links then
- * continues underneath it, so the three Health cards stay together as one logical
- * group and never get split by a Featured Links card in a neighboring column.
- */
+/* Health cards stay separated and aligned as three predictable blocks. */
 .health-admin-bootstrap-root {
   display: block;
   width: 100%;
@@ -339,6 +336,18 @@
   padding-top: 0;
   border-top: 0;
 }
+
+/* Exercise is a separate card following the heart card in the same React root. */
+.health-admin-running + .health-admin-exercise {
+  margin-top: 18px;
+}
+.health-exercise-history {
+  margin-top: 18px;
+}
+.health-admin-exercise .health-step-day {
+  grid-template-columns: minmax(75px, 1fr) minmax(25px, 1.6fr) minmax(44px, auto);
+}
+
 @media (max-width: 980px) {
   /* Columns flatten on tablet/mobile. Render all Health cards before any Featured Links. */
   .health-admin-bootstrap-root[data-health-section="overview"] {
@@ -363,5 +372,9 @@
 @media (max-width: 720px) {
   .account-showcase-section.account-health-card {
     padding: 17px 14px;
+  }
+  .health-step-day {
+    grid-template-columns: 42px minmax(25px, 1fr) 48px;
+    gap: 6px;
   }
 }

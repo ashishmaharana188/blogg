@@ -19,6 +19,7 @@ import youtubeMusicApiRouter from "../routes/youtubeMusicApi.ts";
 import showcaseWidgetVisibilityRouter from "../routes/showcaseWidgetVisibility.ts";
 import linkPreviewRouter from "../routes/linkPreview.ts";
 import healthRouter from "../routes/health.ts";
+import healthSleepRouter from "../routes/healthSleep.ts";
 import currentReadingRouter from "../routes/currentReading.ts";
 import clientUiLogsRouter from "../routes/clientUiLogs.ts";
 
@@ -52,6 +53,7 @@ app.use("/api", youtubeMusicApiRouter);
 // Individual public-profile widget visibility controls.
 app.use("/api", showcaseWidgetVisibilityRouter);
 app.use("/api", healthRouter);
+app.use("/api", healthSleepRouter);
 app.use("/api", currentReadingRouter);
 app.use("/api", adminShowcaseRouter);
 app.use(canvasViewInterceptor);
