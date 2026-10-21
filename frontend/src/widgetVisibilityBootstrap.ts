@@ -1,6 +1,6 @@
 import { API_BASE_URL } from "./services/apiBase";
 
-type WidgetKey = "youtubeLibrary" | "music" | "health";
+type WidgetKey = "music" | "health" | "reading";
 type WidgetVisibility = Record<WidgetKey, boolean>;
 type HealthAvailability = {
   hasAny: boolean;
@@ -9,9 +9,9 @@ type HealthAvailability = {
 };
 
 const DEFAULT_WIDGETS: WidgetVisibility = {
-  youtubeLibrary: false,
   music: false,
   health: false,
+  reading: false,
 };
 
 let widgets: WidgetVisibility = { ...DEFAULT_WIDGETS };
@@ -146,13 +146,27 @@ function createToggle(key: WidgetKey, labelText: string): HTMLDivElement {
   return wrapper;
 }
 
-function ensureToggle(target: HTMLElement | null, key: WidgetKey, label: string): void {
+function ensureToggle(
+  target: HTMLElement | null,
+  key: WidgetKey,
+  label: string,
+  insertAfter: HTMLElement | null = null,
+): void {
   if (!target) return;
-  let wrapper = target.querySelector<HTMLDivElement>(`:scope > [data-showcase-widget-toggle="${key}"]`);
-  if (!wrapper) {
-    wrapper = createToggle(key, label);
+
+  // Keep exactly one control for each setting, even if the preferred heading
+  // appears after another eligible heading has already been rendered.
+  let wrapper = document.querySelector<HTMLDivElement>(`[data-showcase-widget-toggle="${key}"]`);
+  if (!wrapper) wrapper = createToggle(key, label);
+
+  if (insertAfter && insertAfter.parentElement === target) {
+    if (wrapper.parentElement !== target || wrapper.previousElementSibling !== insertAfter) {
+      insertAfter.insertAdjacentElement("afterend", wrapper);
+    }
+  } else if (wrapper.parentElement !== target) {
     target.append(wrapper);
   }
+
   const checkbox = wrapper.querySelector<HTMLInputElement>("input");
   if (checkbox) {
     checkbox.checked = widgets[key];
@@ -162,14 +176,19 @@ function ensureToggle(target: HTMLElement | null, key: WidgetKey, label: string)
 
 function ensureAdminControls(): void {
   if (!canManageWidgets()) return;
-  const youtubeHeading = document.querySelector<HTMLElement>(".account-dashboard-youtube .showcase-section-heading");
-  ensureToggle(youtubeHeading, "youtubeLibrary", "Show YouTube Library on public profile");
 
-  const musicHeading = document.querySelector<HTMLElement>(".account-showcase-ytmusic-section .showcase-mini-heading");
-  ensureToggle(musicHeading, "music", "Enable shared music widget on public profile");
+  const spotifyPanel = Array.from(document.querySelectorAll<HTMLElement>(".account-showcase-mini-section"))
+    .find((panel) => headingTitle(panel) === "spotify") || null;
+  const spotifyHeading = spotifyPanel?.querySelector<HTMLElement>(".showcase-mini-heading") || null;
+  const musicHeading = document.querySelector<HTMLElement>(".account-showcase-ytmusic-section .showcase-mini-heading") || spotifyHeading;
+  ensureToggle(musicHeading, "music", "Show Spotify / YouTube Music on public profile and feed");
 
   const healthHeading = document.querySelector<HTMLElement>(".health-admin-overview .health-panel-heading");
-  ensureToggle(healthHeading, "health", "Show Health on public profile");
+  ensureToggle(healthHeading, "health", "Show Health on public profile and feed");
+
+  const readingPanel = document.querySelector<HTMLElement>(".current-reading-panel");
+  const readingHeading = readingPanel?.querySelector<HTMLElement>(":scope > .current-reading-heading") || null;
+  ensureToggle(readingPanel, "reading", "Show Current Reading on public profile and feed", readingHeading);
 }
 
 async function updateVisibility(key: WidgetKey, enabled: boolean): Promise<void> {
@@ -246,10 +265,6 @@ function headingTitle(panel: HTMLElement | null): string {
   return panel?.querySelector("h2")?.textContent?.trim().toLowerCase() || "";
 }
 
-function hasYoutubeLibraryContent(panel: HTMLElement | null): boolean {
-  return Boolean(panel?.querySelector(".showcase-youtube-playlist-entry"));
-}
-
 function hasYtMusicContent(panel: HTMLElement | null): boolean {
   if (!panel) return false;
   const title = panel.querySelector(".showcase-mini-music-copy strong")?.textContent?.trim() || "";
@@ -267,11 +282,19 @@ function hasFeedNowPlayingContent(panel: HTMLElement | null): boolean {
   return Boolean(text.trim() && !/nothing playing right now/i.test(text));
 }
 
+function hasAccountReadingContent(host: HTMLElement | null): boolean {
+  return Boolean(host?.querySelector(".current-reading-panel .current-reading-book"));
+}
+
+function hasFeedReadingContent(host: HTMLElement | null): boolean {
+  return Boolean(host?.querySelector(".blog-feed-current-reading-teaser a.blog-feed-now-playing-artwork-frame"));
+}
+
 function applyPublicAccountVisibility(health: HealthAvailability): void {
-  const youtubePanel = document.querySelector<HTMLElement>(".account-dashboard-youtube");
   const spotifyPanel = Array.from(document.querySelectorAll<HTMLElement>(".account-showcase-mini-section"))
     .find((panel) => headingTitle(panel) === "spotify") || null;
   const musicPanel = document.querySelector<HTMLElement>(".account-showcase-ytmusic-section");
+  const readingHost = document.querySelector<HTMLElement>(".current-reading-bootstrap-host");
   const healthOverviewHost = document.querySelector<HTMLElement>("[data-health-admin-host='true'][data-health-section='overview']");
   const healthStepsHost = document.querySelector<HTMLElement>("[data-health-admin-host='true'][data-health-section='steps']");
   const healthRunningHost = document.querySelector<HTMLElement>("[data-health-admin-host='true'][data-health-section='running']");
@@ -280,9 +303,10 @@ function applyPublicAccountVisibility(health: HealthAvailability): void {
   const showYtMusic = widgets.music && hasMusicContent;
   const showSpotify = widgets.music && !hasMusicContent && hasSpotifyContent(spotifyPanel);
 
-  setManagedVisibility(youtubePanel, widgets.youtubeLibrary && hasYoutubeLibraryContent(youtubePanel));
+  // The Spotify and YouTube Music presentations share one administrator setting.
   setManagedVisibility(musicPanel, showYtMusic);
   setManagedVisibility(spotifyPanel, showSpotify);
+  setManagedVisibility(readingHost, widgets.reading && hasAccountReadingContent(readingHost));
 
   // The overview panel is the admin import/configuration form, not a public-facing widget.
   setManagedVisibility(healthOverviewHost, false);
@@ -300,17 +324,23 @@ function applyPublicAccountVisibility(health: HealthAvailability): void {
 }
 
 function applyFeedVisibility(health: HealthAvailability): void {
-  const nowPlaying = document.querySelector<HTMLElement>(".blog-feed-now-playing-teaser");
+  const nowPlaying = document.querySelector<HTMLElement>(".blog-feed-now-playing-teaser:not(.blog-feed-current-reading-teaser)");
   setManagedVisibility(nowPlaying, widgets.music && hasFeedNowPlayingContent(nowPlaying));
 
   const healthWidget = document.querySelector<HTMLElement>(".blog-feed-health-widget");
-  setManagedVisibility(healthWidget, widgets.health && health.hasAny);
+  const healthLooksEmpty = Boolean(healthWidget?.textContent?.includes("No health data imported yet."));
+  setManagedVisibility(healthWidget, widgets.health && health.hasAny && !healthLooksEmpty);
+
+  const readingHost = document.querySelector<HTMLElement>(".current-reading-feed-bootstrap-host");
+  setManagedVisibility(readingHost, widgets.reading && hasFeedReadingContent(readingHost));
 }
 
 function restorePublicManagedVisibility(): void {
   const selector = [
-    ".account-dashboard-youtube",
     ".account-showcase-mini-section",
+    ".account-showcase-ytmusic-section",
+    ".current-reading-bootstrap-host",
+    ".current-reading-feed-bootstrap-host",
     "[data-health-admin-host='true']",
     ".blog-feed-now-playing-teaser",
     ".blog-feed-health-widget",

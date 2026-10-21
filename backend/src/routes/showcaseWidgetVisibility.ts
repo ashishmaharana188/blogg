@@ -8,9 +8,9 @@ const ADMIN_GUARD = [authenticationMiddleware, adminMiddleware] as const;
 const SETTING_KEY = "showcase-widget-visibility";
 
 const DEFAULT_WIDGETS = {
-  youtubeLibrary: false,
   music: false,
   health: false,
+  reading: false,
 } as const;
 
 type WidgetKey = keyof typeof DEFAULT_WIDGETS;
@@ -28,9 +28,9 @@ async function readWidgetVisibility(): Promise<WidgetVisibility> {
 
   // Opt-in by default: until an administrator enables a widget, public pages hide it.
   return {
-    youtubeLibrary: saved.youtubeLibrary === true,
     music: saved.music === true,
     health: saved.health === true,
+    reading: saved.reading === true,
   };
 }
 
@@ -50,7 +50,7 @@ router.patch("/admin/showcase/widget-visibility", ...ADMIN_GUARD, async (req, re
 
     if (!isWidgetKey(widget) || typeof enabled !== "boolean") {
       return res.status(400).json({
-        message: "widget must be youtubeLibrary, music, or health, and enabled must be a boolean.",
+        message: "widget must be music, health, or reading, and enabled must be a boolean.",
       });
     }
 
