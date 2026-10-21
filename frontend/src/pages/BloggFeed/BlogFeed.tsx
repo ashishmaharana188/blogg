@@ -5,6 +5,7 @@ import { useCreateBlockNote } from "@blocknote/react";
 import type { BloggItem } from "../../types/pageTypes";
 import { API_BASE_URL } from "../../services/apiBase";
 import AssetStateBox from "../../components/AssetStateBox";
+import { publicStateAssets } from "virtual:public-state-assets";
 import { fetchAllBloggsRequest } from "../BloggPage/services/flipBookService";
 import { fetchStackAndGroup } from "../BloggPage/services/canvasViewService";
 import BloggHeader from "../BloggPage/components/bloggHeader/BloggHeader";
@@ -75,14 +76,47 @@ function validMusicTrack(
   };
 }
 
+/** Reuse the same build-time public image pool as AssetStateBox. */
+function chooseRandomPublicStateAsset(previous?: string | null): string | undefined {
+  if (publicStateAssets.length === 0) return undefined;
+  const alternatives = publicStateAssets.filter((asset) => asset !== previous);
+  const choices = alternatives.length > 0 ? alternatives : publicStateAssets;
+  return choices[Math.floor(Math.random() * choices.length)];
+}
+
 function NowPlayingTeaser({ track }: { track: FeedNowPlayingTrack | null }) {
+  const [fallbackArtwork, setFallbackArtwork] = useState<string | undefined>(
+    () => chooseRandomPublicStateAsset(null),
+  );
+  const [failedTrackThumbnail, setFailedTrackThumbnail] = useState<string | null>(null);
+
+  useEffect(() => {
+    setFailedTrackThumbnail(null);
+    // Pick a fresh public image when playback drops back to the disconnected state.
+    if (!track?.thumbnail) {
+      setFallbackArtwork((current) => chooseRandomPublicStateAsset(current));
+    }
+  }, [track?.thumbnail]);
+
   const songName = track?.title || "Nothing playing right now";
   const artistName = track?.artists.join(", ") || (track?.provider === "ytmusic" ? "YouTube Music" : "Waiting for playback");
   const scrollingText = track
     ? `${track.label} · ${songName} · ${artistName} ·`
     : "NOW PLAYING · NOTHING PLAYING RIGHT NOW ·";
-  const artwork = track?.thumbnail
-    ? <img className="blog-feed-now-playing-artwork" src={track.thumbnail} alt="" loading="lazy" />
+  const activeArtwork = track?.thumbnail && failedTrackThumbnail !== track.thumbnail
+    ? track.thumbnail
+    : fallbackArtwork;
+
+  const handleArtworkError = () => {
+    if (track?.thumbnail && activeArtwork === track.thumbnail) {
+      setFailedTrackThumbnail(track.thumbnail);
+      return;
+    }
+    setFallbackArtwork((current) => chooseRandomPublicStateAsset(current));
+  };
+
+  const artwork = activeArtwork
+    ? <img key={activeArtwork} className="blog-feed-now-playing-artwork" src={activeArtwork} alt="" loading="lazy" onError={handleArtworkError} />
     : <span className="blog-feed-now-playing-placeholder" aria-hidden="true">♫</span>;
 
   return (
@@ -90,7 +124,7 @@ function NowPlayingTeaser({ track }: { track: FeedNowPlayingTrack | null }) {
       className="blog-feed-now-playing-teaser"
       aria-label={track ? `${track.label}: ${songName}, ${artistName}` : "Now playing: no active track"}
     >
-      {track?.url ? (
+      {track?.url && track.thumbnail && activeArtwork === track.thumbnail ? (
         <a
           className="blog-feed-now-playing-artwork-frame"
           href={track.url}
