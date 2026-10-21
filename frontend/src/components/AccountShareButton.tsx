@@ -18,9 +18,13 @@ export default function AccountShareButton({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [feedback, setFeedback] = useState("");
-  const [snapshotVersion, setSnapshotVersion] = useState(() => String(Date.now()));
+  const [snapshotVersion, setSnapshotVersion] = useState(() =>
+    String(Date.now()),
+  );
   const [canManageSnapshot, setCanManageSnapshot] = useState(canUpdateSnapshot);
-  const [snapshotCaptureUrl, setSnapshotCaptureUrl] = useState<string | null>(null);
+  const [snapshotCaptureUrl, setSnapshotCaptureUrl] = useState<string | null>(
+    null,
+  );
   const snapshotCaptureFrameRef = useRef<HTMLIFrameElement | null>(null);
   const shareUrl = `${window.location.origin}/share/account`;
   // The image endpoint belongs to the backend, not Vite. Use the configured API
@@ -50,8 +54,10 @@ export default function AccountShareButton({
       attempts += 1;
       let statusElement: HTMLElement | null = null;
       try {
-        statusElement = snapshotCaptureFrameRef.current?.contentDocument
-          ?.getElementById("account-share-snapshot-status") ?? null;
+        statusElement =
+          snapshotCaptureFrameRef.current?.contentDocument?.getElementById(
+            "account-share-snapshot-status",
+          ) ?? null;
       } catch {
         // A navigation away from the same-origin account page is reported as a timeout below.
       }
@@ -60,15 +66,19 @@ export default function AccountShareButton({
       if (message.startsWith("Snapshot saved.")) {
         const version = String(Date.now());
         setSnapshotVersion(version);
-        setPreviewImageUrl(`${API_BASE_URL}/share/account/og-image.png?v=${version}`);
-        setFeedback("Snapshot saved. The rich-preview image has been refreshed.");
+        setPreviewImageUrl(
+          `${API_BASE_URL}/share/account/og-image.png?v=${version}`,
+        );
+
         setSnapshotCaptureUrl(null);
         return;
       }
 
       // The capture routine uses these three messages while it is working. Any
       // other non-empty message is its final error text and should be shown here.
-      const isProgress = SNAPSHOT_PROGRESS_MESSAGES.some((progress) => message === progress);
+      const isProgress = SNAPSHOT_PROGRESS_MESSAGES.some(
+        (progress) => message === progress,
+      );
       if (message && !isProgress) {
         setFeedback(message);
         setSnapshotCaptureUrl(null);
@@ -76,7 +86,9 @@ export default function AccountShareButton({
       }
 
       if (attempts >= 120) {
-        setFeedback("Snapshot capture timed out. No new preview was confirmed; check the account page and try again.");
+        setFeedback(
+          "Snapshot capture timed out. No new preview was confirmed; check the account page and try again.",
+        );
         setSnapshotCaptureUrl(null);
       }
     }, 500);
@@ -91,7 +103,9 @@ export default function AccountShareButton({
       if (event.data?.type !== "blogg-account-snapshot-updated") return;
       const version = String(event.data.version || Date.now());
       setSnapshotVersion(version);
-      setPreviewImageUrl(`${API_BASE_URL}/share/account/og-image.png?v=${version}`);
+      setPreviewImageUrl(
+        `${API_BASE_URL}/share/account/og-image.png?v=${version}`,
+      );
       setFeedback("Snapshot saved. The rich-preview image has been refreshed.");
     };
     window.addEventListener("message", onSnapshotUpdated);
@@ -103,7 +117,6 @@ export default function AccountShareButton({
     const captureUrl = new URL("/account", window.location.origin);
     captureUrl.searchParams.set("view", "public");
     captureUrl.searchParams.set("captureSnapshot", "1");
-    setFeedback("Building the public-view snapshot in the background. This page will update when the capture finishes.");
     setSnapshotCaptureUrl(captureUrl.toString());
   };
 
@@ -249,12 +262,17 @@ export default function AccountShareButton({
                   onClick={updateSnapshot}
                   disabled={Boolean(snapshotCaptureUrl)}
                 >
-                  {snapshotCaptureUrl ? "Updating snapshot…" : "Update rich-preview snapshot"}
+                  {snapshotCaptureUrl
+                    ? "Updating snapshot…"
+                    : "Update rich-preview snapshot"}
                 </button>
               </div>
             )}
             {feedback && (
-              <p className="account-share-feedback" role="status">
+              <p
+                className="account-share-feedback typewriter-font"
+                role="status"
+              >
                 {feedback}
               </p>
             )}
