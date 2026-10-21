@@ -20,25 +20,18 @@ import showcaseWidgetVisibilityRouter from "../routes/showcaseWidgetVisibility.t
 import linkPreviewRouter from "../routes/linkPreview.ts";
 import healthRouter from "../routes/health.ts";
 import healthSleepRouter from "../routes/healthSleep.ts";
+import currentReadingSearchPaginationRouter from "../routes/currentReadingSearchPagination.ts";
 import currentReadingRouter from "../routes/currentReading.ts";
 import clientUiLogsRouter from "../routes/clientUiLogs.ts";
 
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
-
-app.use(
-  cors({
-    origin: process.env.FRONTEND_URL ?? "http://localhost:5173",
-    credentials: true,
-  }),
-);
+app.use(cors({ origin: process.env.FRONTEND_URL ?? "http://localhost:5173", credentials: true }));
 app.use(express.json({ limit: "5mb" }));
 app.use(middleware);
-
 await mongoConnectDB();
 await warmupPgPool();
 await initializePostgresSchema();
-
 app.use(cookieParser());
 // Register the fixed route before /share/:bloggId so "account" is not treated as a note ID.
 app.use(accountSharePreviewRouter);
@@ -54,13 +47,12 @@ app.use("/api", youtubeMusicApiRouter);
 app.use("/api", showcaseWidgetVisibilityRouter);
 app.use("/api", healthRouter);
 app.use("/api", healthSleepRouter);
+// Register the paginated search first; it handles the matching GET before the legacy search route.
+app.use("/api", currentReadingSearchPaginationRouter);
 app.use("/api", currentReadingRouter);
 app.use("/api", adminShowcaseRouter);
 app.use(canvasViewInterceptor);
 app.use(blogInterceptRouter);
 app.use(flipBookInterceptor);
 app.use(errorHandler);
-
-app.listen(port, "0.0.0.0", () => {
-  logger.info({ event: "SERVER_RUNNING", port });
-});
+app.listen(port, "0.0.0.0", () => { logger.info({ event: "SERVER_RUNNING", port }); });
