@@ -23,6 +23,8 @@ let healthUpdatedAt = 0;
 const saving = new Set<WidgetKey>();
 let syncing = false;
 let syncQueued = false;
+let toggleLayer: HTMLDivElement | null = null;
+const toggleTargets: Partial<Record<WidgetKey, HTMLElement>> = {};
 
 async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -122,56 +124,187 @@ function canManageWidgets(): boolean {
   return isAccountPath() && !isForcedPublicView() && Boolean(document.querySelector(".account-activity-select"));
 }
 
+function ensureToggleStyles(): void {
+  if (document.getElementById("showcase-widget-dot-toggle-styles")) return;
+  const style = document.createElement("style");
+  style.id = "showcase-widget-dot-toggle-styles";
+  style.textContent = `
+    #showcase-widget-toggle-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      pointer-events: none;
+      overflow: visible;
+    }
+    .showcase-widget-dot-toggle-wrap {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      margin: 0;
+      padding: 0;
+      transform: translate(-50%, -50%);
+      pointer-events: auto;
+      font: 12px/1.4 Arial, sans-serif;
+    }
+    .showcase-widget-dot-toggle {
+      display: grid;
+      place-items: center;
+      box-sizing: border-box;
+      width: 23px;
+      height: 23px;
+      margin: 0;
+      padding: 0;
+      border: 1.5px solid #9aa4b2;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 1px 5px rgb(15 23 42 / 18%);
+      cursor: pointer;
+      transition: border-color .15s ease, background .15s ease, transform .15s ease;
+    }
+    .showcase-widget-dot-toggle::after {
+      content: "";
+      display: block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #9aa4b2;
+      transition: width .15s ease, height .15s ease, background .15s ease;
+    }
+    .showcase-widget-dot-toggle[aria-checked="true"] {
+      border-color: #14845b;
+      background: #e9f8f0;
+    }
+    .showcase-widget-dot-toggle[aria-checked="true"]::after {
+      width: 12px;
+      height: 12px;
+      background: #14845b;
+    }
+    .showcase-widget-dot-toggle:hover:not(:disabled) { transform: scale(1.06); }
+    .showcase-widget-dot-toggle:focus-visible {
+      outline: 3px solid #8fd4b5;
+      outline-offset: 2px;
+    }
+    .showcase-widget-dot-toggle:disabled { opacity: .55; cursor: wait; }
+    .showcase-widget-dot-status {
+      position: absolute;
+      top: 25px;
+      right: 0;
+      max-width: min(280px, 75vw);
+      box-sizing: border-box;
+      padding: 4px 7px;
+      border-radius: 5px;
+      color: #9b2c2c;
+      background: #fff7f7;
+      box-shadow: 0 2px 8px rgb(15 23 42 / 13%);
+      overflow-wrap: anywhere;
+      font: 11px/1.4 Arial, sans-serif;
+    }
+    .showcase-widget-dot-status:empty { display: none; }
+  `;
+  document.head.append(style);
+}
+
+function getToggleLayer(): HTMLDivElement {
+  ensureToggleStyles();
+  let layer = document.getElementById("showcase-widget-toggle-layer") as HTMLDivElement | null;
+  if (!layer) {
+    layer = document.createElement("div");
+    layer.id = "showcase-widget-toggle-layer";
+    layer.setAttribute("aria-label", "Administrator widget visibility controls");
+    document.body.append(layer);
+  }
+  toggleLayer = layer;
+  return layer;
+}
+
+function setToggleLayerVisible(visible: boolean): void {
+  const layer = toggleLayer || document.getElementById("showcase-widget-toggle-layer") as HTMLDivElement | null;
+  if (layer) layer.style.display = visible ? "block" : "none";
+}
+
+function positionToggle(key: WidgetKey, target: HTMLElement | null): void {
+  const layer = toggleLayer || document.getElementById("showcase-widget-toggle-layer") as HTMLDivElement | null;
+  const wrapper = layer?.querySelector<HTMLDivElement>(`[data-showcase-widget-toggle="${key}"]`);
+  if (!wrapper || !target || !target.isConnected) {
+    if (wrapper) wrapper.style.display = "none";
+    return;
+  }
+
+  const rect = target.getBoundingClientRect();
+  const isVisible = rect.width > 0 && rect.height > 0 && rect.bottom >= 0 && rect.top <= window.innerHeight && rect.right >= 0 && rect.left <= window.innerWidth;
+  if (!isVisible) {
+    wrapper.style.display = "none";
+    return;
+  }
+
+  const left = Math.max(14, Math.min(window.innerWidth - 14, rect.right));
+  const top = Math.max(14, Math.min(window.innerHeight - 14, rect.top));
+  wrapper.style.left = `${left}px`;
+  wrapper.style.top = `${top}px`;
+  wrapper.style.display = "flex";
+}
+
+function positionAllToggles(): void {
+  (Object.keys(DEFAULT_WIDGETS) as WidgetKey[]).forEach((key) => {
+    positionToggle(key, toggleTargets[key] || null);
+  });
+}
+
 function createToggle(key: WidgetKey, labelText: string): HTMLDivElement {
   const wrapper = document.createElement("div");
+  wrapper.className = "showcase-widget-dot-toggle-wrap";
   wrapper.dataset.showcaseWidgetToggle = key;
-  wrapper.style.cssText = "display:flex;flex-direction:column;align-items:flex-start;gap:3px;margin-top:8px;max-width:100%;font:12px/1.4 Arial,sans-serif;color:#536174;";
-  const label = document.createElement("label");
-  label.style.cssText = "display:inline-flex;align-items:center;gap:7px;cursor:pointer;font:inherit;";
-  const checkbox = document.createElement("input");
-  checkbox.type = "checkbox";
-  checkbox.dataset.showcaseWidgetToggleInput = key;
-  checkbox.style.cssText = "width:15px;height:15px;margin:0;accent-color:#111827;";
-  const text = document.createElement("span");
-  text.textContent = labelText;
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "showcase-widget-dot-toggle";
+  button.dataset.showcaseWidgetToggleInput = key;
+  button.setAttribute("role", "switch");
+  button.setAttribute("aria-checked", "false");
+  button.setAttribute("aria-label", labelText);
+  button.title = `${labelText}: disabled`;
+
   const status = document.createElement("span");
+  status.className = "showcase-widget-dot-status";
   status.dataset.showcaseWidgetToggleStatus = key;
   status.setAttribute("role", "status");
-  status.style.cssText = "font-size:11px;color:#9b2c2c;overflow-wrap:anywhere;";
-  label.append(checkbox, text);
-  wrapper.append(label, status);
-  checkbox.addEventListener("change", () => {
-    void updateVisibility(key, checkbox.checked);
+
+  wrapper.append(button, status);
+  button.addEventListener("click", () => {
+    void updateVisibility(key, !widgets[key]);
   });
   return wrapper;
 }
 
-function ensureToggle(
-  target: HTMLElement | null,
-  key: WidgetKey,
-  label: string,
-  insertAfter: HTMLElement | null = null,
-): void {
-  if (!target) return;
+function ensureToggle(target: HTMLElement | null, key: WidgetKey, labelText: string): void {
+  const layer = getToggleLayer();
+  let wrapper = layer.querySelector<HTMLDivElement>(`[data-showcase-widget-toggle="${key}"]`);
 
-  // Keep exactly one control for each setting, even if the preferred heading
-  // appears after another eligible heading has already been rendered.
-  let wrapper = document.querySelector<HTMLDivElement>(`[data-showcase-widget-toggle="${key}"]`);
-  if (!wrapper) wrapper = createToggle(key, label);
-
-  if (insertAfter && insertAfter.parentElement === target) {
-    if (wrapper.parentElement !== target || wrapper.previousElementSibling !== insertAfter) {
-      insertAfter.insertAdjacentElement("afterend", wrapper);
-    }
-  } else if (wrapper.parentElement !== target) {
-    target.append(wrapper);
+  // Never append controls inside a React-owned card. A separate overlay avoids
+  // corrupting React's child tree when Health, music, or reading state updates.
+  if (!wrapper) {
+    wrapper = createToggle(key, labelText);
+    layer.append(wrapper);
   }
 
-  const checkbox = wrapper.querySelector<HTMLInputElement>("input");
-  if (checkbox) {
-    checkbox.checked = widgets[key];
-    checkbox.disabled = !settingsLoaded || saving.size > 0;
+  if (!target) {
+    delete toggleTargets[key];
+    positionToggle(key, null);
+    return;
   }
+
+  toggleTargets[key] = target;
+  const button = wrapper.querySelector<HTMLButtonElement>("button");
+  if (button) {
+    button.setAttribute("aria-label", labelText);
+    button.setAttribute("aria-checked", String(widgets[key]));
+    button.title = `${labelText}: ${widgets[key] ? "enabled" : "disabled"}`;
+    button.disabled = !settingsLoaded || saving.size > 0;
+  }
+  positionToggle(key, target);
 }
 
 function ensureAdminControls(): void {
@@ -179,16 +312,15 @@ function ensureAdminControls(): void {
 
   const spotifyPanel = Array.from(document.querySelectorAll<HTMLElement>(".account-showcase-mini-section"))
     .find((panel) => headingTitle(panel) === "spotify") || null;
-  const spotifyHeading = spotifyPanel?.querySelector<HTMLElement>(".showcase-mini-heading") || null;
-  const musicHeading = document.querySelector<HTMLElement>(".account-showcase-ytmusic-section .showcase-mini-heading") || spotifyHeading;
-  ensureToggle(musicHeading, "music", "Show Spotify / YouTube Music on public profile and feed");
+  const musicPanel = document.querySelector<HTMLElement>(".account-showcase-ytmusic-section") || spotifyPanel;
+  ensureToggle(musicPanel, "music", "Show Spotify / YouTube Music on public profile and feed");
 
-  const healthHeading = document.querySelector<HTMLElement>(".health-admin-overview .health-panel-heading");
-  ensureToggle(healthHeading, "health", "Show Health on public profile and feed");
+  // This is the visible Personal Metrics card, not the admin-only heading selector.
+  const healthCard = document.querySelector<HTMLElement>(".health-admin-overview.account-health-card, .health-admin-overview");
+  ensureToggle(healthCard, "health", "Show Health / Personal Metrics on public profile and feed");
 
-  const readingPanel = document.querySelector<HTMLElement>(".current-reading-panel");
-  const readingHeading = readingPanel?.querySelector<HTMLElement>(":scope > .current-reading-heading") || null;
-  ensureToggle(readingPanel, "reading", "Show Current Reading on public profile and feed", readingHeading);
+  const readingCard = document.querySelector<HTMLElement>(".current-reading-panel");
+  ensureToggle(readingCard, "reading", "Show Current Reading on public profile and feed");
 }
 
 async function updateVisibility(key: WidgetKey, enabled: boolean): Promise<void> {
@@ -224,12 +356,14 @@ function setToggleMessage(key: WidgetKey, message: string): void {
 }
 
 function updateToggleControls(): void {
-  document.querySelectorAll<HTMLInputElement>("[data-showcase-widget-toggle-input]")
-    .forEach((input) => {
-      const key = input.dataset.showcaseWidgetToggleInput as WidgetKey | undefined;
+  document.querySelectorAll<HTMLButtonElement>("[data-showcase-widget-toggle-input]")
+    .forEach((button) => {
+      const key = button.dataset.showcaseWidgetToggleInput as WidgetKey | undefined;
       if (!key) return;
-      input.checked = widgets[key];
-      input.disabled = !settingsLoaded || saving.size > 0;
+      button.setAttribute("aria-checked", String(widgets[key]));
+      const label = button.getAttribute("aria-label") || "Widget visibility";
+      button.title = `${label}: ${widgets[key] ? "enabled" : "disabled"}`;
+      button.disabled = !settingsLoaded || saving.size > 0;
     });
 }
 
@@ -351,6 +485,7 @@ function restorePublicManagedVisibility(): void {
 async function runSync(): Promise<void> {
   const path = window.location.pathname.replace(/\/+$/, "") || "/";
   if (path !== "/account" && path !== "/feed") {
+    setToggleLayerVisible(false);
     restorePublicManagedVisibility();
     return;
   }
@@ -361,9 +496,12 @@ async function runSync(): Promise<void> {
     if (canManageWidgets()) {
       restorePublicManagedVisibility();
       ensureAdminControls();
+      setToggleLayerVisible(true);
       updateToggleControls();
+      positionAllToggles();
       return;
     }
+    setToggleLayerVisible(false);
     if (!isPublicProfile()) {
       // Wait for the existing bootstrap to determine whether this /account view
       // belongs to the administrator before making a public visibility decision.
@@ -380,6 +518,7 @@ async function runSync(): Promise<void> {
   }
 
   if (path === "/feed") {
+    setToggleLayerVisible(false);
     const health = widgets.health
       ? await loadHealthAvailability()
       : { hasAny: false, hasSteps: false, hasRunning: false };
@@ -411,6 +550,8 @@ if (typeof document !== "undefined" && document.body) {
     attributeFilter: ["class"],
   });
   window.addEventListener("popstate", sync);
+  window.addEventListener("resize", positionAllToggles);
+  window.addEventListener("scroll", positionAllToggles, true);
   window.addEventListener("health-data-updated", () => {
     healthAvailability = null;
     healthUpdatedAt = 0;
