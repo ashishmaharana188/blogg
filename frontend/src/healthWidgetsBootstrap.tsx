@@ -54,7 +54,6 @@ function ensureAdminPanel(main: HTMLElement) {
   if (!dashboard) return;
 
   const state = adminAccessByMain.get(main);
-  if (state === "denied") return;
 
   const placements = adminHealthPlacements.map((placement) => {
     const column = dashboard.querySelector<HTMLElement>(placement.columnSelector);
@@ -94,6 +93,12 @@ function ensureAdminPanel(main: HTMLElement) {
   if (hosts.some((host) => !host)) return;
 
   if (state === "pending") return;
+  if (state === "denied") {
+    placements.forEach(({ section, host }) => {
+      if (host) mountRoot(host, <HealthAdminPanel isAdmin={false} section={section} />);
+    });
+    return;
+  }
   if (state === "allowed") {
     placements.forEach(({ section, host }) => {
       if (host) mountRoot(host, <HealthAdminPanel isAdmin={true} section={section} />);
@@ -115,7 +120,9 @@ function ensureAdminPanel(main: HTMLElement) {
     }
     if (!response.ok) {
       adminAccessByMain.set(main, "denied");
-      currentHosts.forEach((host) => host?.remove());
+      placements.forEach(({ section, host }) => {
+        if (host) mountRoot(host, <HealthAdminPanel isAdmin={false} section={section} />);
+      });
       return;
     }
     adminAccessByMain.set(main, "allowed");
@@ -124,7 +131,9 @@ function ensureAdminPanel(main: HTMLElement) {
     });
   }).catch(() => {
     adminAccessByMain.set(main, "denied");
-    placements.forEach(({ host }) => host?.remove());
+    placements.forEach(({ section, host }) => {
+      if (host) mountRoot(host, <HealthAdminPanel isAdmin={false} section={section} />);
+    });
   });
 }
 

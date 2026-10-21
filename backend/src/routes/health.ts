@@ -367,6 +367,30 @@ router.get("/health/public-summary", async (_req, res, next) => {
   const client = await getPgClient();
   try {
     const summary = await loadHealthSummary(client);
+    // The Account page also has a read-only public mode. Share the actual health
+    // metrics there, but keep import history and source filenames administrator-only.
+    const standalone = await client.query(
+      "SELECT sample_id, measured_at, bpm FROM health_heart_rate_samples ORDER BY measured_at DESC LIMIT 30",
+    );
+    const runSamplesResult = await client.query(
+      "SELECT started_at, samples_json FROM health_running_sessions ORDER BY started_at DESC LIMIT 12",
+    );
+    const allSamples = standalone.rows.map((row: any) => ({
+      measuredAt: new Date(row.measured_at).toISOString(),
+      bpm: Number(row.bpm),
+    }));
+    for (const runRow of runSamplesResult.rows) {
+      for (const point of safeJsonArray(runRow.samples_json)) {
+        if (typeof point.bpm === "number" && Number.isFinite(point.bpm)) {
+          allSamples.push({ measuredAt: point.time, bpm: point.bpm });
+        }
+      }
+    }
+    allSamples.sort((a, b) => b.measuredAt.localeCompare(a.measuredAt));
+    const recentHeartRates = [...new Map(
+      allSamples.map((sample) => [`${sample.measuredAt}|${sample.bpm}`, sample]),
+    ).values()].slice(0, 30);
+
     return res.setHeader("Cache-Control", "public, max-age=60").json({
       steps: {
         date: summary.steps.date,
@@ -375,12 +399,11 @@ router.get("/health/public-summary", async (_req, res, next) => {
         observedDays7d: summary.steps.observedDays7d,
         recentDays: summary.steps.recentDays.map((day: any) => ({ day: day.day, steps: day.steps })),
       },
-      latestHeartRate: summary.latestHeartRate ? { bpm: summary.latestHeartRate.bpm } : null,
-      latestRun: summary.latestRun ? {
-        durationSeconds: summary.latestRun.durationSeconds,
-        distanceM: summary.latestRun.distanceM,
-        avgHeartRate: summary.latestRun.avgHeartRate,
-      } : null,
+      latestHeartRate: summary.latestHeartRate,
+      latestRun: summary.latestRun,
+      recentRuns: summary.recentRuns,
+      recentHeartRates,
+      // Deliberately omit latestImport: filenames and import audit details are private.
     });
   } catch (error) { next(error); }
   finally { client.release(); }
