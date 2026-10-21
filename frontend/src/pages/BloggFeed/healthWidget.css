@@ -56,7 +56,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 14px 0 9px;
+  padding: 9px 0 9px;
 }
 .blog-feed-health-primary > span,
 .blog-feed-health-secondary > div > span,
@@ -78,7 +78,7 @@
   display: flex;
   align-items: flex-end;
   gap: 4px;
-  height: 33px;
+  height: 25px;
   padding: 0 0 5px;
   border-bottom: 1px solid #edf0f4;
 }
@@ -108,7 +108,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 9px;
-  padding: 10px 0;
+  padding: 9px 0;
   border-bottom: 1px solid #edf0f4;
 }
 .blog-feed-health-secondary > div {
