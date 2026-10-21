@@ -1,4 +1,4 @@
-/* Configuration and exercise-data display for the existing Samsung Health card. */
+/* Closed-by-default metric configuration menu inside the existing Samsung Health importer. */
 .health-metric-settings { margin-top: 14px; border-top: 1px solid #edf0f4; border-bottom: 1px solid #edf0f4; }
 .health-metric-settings > summary { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:42px; color:#354154; font-size:.76rem; font-weight:650; cursor:pointer; list-style:none; }
 .health-metric-settings > summary::-webkit-details-marker { display:none; }
@@ -16,33 +16,3 @@
 .health-metric-option small { color:#687586; font-size:.66rem; line-height:1.45; }
 .health-metric-settings-footer { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-top:12px; }
 .health-metric-settings-footer > span { color:#7b8490; font-size:.68rem; }
-.health-selected-exercise { margin-top:16px; padding-top:15px; border-top:1px solid #edf0f4; }
-.health-selected-exercise-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin-bottom:12px; }
-.health-selected-exercise-heading .account-eyebrow { margin:0 0 4px; }
-.health-selected-exercise-heading h3 { margin:0; color:#273246; font-size:.93rem; font-weight:650; }
-.health-selected-exercise-heading > span { color:#7b8490; font-size:.67rem; text-align:right; }
-.health-selected-exercise-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,145px),1fr)); gap:9px; }
-.health-selected-exercise-card { display:flex; flex-direction:column; gap:5px; min-width:0; padding:12px; border:1px solid #e1e6ec; background:#fff; }
-.health-selected-exercise-card > span { color:#8792a0; font-size:.58rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
-.health-selected-exercise-card > strong { color:#172033; font-size:1.12rem; line-height:1.3; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
-.health-selected-exercise-card > small { color:#7b8490; font-size:.65rem; line-height:1.4; }
-.health-exercise-trend { margin-top:17px; }
-.health-exercise-trend .health-admin-subheading { margin-bottom:8px; }
-.health-exercise-trend .health-admin-subheading h4 { margin:0; color:#39465a; font-size:.72rem; font-weight:650; }
-.health-exercise-trend-bars { display:flex; align-items:stretch; gap:7px; min-height:74px; padding:8px 0 0; border-bottom:1px solid #edf0f4; }
-.health-exercise-trend-bars > span { display:flex; align-items:center; justify-content:flex-end; flex:1 1 0; flex-direction:column; gap:5px; min-width:0; }
-.health-exercise-trend-bars i { display:block; width:100%; min-height:5px; max-width:34px; background:#8499b3; }
-.health-exercise-trend-bars small { color:#8792a0; font-size:.54rem; white-space:nowrap; }
-@media (max-width:560px) { .health-selected-exercise-heading { align-items:flex-start; flex-direction:column; } .health-selected-exercise-heading > span { text-align:left; } }
-
-/* Activity history belongs in its own Account section; keep detail graphs collapsed initially. */
-.health-exercise-details { margin-top: 14px; border-top: 1px solid #edf0f4; }
-.health-exercise-details > summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; color: #475467; font-size: .72rem; font-weight: 600; cursor: pointer; list-style: none; }
-.health-exercise-details > summary::-webkit-details-marker { display: none; }
-.health-exercise-details > summary::after { content: "+"; display: grid; place-items: center; width: 22px; height: 22px; flex: 0 0 22px; border: 1px solid #d7dee7; color: #667085; font-size: 1rem; line-height: 1; }
-.health-exercise-details[open] > summary::after { content: "−"; }
-.health-exercise-session-list { display: flex; flex-direction: column; gap: 7px; margin: 0 0 12px; }
-.health-exercise-session-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; padding: 9px 10px; border: 1px solid #e6eaf0; background: #fff; }
-.health-exercise-session-row strong { color: #344054; font-size: .7rem; }
-.health-exercise-session-row > span { color: #7b8490; font-size: .64rem; }
-.health-exercise-session-row > span:last-child { grid-column: 1 / -1; }

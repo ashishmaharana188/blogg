@@ -133,7 +133,7 @@ function metricTrendNumber(metricId: string, session: ExerciseSession): number |
     return numeric(session.avgHeartRate) ?? numeric(heartRate?.average);
   }
   if (metricId === "sets") {
-    const sets = session.sets?.map((set) => set.reps) ?? (Array.isArray(values.sets) ? values.sets.filter((value): value is number => typeof value === "number") : []);
+    const sets = session.sets?.length ? session.sets.map((set) => set.reps) : (Array.isArray(values.sets) ? values.sets.filter((value): value is number => typeof value === "number") : []);
     return sets.length ? sets.reduce((sum, value) => sum + value, 0) : null;
   }
   return 1;
@@ -233,7 +233,7 @@ export default function HealthAdminPanel({ isAdmin, section }: { isAdmin: boolea
 
     const onHealthDataUpdated = (event: Event) => {
       const detail = (event as CustomEvent<{ source?: HealthPanelSection | "metrics" }>).detail;
-      if (detail?.source !== section || detail?.source === "metrics") void refresh();
+      if (detail?.source !== section) void refresh();
     };
     window.addEventListener("health-data-updated", onHealthDataUpdated);
     return () => window.removeEventListener("health-data-updated", onHealthDataUpdated);
@@ -510,79 +510,66 @@ export default function HealthAdminPanel({ isAdmin, section }: { isAdmin: boolea
         </>}
       </section>
 
-      <section className="account-showcase-section account-health-card health-selected-exercise" aria-labelledby="health-exercise-title">
+      <section className="account-showcase-section account-health-card health-admin-steps" aria-labelledby="health-exercise-title">
         <div className="health-column-heading">
-          <p className="account-eyebrow">EXERCISE & OTHER ACTIVITIES</p>
+          <p className="account-eyebrow">EXERCISE &amp; OTHER ACTIVITIES</p>
           <h3 id="health-exercise-title">Exercise sessions</h3>
         </div>
         {metricsLoading ? <AssetStateBox status="loading" compact /> : metricsFailed ? (
           <AssetStateBox status="error" compact onRetry={() => void refresh()} />
-        ) : !metricData || (!(metricData.sessions?.length) && !metricData.latestSession) ? (
+        ) : !metricData || (!(metricData.sessions?.length) && !(metricData.recentSessions?.length) && !metricData.latestSession) ? (
           <p className="health-muted">Exercise records will appear here after importing a Samsung Health export containing supported exercise activities.</p>
-        ) : (
-          <>
-            <div className="health-selected-exercise-heading">
-              <div><strong>{metricData.sessions?.[0]?.activityName || metricData.latestSession?.activityName || "Exercise"}</strong></div>
-              <span>{formatDate(metricData.sessions?.[0]?.startedAt || metricData.latestSession?.startedAt)}</span>
+        ) : (() => {
+          const sessions = (metricData.sessions?.length ? metricData.sessions : metricData.recentSessions || []).slice(0, 8);
+          const latestSession = sessions[0] || metricData.latestSession;
+          const trendMetric = metricData.selectedMetrics.find((id) => id !== "history") || (metricData.selectedMetrics.includes("history") ? "history" : "repetitions");
+          const trendValues = sessions.map((session) => metricTrendNumber(trendMetric, session));
+          const trendMaximum = Math.max(1, ...trendValues.filter((value): value is number => value !== null));
+          const formatTrend = (value: number | null): string => {
+            if (value === null) return "—";
+            if (trendMetric === "duration") return formatDuration(value);
+            if (trendMetric === "heart_rate") return `${Math.round(value)} bpm`;
+            if (trendMetric === "calories") return `${value.toFixed(1)} kcal`;
+            if (trendMetric === "history") return "1 session";
+            if (trendMetric === "sets") return `${Math.round(value).toLocaleString()} reps`;
+            return `${Math.round(value).toLocaleString()} reps / count`;
+          };
+          return <>
+            <div className="health-metric-grid">
+              {metricData.selectedMetrics.map((id) => {
+                const shown = getMetricValue(id, metricData);
+                return <article className="health-metric-card" key={id}>
+                  <span>{METRIC_LABELS[id] || id}</span>
+                  <strong>{shown.value}</strong>
+                  <small>{latestSession ? `${latestSession.activityName || "Latest activity"} · ${formatDate(latestSession.startedAt)}${shown.detail ? ` · ${shown.detail}` : ""}` : (shown.detail || "Latest session")}</small>
+                </article>;
+              })}
             </div>
-            {metricData.selectedMetrics.length ? (
-              <div className="health-selected-exercise-cards">
-                {metricData.selectedMetrics.map((id) => {
-                  const shown = getMetricValue(id, metricData);
-                  return <article className="health-selected-exercise-card" key={id}>
-                    <span>{METRIC_LABELS[id] || id}</span><strong>{shown.value}</strong>{shown.detail && <small>{shown.detail}</small>}
-                  </article>;
-                })}
-              </div>
-            ) : <p className="health-muted">No exercise fields are currently selected. Open “Customize displayed Samsung Health metrics” in the import card to choose up to three fields.</p>}
 
-            <details className="health-exercise-details">
-              <summary>Expand exercise history and trend</summary>
-              {(() => {
-                const sessions = (metricData.sessions || metricData.recentSessions || []).slice(0, 8).reverse();
-                const trendMetric = metricData.selectedMetrics.find((id) => id !== "history") || (metricData.selectedMetrics.includes("history") ? "history" : undefined);
-                const numberFrom = (value: unknown): number | null => typeof value === "number" && Number.isFinite(value) ? value : null;
-                let points: Array<{ key: string; label: string; value: number }> = [];
-                if (trendMetric === "history") {
-                  const counts = new Map<string, number>();
-                  sessions.forEach((session) => {
-                    const day = new Date(session.startedAt).toISOString().slice(0, 10);
-                    counts.set(day, (counts.get(day) || 0) + 1);
-                  });
-                  points = [...counts.entries()].map(([day, value]) => ({ key: day, label: day, value }));
-                } else if (trendMetric) {
-                  points = sessions.map((session) => {
-                    const value = metricTrendNumber(trendMetric, session);
-                    return value === null ? null : { key: session.startedAt, label: session.startedAt, value };
-                  }).filter((point): point is { key: string; label: string; value: number } => point !== null && numberFrom(point.value) !== null);
-                }
-                const maximum = Math.max(1, ...points.map((point) => point.value));
-                return <>
-                  {sessions.length > 0 && <div className="health-exercise-session-list">
-                    {sessions.slice().reverse().map((session, index) => {
-                      const values = session.values ?? {};
-                      const count = session.repetitions ?? (typeof values.repetitions === "number" ? values.repetitions : null);
-                      return (
-                        <div className="health-exercise-session-row" key={`${session.sessionId || session.startedAt}-${index}`}>
-                          <strong>{session.activityName || "Exercise"}</strong>
-                          <span>{formatDate(session.startedAt)}</span>
-                          <span>{count == null ? "" : `${count.toLocaleString()} count / reps`}</span>
-                        </div>
-                      );
-                    })}
-                  </div>}
-                  {points.length > 0 && <div className="health-exercise-trend">
-                    <div className="health-admin-subheading"><h4>Recent activity trend · {METRIC_LABELS[trendMetric || "history"]}</h4><span>{sessions.length} sessions</span></div>
-                    <div className="health-exercise-trend-bars" role="img" aria-label={`Recent exercise trend for ${METRIC_LABELS[trendMetric || "history"].toLowerCase()}`}>
-                      {points.map((point) => <span key={point.key} title={`${new Date(point.label).toLocaleDateString()} · ${point.value}`}><i style={{ height: `${Math.max(6, (point.value / maximum) * 100)}%` }} /><small>{new Date(point.label).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</small></span>)}
-                    </div>
-                  </div>}
-                  {!sessions.length && <p className="health-muted">No exercise history is available.</p>}
-                </>;
-              })()}
-            </details>
-          </>
-        )}
+            <div className="health-admin-subsection">
+              <div className="health-admin-subheading">
+                <h3>Recent exercise sessions</h3>
+                <span>{sessions.length} shown</span>
+              </div>
+              {sessions.length ? <div className="health-step-history">
+                {sessions.slice().reverse().map((session, index) => {
+                  const value = metricTrendNumber(trendMetric, session);
+                  const width = value === null ? 0 : Math.max(0, Math.min(100, (value / trendMaximum) * 100));
+                  const timestamp = new Date(session.startedAt);
+                  const dateLabel = Number.isFinite(timestamp.getTime())
+                    ? timestamp.toLocaleDateString(undefined, { day: "numeric", month: "short" })
+                    : "Unknown date";
+                  const activityLabel = (session.activityName || "Exercise").replace(/^Exercise type /, "Type ");
+                  return <div className="health-step-day" key={`${session.sessionId || session.startedAt}-${index}`} aria-label={`${activityLabel}, ${dateLabel}, ${formatTrend(value)}`}>
+                    <span className="health-step-day-date" title={`${dateLabel} · ${formatDate(session.startedAt)}`}>{activityLabel}</span>
+                    <span className="health-step-bar" title={`${activityLabel} · ${dateLabel} · ${formatTrend(value)}`}><span style={{ width: `${width}%` }} /></span>
+                    <strong>{formatTrend(value)}</strong>
+                  </div>;
+                })}
+              </div> : <p className="health-muted">No exercise history is available.</p>}
+            </div>
+          </>;
+        })()}
       </section>
       </>
       )}
