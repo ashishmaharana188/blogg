@@ -196,7 +196,12 @@ function MusicTrack({
   song: Song;
   onFeature?: (song: Song) => void;
   publicAction?: { label: string; disabled?: boolean; onClick: () => void };
-  nowPlayingAction?: { label: string; active?: boolean; disabled?: boolean; onClick: () => void };
+  nowPlayingAction?: {
+    label: string;
+    active?: boolean;
+    disabled?: boolean;
+    onClick: () => void;
+  };
 }) {
   const removingPublicTrack = publicAction?.label === "Remove from public";
   const publicIcon = removingPublicTrack ? "×" : "✓";
@@ -999,7 +1004,9 @@ export default function AccountPage() {
     setYtmusicNowPlayingSaving(true);
     setYtmusicNowPlayingMessage("");
     try {
-      await api("/api/admin/showcase/ytmusic/now-playing", { method: "DELETE" });
+      await api("/api/admin/showcase/ytmusic/now-playing", {
+        method: "DELETE",
+      });
       setYtmusicPublic((current) => ({ ...current, nowPlaying: null }));
       setYtmusicNowPlayingMessage("Now Playing cleared.");
     } catch (error) {
@@ -1337,7 +1344,6 @@ export default function AccountPage() {
                   <div>
                     <p className="account-eyebrow">YOUTUBE LIBRARY</p>
                     <h2>Public playlists</h2>
-                    <p>Public playlists from your YouTube account.</p>
                   </div>
                   {isAdmin && (
                     <button
@@ -1625,7 +1631,9 @@ export default function AccountPage() {
                   </div>
 
                   {ytmusicNowPlayingMessage && isAdmin && (
-                    <p className="account-message" role="status">{ytmusicNowPlayingMessage}</p>
+                    <p className="account-message" role="status">
+                      {ytmusicNowPlayingMessage}
+                    </p>
                   )}
 
                   {ytmusicConnectError && isAdmin && (
@@ -1759,12 +1767,22 @@ export default function AccountPage() {
                                             void toggleYtmusicPublicTrack(song),
                                         }}
                                         nowPlayingAction={{
-                                          label: song.videoId && song.videoId === ytmusicPublic.nowPlaying?.videoId
-                                            ? "Now Playing ✓"
-                                            : "Set as Now Playing",
-                                          active: Boolean(song.videoId && song.videoId === ytmusicPublic.nowPlaying?.videoId),
-                                          disabled: ytmusicNowPlayingSaving || !song.videoId,
-                                          onClick: () => void setYtmusicNowPlaying(song),
+                                          label:
+                                            song.videoId &&
+                                            song.videoId ===
+                                              ytmusicPublic.nowPlaying?.videoId
+                                              ? "Now Playing ✓"
+                                              : "Set as Now Playing",
+                                          active: Boolean(
+                                            song.videoId &&
+                                            song.videoId ===
+                                              ytmusicPublic.nowPlaying?.videoId,
+                                          ),
+                                          disabled:
+                                            ytmusicNowPlayingSaving ||
+                                            !song.videoId,
+                                          onClick: () =>
+                                            void setYtmusicNowPlaying(song),
                                         }}
                                       />
                                     );

@@ -400,7 +400,6 @@ export default function HealthAdminPanel({
         >
           <div className="health-column-heading">
             <p className="account-eyebrow">RUNNING AND BPM</p>
-            <h3 id="health-running-title">Runs and heart rate</h3>
           </div>
           {loading && !summary ? (
             <p className="health-muted">Loading run records…</p>
