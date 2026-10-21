@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { API_BASE_URL } from "../../services/apiBase";
+import AssetStateBox from "../../components/AssetStateBox";
+import { reportUiFailure } from "../../utils/uiDiagnostics";
 import "./healthWidget.css";
 
 type HealthPublicSummary = {
@@ -35,6 +37,7 @@ function formatDuration(seconds?: number | null): string {
 export default function HealthWidget() {
   const [summary, setSummary] = useState<HealthPublicSummary | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -49,8 +52,10 @@ export default function HealthWidget() {
       if (!response.ok)
         throw new Error(`Health summary request failed (${response.status})`);
       setSummary((await response.json()) as HealthPublicSummary);
+      setLoadFailed(false);
     } catch (error) {
-      console.warn("Could not load public health summary:", error);
+      reportUiFailure("HealthWidget.loadSummary", error);
+      setLoadFailed(true);
     } finally {
       setLoaded(true);
     }
@@ -82,7 +87,9 @@ export default function HealthWidget() {
       </div>
 
       {!loaded ? (
-        <p className="blog-feed-health-empty">Loading health data…</p>
+        <AssetStateBox status="loading" compact />
+      ) : loadFailed ? (
+        <AssetStateBox status="error" compact onRetry={() => void refresh()} />
       ) : !hasRecords ? (
         <p className="blog-feed-health-empty">No health data imported yet.</p>
       ) : (

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { inflateRawSync } from "node:zlib";
 import { Router } from "express";
 import multer from "multer";
 import { getPgClient } from "../db/postgres.ts";
@@ -12,6 +13,172 @@ const upload = multer({
   limits: { files: 40, fileSize: 12 * 1024 * 1024, fieldSize: 1024 * 1024 },
 });
 const INDIA_TZ = "Asia/Kolkata";
+
+// ZIP uploads are expanded in memory only. Entry count, per-file size, and total
+// expanded size are bounded before and during decompression to avoid zip bombs.
+const MAX_ZIP_ENTRIES = 2_000;
+const MAX_EXTRACTED_FILE_BYTES = 12 * 1024 * 1024;
+const MAX_TOTAL_EXTRACTED_BYTES = 100 * 1024 * 1024;
+const ZIP_END_OF_CENTRAL_DIRECTORY = 0x06054b50;
+const ZIP_CENTRAL_DIRECTORY_ENTRY = 0x02014b50;
+const ZIP_LOCAL_FILE_HEADER = 0x04034b50;
+
+class InvalidHealthArchiveError extends Error {}
+
+function readZipUInt16(buffer: Buffer, offset: number): number {
+  if (offset < 0 || offset + 2 > buffer.length) {
+    throw new InvalidHealthArchiveError("The ZIP archive is incomplete or malformed.");
+  }
+  return buffer.readUInt16LE(offset);
+}
+
+function readZipUInt32(buffer: Buffer, offset: number): number {
+  if (offset < 0 || offset + 4 > buffer.length) {
+    throw new InvalidHealthArchiveError("The ZIP archive is incomplete or malformed.");
+  }
+  return buffer.readUInt32LE(offset);
+}
+
+function extractHealthFilesFromZip(archiveFile: Express.Multer.File): Express.Multer.File[] {
+  const archive = archiveFile.buffer;
+  if (!Buffer.isBuffer(archive) || archive.length < 22) {
+    throw new InvalidHealthArchiveError(`"${archiveFile.originalname}" is not a valid ZIP archive.`);
+  }
+
+  // EOCD is located within the last 65,557 bytes of a standard ZIP archive.
+  const searchStart = Math.max(0, archive.length - 22 - 0xffff);
+  let eocdOffset = -1;
+  for (let offset = archive.length - 22; offset >= searchStart; offset -= 1) {
+    if (archive.readUInt32LE(offset) === ZIP_END_OF_CENTRAL_DIRECTORY) {
+      const commentLength = readZipUInt16(archive, offset + 20);
+      if (offset + 22 + commentLength === archive.length) {
+        eocdOffset = offset;
+        break;
+      }
+    }
+  }
+  if (eocdOffset < 0) {
+    throw new InvalidHealthArchiveError(`Could not read "${archiveFile.originalname}" as a standard ZIP archive.`);
+  }
+
+  const diskNumber = readZipUInt16(archive, eocdOffset + 4);
+  const centralDirectoryDisk = readZipUInt16(archive, eocdOffset + 6);
+  const entriesOnDisk = readZipUInt16(archive, eocdOffset + 8);
+  const entryCount = readZipUInt16(archive, eocdOffset + 10);
+  const centralDirectorySize = readZipUInt32(archive, eocdOffset + 12);
+  const centralDirectoryOffset = readZipUInt32(archive, eocdOffset + 16);
+
+  if (diskNumber !== 0 || centralDirectoryDisk !== 0 || entriesOnDisk !== entryCount) {
+    throw new InvalidHealthArchiveError("Multi-disk ZIP archives are not supported.");
+  }
+  if (entryCount === 0xffff || centralDirectorySize === 0xffffffff || centralDirectoryOffset === 0xffffffff) {
+    throw new InvalidHealthArchiveError("ZIP64 archives are not supported. Export a standard Samsung Health ZIP archive instead.");
+  }
+  if (entryCount > MAX_ZIP_ENTRIES) {
+    throw new InvalidHealthArchiveError(`The ZIP contains too many entries. The limit is ${MAX_ZIP_ENTRIES}.`);
+  }
+  if (centralDirectoryOffset + centralDirectorySize > eocdOffset) {
+    throw new InvalidHealthArchiveError("The ZIP central directory is invalid.");
+  }
+
+  const extracted: Express.Multer.File[] = [];
+  let totalExpandedBytes = 0;
+  let cursor = centralDirectoryOffset;
+
+  for (let index = 0; index < entryCount; index += 1) {
+    if (readZipUInt32(archive, cursor) !== ZIP_CENTRAL_DIRECTORY_ENTRY) {
+      throw new InvalidHealthArchiveError("The ZIP central directory is malformed.");
+    }
+    const flags = readZipUInt16(archive, cursor + 8);
+    const method = readZipUInt16(archive, cursor + 10);
+    const compressedSize = readZipUInt32(archive, cursor + 20);
+    const uncompressedSize = readZipUInt32(archive, cursor + 24);
+    const fileNameLength = readZipUInt16(archive, cursor + 28);
+    const extraLength = readZipUInt16(archive, cursor + 30);
+    const commentLength = readZipUInt16(archive, cursor + 32);
+    const localHeaderOffset = readZipUInt32(archive, cursor + 42);
+    const recordEnd = cursor + 46 + fileNameLength + extraLength + commentLength;
+    if (recordEnd > centralDirectoryOffset + centralDirectorySize || recordEnd > archive.length) {
+      throw new InvalidHealthArchiveError("The ZIP central directory is truncated.");
+    }
+
+    const archiveName = archive.toString("utf8", cursor + 46, cursor + 46 + fileNameLength).replace(/\\/g, "/");
+    cursor = recordEnd;
+    if (!archiveName || archiveName.endsWith("/")) continue;
+
+    const extension = archiveName.toLowerCase().match(/\.(csv|json)$/)?.[1];
+    if (!extension) continue; // Ignore images, readmes, and other unrelated export files.
+
+    if (archiveName.startsWith("/") || /^[a-z]:/i.test(archiveName) || archiveName.split("/").some((part) => part === "..")) {
+      throw new InvalidHealthArchiveError("The ZIP contains an unsafe file path.");
+    }
+    if ((flags & 0x1) !== 0) {
+      throw new InvalidHealthArchiveError(`The ZIP entry "${archiveName}" is encrypted and cannot be imported.`);
+    }
+    if (compressedSize === 0xffffffff || uncompressedSize === 0xffffffff || localHeaderOffset === 0xffffffff) {
+      throw new InvalidHealthArchiveError("ZIP64 entries are not supported.");
+    }
+    if (uncompressedSize > MAX_EXTRACTED_FILE_BYTES) {
+      throw new InvalidHealthArchiveError(`"${archiveName}" exceeds the ${MAX_EXTRACTED_FILE_BYTES / (1024 * 1024)} MB per-file extraction limit.`);
+    }
+    if (totalExpandedBytes + uncompressedSize > MAX_TOTAL_EXTRACTED_BYTES) {
+      throw new InvalidHealthArchiveError(`The ZIP expands beyond the ${MAX_TOTAL_EXTRACTED_BYTES / (1024 * 1024)} MB total extraction limit.`);
+    }
+    if (method !== 0 && method !== 8) {
+      throw new InvalidHealthArchiveError(`The ZIP entry "${archiveName}" uses an unsupported compression method.`);
+    }
+
+    if (readZipUInt32(archive, localHeaderOffset) !== ZIP_LOCAL_FILE_HEADER) {
+      throw new InvalidHealthArchiveError(`The ZIP entry "${archiveName}" has an invalid local header.`);
+    }
+    const localNameLength = readZipUInt16(archive, localHeaderOffset + 26);
+    const localExtraLength = readZipUInt16(archive, localHeaderOffset + 28);
+    const dataOffset = localHeaderOffset + 30 + localNameLength + localExtraLength;
+    const dataEnd = dataOffset + compressedSize;
+    if (dataOffset < localHeaderOffset || dataEnd > centralDirectoryOffset || dataEnd > archive.length) {
+      throw new InvalidHealthArchiveError(`The ZIP entry "${archiveName}" has invalid compressed data bounds.`);
+    }
+
+    const compressed = archive.subarray(dataOffset, dataEnd);
+    let contents: Buffer;
+    try {
+      contents = method === 0
+        ? Buffer.from(compressed)
+        : inflateRawSync(compressed, { maxOutputLength: Math.min(MAX_EXTRACTED_FILE_BYTES, MAX_TOTAL_EXTRACTED_BYTES - totalExpandedBytes) + 1 });
+    } catch {
+      throw new InvalidHealthArchiveError(`Could not decompress "${archiveName}". The ZIP may be damaged or exceed the import limits.`);
+    }
+    if (contents.length !== uncompressedSize) {
+      throw new InvalidHealthArchiveError(`The extracted size of "${archiveName}" does not match the ZIP directory.`);
+    }
+    totalExpandedBytes += contents.length;
+    extracted.push({
+      fieldname: archiveFile.fieldname,
+      originalname: archiveName,
+      encoding: archiveFile.encoding,
+      mimetype: extension === "json" ? "application/json" : "text/csv",
+      size: contents.length,
+      buffer: contents,
+    } as unknown as Express.Multer.File);
+  }
+
+  return extracted;
+}
+
+function expandUploadedHealthFiles(uploadedFiles: Express.Multer.File[]): Express.Multer.File[] {
+  const expanded: Express.Multer.File[] = [];
+  for (const file of uploadedFiles) {
+    const name = file.originalname.toLowerCase();
+    if (name.endsWith(".zip")) {
+      expanded.push(...extractHealthFilesFromZip(file));
+    } else if (/\.(csv|json)$/i.test(file.originalname)) {
+      expanded.push(file);
+    } else {
+      throw new InvalidHealthArchiveError("Choose Samsung Health ZIP, CSV, or JSON files only.");
+    }
+  }
+  return expanded;
+}
 
 type CsvRow = Record<string, string>;
 type StepDay = {
@@ -429,9 +596,21 @@ router.get("/health/admin/summary", ...ADMIN_GUARD, async (_req, res, next) => {
 });
 
 router.post("/health/admin/import", ...ADMIN_GUARD, upload.array("files", 40), async (req, res, next) => {
-  const files = (req.files || []) as Express.Multer.File[];
-  if (!files.length) return res.status(400).json({ message: "Choose one or more Samsung Health CSV or JSON files first." });
-  if (files.some((file) => !/\.(csv|json)$/i.test(file.originalname))) return res.status(400).json({ message: "Only CSV and JSON files are accepted. ZIP files are not required." });
+  const uploadedFiles = (req.files || []) as Express.Multer.File[];
+  if (!uploadedFiles.length) return res.status(400).json({ message: "Choose one or more Samsung Health ZIP, CSV, or JSON files first." });
+
+  let files: Express.Multer.File[];
+  try {
+    files = expandUploadedHealthFiles(uploadedFiles);
+  } catch (error) {
+    if (error instanceof InvalidHealthArchiveError) {
+      return res.status(400).json({ message: error.message });
+    }
+    return next(error);
+  }
+  if (!files.length) {
+    return res.status(400).json({ message: "No CSV or JSON files were found in the selected upload. Choose a Samsung Health ZIP archive containing exported CSV/JSON files, or select the files directly." });
+  }
 
   const stepDays = parseStepDays(files);
   const runs = parseRuns(files);

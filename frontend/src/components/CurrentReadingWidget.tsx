@@ -1,5 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { API_BASE_URL } from "../services/apiBase";
+import AssetStateBox from "./AssetStateBox";
+import { reportUiFailure } from "../utils/uiDiagnostics";
 import "./currentReadingWidget.css";
 
 type ReadingBook = {
@@ -94,6 +96,9 @@ export default function CurrentReadingWidget({
   const [saving, setSaving] = useState("");
   const [clearing, setClearing] = useState<ReadingTarget | "">("");
   const [error, setError] = useState("");
+  const [bookLoadFailed, setBookLoadFailed] = useState(false);
+  const [otherBookLoadFailed, setOtherBookLoadFailed] = useState(false);
+  const [requestFailed, setRequestFailed] = useState(false);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -104,7 +109,8 @@ export default function CurrentReadingWidget({
       .then(parseResponse<{ book: ReadingBook | null }>)
       .then((payload) => { if (!cancelled) setBook(payload.book); })
       .catch((reason: unknown) => {
-        if (!cancelled) setError(reason instanceof Error ? reason.message : "Could not load the current book.");
+        reportUiFailure("CurrentReadingWidget.loadCurrentBook", reason);
+        if (!cancelled) setBookLoadFailed(true);
       })
       .finally(() => { if (!cancelled) setLoadingBook(false); });
 
@@ -115,7 +121,8 @@ export default function CurrentReadingWidget({
         .then(parseResponse<{ book: ReadingBook | null }>)
         .then((payload) => { if (!cancelled) setOtherBook(payload.book); })
         .catch((reason: unknown) => {
-          if (!cancelled) setError(reason instanceof Error ? reason.message : "Could not load other reading.");
+          reportUiFailure("CurrentReadingWidget.loadOtherBook", reason);
+          if (!cancelled) setOtherBookLoadFailed(true);
         })
         .finally(() => { if (!cancelled) setLoadingOtherBook(false); });
     }
@@ -132,6 +139,7 @@ export default function CurrentReadingWidget({
     setSearching(true);
     setError("");
     setMessage("");
+    setRequestFailed(false);
     setResults([]);
     try {
       const response = await fetch(`${API_BASE_URL}/api/admin/current-reading/search?q=${encodeURIComponent(trimmed)}`, {
@@ -141,7 +149,8 @@ export default function CurrentReadingWidget({
       setResults(payload.results || []);
       if (!payload.results?.length) setMessage("No matching books found. Try a shorter title or the author's name.");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Book search failed.");
+      reportUiFailure("CurrentReadingWidget.searchBooks", reason);
+      setRequestFailed(true);
     } finally {
       setSearching(false);
     }
@@ -151,6 +160,7 @@ export default function CurrentReadingWidget({
     setSaving(`${target}:${candidate.identifier}`);
     setError("");
     setMessage("");
+    setRequestFailed(false);
     try {
       const response = await fetch(`${API_BASE_URL}/api/admin/${target}-reading`, {
         method: "PUT", credentials: "include", cache: "no-store",
@@ -164,7 +174,8 @@ export default function CurrentReadingWidget({
       setQuery("");
       setMessage(target === "current" ? "Current reading updated." : "Other reading updated.");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : `Could not save ${target} reading.`);
+      reportUiFailure("CurrentReadingWidget.saveBook", reason);
+      setRequestFailed(true);
     } finally {
       setSaving("");
     }
@@ -174,6 +185,7 @@ export default function CurrentReadingWidget({
     setClearing(target);
     setError("");
     setMessage("");
+    setRequestFailed(false);
     try {
       const response = await fetch(`${API_BASE_URL}/api/admin/${target}-reading`, {
         method: "DELETE", credentials: "include", cache: "no-store", headers: { Accept: "application/json" },
@@ -183,13 +195,18 @@ export default function CurrentReadingWidget({
       else setOtherBook(null);
       setMessage(target === "current" ? "Current reading cleared." : "Other reading cleared.");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : `Could not clear ${target} reading.`);
+      reportUiFailure("CurrentReadingWidget.clearBook", reason);
+      setRequestFailed(true);
     } finally {
       setClearing("");
     }
   };
 
-  if (variant === "feed") return <FeedReadingWidget book={book} />;
+  if (variant === "feed") {
+    if (bookLoadFailed) return <AssetStateBox status="error" compact onRetry={() => window.location.reload()} />;
+    if (loadingBook) return <AssetStateBox status="loading" compact />;
+    return <FeedReadingWidget book={book} />;
+  }
 
   return (
     <section className="current-reading-panel" aria-labelledby={`${idPrefix}-heading`}>
@@ -200,27 +217,29 @@ export default function CurrentReadingWidget({
         </div>
         {isAdmin && book && (
           <button type="button" className="current-reading-clear" onClick={() => void clearBook("current")} disabled={Boolean(clearing)}>
-            {clearing === "current" ? "Clearing…" : "Clear"}
+            {"Clear"}
           </button>
         )}
       </div>
 
-      {loadingBook ? <p className="current-reading-muted">Loading current book…</p>
-        : book ? <BookDetails book={book} />
-          : <p className="current-reading-muted">No current book selected.</p>}
+      {bookLoadFailed ? <AssetStateBox status="error" compact onRetry={() => window.location.reload()} />
+        : loadingBook ? <AssetStateBox status="loading" compact />
+          : book ? <BookDetails book={book} />
+            : <p className="current-reading-muted">No current book selected.</p>}
 
       <section className="current-reading-other-section" aria-labelledby={`${idPrefix}-other-heading`}>
         <div className="current-reading-heading current-reading-other-heading">
           <h3 id={`${idPrefix}-other-heading`}>Other reading</h3>
           {isAdmin && otherBook && (
             <button type="button" className="current-reading-clear" onClick={() => void clearBook("other")} disabled={Boolean(clearing)}>
-              {clearing === "other" ? "Clearing…" : "Clear"}
+              {"Clear"}
             </button>
           )}
         </div>
-        {loadingOtherBook ? <p className="current-reading-muted">Loading…</p>
-          : otherBook ? <BookDetails book={otherBook} />
-            : <p className="current-reading-muted">No other reading selected.</p>}
+        {otherBookLoadFailed ? <AssetStateBox status="error" compact onRetry={() => window.location.reload()} />
+          : loadingOtherBook ? <AssetStateBox status="loading" compact />
+            : otherBook ? <BookDetails book={otherBook} />
+              : <p className="current-reading-muted">No other reading selected.</p>}
       </section>
 
       {isAdmin && (
@@ -234,11 +253,13 @@ export default function CurrentReadingWidget({
                 placeholder="Book title or author" autoComplete="off"
               />
               <button type="submit" disabled={searching || query.trim().length < 2}>
-                {searching ? "Searching…" : "Search"}
+                {"Search"}
               </button>
             </div>
           </form>
 
+          {(searching || Boolean(saving) || Boolean(clearing)) && <AssetStateBox status="loading" compact />}
+          {requestFailed && <AssetStateBox status="error" compact onRetry={() => window.location.reload()} />}
           {results.length > 0 && (
             <div className="current-reading-results" aria-label="Internet Archive search results">
               {results.map((result) => (
@@ -249,10 +270,10 @@ export default function CurrentReadingWidget({
                     <span>{result.author}{result.year ? ` · ${result.year}` : ""}</span>
                     <div className="current-reading-result-actions">
                       <button type="button" onClick={() => void selectBook(result, "current")} disabled={Boolean(saving) || Boolean(clearing)}>
-                        {saving === `current:${result.identifier}` ? "Saving…" : "Set as current reading"}
+                        {"Set as current reading"}
                       </button>
                       <button type="button" onClick={() => void selectBook(result, "other")} disabled={Boolean(saving) || Boolean(clearing)}>
-                        {saving === `other:${result.identifier}` ? "Saving…" : "Set as other reading"}
+                        {"Set as other reading"}
                       </button>
                     </div>
                   </div>
@@ -263,7 +284,8 @@ export default function CurrentReadingWidget({
         </div>
       )}
 
-      {(error || message) && <p className={`current-reading-status ${error ? "is-error" : ""}`} role="status">{error || message}</p>}
+      {error && <p className="current-reading-status is-error" role="alert">{error}</p>}
+      {message && <p className="current-reading-status" role="status">{message}</p>}
     </section>
   );
 }

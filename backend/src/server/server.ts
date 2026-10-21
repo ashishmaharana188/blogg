@@ -19,6 +19,7 @@ import youtubeMusicApiRouter from "../routes/youtubeMusicApi.ts";
 import linkPreviewRouter from "../routes/linkPreview.ts";
 import healthRouter from "../routes/health.ts";
 import currentReadingRouter from "../routes/currentReading.ts";
+import clientUiLogsRouter from "../routes/clientUiLogs.ts";
 
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
@@ -43,6 +44,8 @@ app.use(sharePreviewRouter);
 app.use("/api/auth", authenticationRouter);
 app.use("/api/admin", adminStatusRouter);
 app.use("/api", linkPreviewRouter);
+// The diagnostics route stores technical client failures in backend logs; details never enter the UI.
+app.use("/api", clientUiLogsRouter);
 // Mount the OAuth-backed YouTube Music routes first. The general showcase router
 // continues to provide Spotify playback, regular YouTube playlists, and featured links.
 app.use("/api", youtubeMusicApiRouter);

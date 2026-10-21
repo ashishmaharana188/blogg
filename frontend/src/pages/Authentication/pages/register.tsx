@@ -4,22 +4,28 @@ import AuthLayout from "../components/authLayout";
 import AuthInput from "../components/authInput";
 import authenticationService from "../services/authenticationService";
 import { useAuth } from "../../../context/authContext";
+import AssetStateBox from "../../../components/AssetStateBox";
+import { reportUiFailure } from "../../../utils/uiDiagnostics";
 
 const Register = () => {
   const navigate = useNavigate();
   const { refreshUser } = useAuth();
   const [form, setForm] = useState({ username: "", email: "", password: "", confirmPassword: "" });
-  const [errorMessage, setErrorMessage] = useState("");
+  const [validationError, setValidationError] = useState("");
+  const [requestFailed, setRequestFailed] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    setValidationError("");
+    setRequestFailed(false);
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setErrorMessage("");
+    setValidationError("");
+    setRequestFailed(false);
     if (form.password !== form.confirmPassword) {
-      setErrorMessage("Passwords do not match.");
+      setValidationError("Passwords do not match.");
       return;
     }
     try {
@@ -27,8 +33,8 @@ const Register = () => {
       await refreshUser();
       navigate("/feed", { replace: true });
     } catch (error) {
-      console.error(error);
-      setErrorMessage("Admin registration is disabled unless ENABLE_ADMIN_REGISTRATION is temporarily enabled on the server, and the email must match ADMIN_EMAIL.");
+      reportUiFailure("Register.submit", error);
+      setRequestFailed(true);
     }
   };
 
@@ -39,7 +45,8 @@ const Register = () => {
         <AuthInput label="Administrator email" name="email" value={form.email} onChange={handleChange} />
         <AuthInput label="Password" type="password" name="password" value={form.password} onChange={handleChange} />
         <AuthInput label="Confirm Password" type="password" name="confirmPassword" value={form.confirmPassword} onChange={handleChange} />
-        {errorMessage && <p role="alert" className="auth-error">{errorMessage}</p>}
+        {validationError && <p role="alert" className="auth-error">{validationError}</p>}
+        {requestFailed && <AssetStateBox status="error" compact />}
         <button className="auth-submit" type="submit">Create Admin Account</button>
         <p className="auth-supporting-copy auth-muted-copy">One administrator account only. Turn registration off again after the initial account has been created.</p>
         <p className="auth-supporting-copy"><Link to="/login" className="auth-text-link">Back to administrator login</Link></p>
