@@ -10,6 +10,7 @@ import "./App.css";
 import "./mobile.css";
 import "./healthWidgetsBootstrap.tsx";
 import "./currentReadingBootstrap.tsx";
+import "./widgetVisibilityBootstrap.ts";
 
 installUiConsoleDiagnostics();
 

@@ -16,6 +16,7 @@ import { errorHandler } from "../middleware/errorHandler.ts";
 import adminStatusRouter from "../routes/adminStatus.ts";
 import adminShowcaseRouter from "../routes/adminShowcase.ts";
 import youtubeMusicApiRouter from "../routes/youtubeMusicApi.ts";
+import showcaseWidgetVisibilityRouter from "../routes/showcaseWidgetVisibility.ts";
 import linkPreviewRouter from "../routes/linkPreview.ts";
 import healthRouter from "../routes/health.ts";
 import currentReadingRouter from "../routes/currentReading.ts";
@@ -46,9 +47,10 @@ app.use("/api/admin", adminStatusRouter);
 app.use("/api", linkPreviewRouter);
 // The diagnostics route stores technical client failures in backend logs; details never enter the UI.
 app.use("/api", clientUiLogsRouter);
-// Mount the OAuth-backed YouTube Music routes first. The general showcase router
-// continues to provide Spotify playback, regular YouTube playlists, and featured links.
+// Mount OAuth-backed routes before the general showcase routes.
 app.use("/api", youtubeMusicApiRouter);
+// Individual public-profile widget visibility controls.
+app.use("/api", showcaseWidgetVisibilityRouter);
 app.use("/api", healthRouter);
 app.use("/api", currentReadingRouter);
 app.use("/api", adminShowcaseRouter);
