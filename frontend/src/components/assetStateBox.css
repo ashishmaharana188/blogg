@@ -14,26 +14,43 @@
   padding: 6px 0;
 }
 
+.asset-state-content {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* The artwork always uses one medium square size, regardless of state or retry. */
 .asset-state-square {
   position: relative;
   display: block;
-  flex: 0 1 auto;
+  flex: 0 0 96px;
+  width: 96px;
+  height: 96px;
   overflow: hidden;
   box-sizing: border-box;
-  aspect-ratio: 1 / 1;
-  max-width: 100%;
   padding: 0;
   border: 1px solid #d5dbe3;
   border-radius: 0;
   background: #f3f5f7;
   appearance: none;
+  cursor: pointer;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
 }
 
-.asset-state-square--xs { width: min(40px, 100%); }
-.asset-state-square--sm { width: min(64px, 100%); }
-.asset-state-square--md { width: min(96px, 100%); }
-.asset-state-square--lg { width: min(160px, 100%); }
-.asset-state-square--xl { width: min(224px, 100%); }
+.asset-state-square:hover {
+  border-color: #94a3b8;
+  box-shadow: 0 2px 8px rgb(15 23 42 / 10%);
+}
+
+.asset-state-square:focus-visible,
+.asset-state-retry-button:focus-visible {
+  outline: 2px solid #334155;
+  outline-offset: 3px;
+}
 
 .asset-state-image,
 .asset-state-fallback {
@@ -58,36 +75,42 @@
   background-size: 18px 18px;
 }
 
-button.asset-state-square--retry {
-  width: auto;
-  cursor: pointer;
-  color: #374151;
-  transition: border-color 140ms ease, box-shadow 140ms ease;
-}
-
-button.asset-state-square--retry.asset-state-square--xs { width: min(40px, 100%); }
-button.asset-state-square--retry.asset-state-square--sm { width: min(64px, 100%); }
-button.asset-state-square--retry.asset-state-square--md { width: min(96px, 100%); }
-button.asset-state-square--retry.asset-state-square--lg { width: min(160px, 100%); }
-button.asset-state-square--retry.asset-state-square--xl { width: min(224px, 100%); }
-
-button.asset-state-square--retry:hover {
-  border-color: #94a3b8;
-  box-shadow: 0 2px 8px rgb(15 23 42 / 10%);
-}
-
-.asset-state-retry-mark {
-  position: absolute;
-  z-index: 2;
-  right: 4px;
-  bottom: 4px;
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
+.asset-state-retry-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 5px 10px;
   border: 1px solid #d5dbe3;
-  background: rgb(255 255 255 / 94%);
-  color: #334155;
-  font-size: 18px;
+  border-radius: 999px;
+  background: #fff;
+  color: #374151;
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.asset-state-retry-button:hover {
+  border-color: #94a3b8;
+  background: #f8fafc;
+}
+
+.asset-state-retry-button > span {
+  font-size: 1rem;
   line-height: 1;
+}
+
+.asset-state-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
