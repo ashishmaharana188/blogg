@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { API_BASE_URL } from "../../services/apiBase";
 import AssetStateBox from "../../components/AssetStateBox";
-import PushupsAdminPanel from "../../components/PushupsAdminPanel";
 import { reportUiFailure } from "../../utils/uiDiagnostics";
 import "./healthAdminPanel.css";
+import "./samsungHealthMetrics.css";
 
 type StepDay = {
   day: string;
@@ -52,6 +52,93 @@ type HealthSummary = {
   recentHeartRates: HeartRateSample[];
 };
 
+type SamsungMetric = { id: string; label: string; description: string };
+type ExerciseSession = {
+  sessionId?: string;
+  exerciseType?: number;
+  activityName?: string;
+  startedAt: string;
+  durationSeconds?: number | null;
+  repetitions?: number | null;
+  calories?: number | null;
+  avgHeartRate?: number | null;
+  minHeartRate?: number | null;
+  maxHeartRate?: number | null;
+  sets?: Array<{ reps: number }>;
+  values?: Record<string, unknown>;
+};
+type SamsungMetricData = {
+  selectedMetrics: string[];
+  availableMetrics?: SamsungMetric[];
+  sessions?: ExerciseSession[];
+  latestSession?: { startedAt: string; exerciseType?: number; activityName?: string; values: Record<string, unknown> } | null;
+  recentSessions?: ExerciseSession[];
+  sessionCount?: number;
+  totalRepetitions?: number;
+};
+
+const METRIC_LABELS: Record<string, string> = {
+  repetitions: "Repetitions / count",
+  sets: "Set breakdown",
+  duration: "Workout duration",
+  heart_rate: "Heart rate",
+  calories: "Calories",
+  history: "Workout history",
+};
+
+function getMetricValue(metricId: string, data: SamsungMetricData): { value: string; detail?: string } {
+  const session = data.sessions?.[0];
+  const latest = data.latestSession;
+  const values = session?.values ?? latest?.values ?? {};
+  const numberValue = (value: unknown): number | null => typeof value === "number" && Number.isFinite(value) ? value : null;
+  if (metricId === "repetitions") {
+    const value = numberValue(session?.repetitions) ?? numberValue(values.repetitions);
+    return { value: value === null ? "—" : value.toLocaleString(), detail: "Latest session" };
+  }
+  if (metricId === "sets") {
+    const sessionSets = session?.sets?.map((set) => set.reps);
+    const rawSets = Array.isArray(values.sets) ? values.sets.filter((value): value is number => typeof value === "number") : [];
+    const sets = sessionSets?.length ? sessionSets : rawSets;
+    return { value: sets.length ? sets.join(" + ") : "—", detail: sets.length ? `${sets.length} set(s)` : "No set data" };
+  }
+  if (metricId === "duration") {
+    const value = numberValue(session?.durationSeconds) ?? numberValue(values.durationSeconds);
+    return { value: value === null ? "—" : formatDuration(value), detail: "Latest session" };
+  }
+  if (metricId === "calories") {
+    const value = numberValue(session?.calories) ?? numberValue(values.calories);
+    return { value: value === null ? "—" : `${value.toFixed(1)} kcal`, detail: "Latest session" };
+  }
+  if (metricId === "heart_rate") {
+    const raw = values.heartRate as { average?: unknown; minimum?: unknown; maximum?: unknown } | undefined;
+    const average = numberValue(session?.avgHeartRate) ?? numberValue(raw?.average);
+    const minimum = numberValue(session?.minHeartRate) ?? numberValue(raw?.minimum);
+    const maximum = numberValue(session?.maxHeartRate) ?? numberValue(raw?.maximum);
+    return { value: average === null ? "—" : `${Math.round(average)} bpm`, detail: minimum !== null || maximum !== null ? `${minimum === null ? "—" : Math.round(minimum)}–${maximum === null ? "—" : Math.round(maximum)} BPM range` : "Latest session average" };
+  }
+  const history = values.history as { sessionCount?: unknown; totalRepetitions?: unknown; totalCount?: unknown } | undefined;
+  const count = data.sessionCount ?? numberValue(history?.sessionCount) ?? 0;
+  const total = data.totalRepetitions ?? numberValue(history?.totalCount) ?? numberValue(history?.totalRepetitions) ?? 0;
+  return { value: `${count.toLocaleString()} session(s)`, detail: `${total.toLocaleString()} total count / reps` };
+}
+
+function metricTrendNumber(metricId: string, session: ExerciseSession): number | null {
+  const values = session.values ?? {};
+  const numeric = (value: unknown) => typeof value === "number" && Number.isFinite(value) ? value : null;
+  if (metricId === "repetitions") return numeric(session.repetitions) ?? numeric(values.repetitions);
+  if (metricId === "duration") return numeric(session.durationSeconds) ?? numeric(values.durationSeconds);
+  if (metricId === "calories") return numeric(session.calories) ?? numeric(values.calories);
+  if (metricId === "heart_rate") {
+    const heartRate = values.heartRate as { average?: unknown } | undefined;
+    return numeric(session.avgHeartRate) ?? numeric(heartRate?.average);
+  }
+  if (metricId === "sets") {
+    const sets = session.sets?.map((set) => set.reps) ?? (Array.isArray(values.sets) ? values.sets.filter((value): value is number => typeof value === "number") : []);
+    return sets.length ? sets.reduce((sum, value) => sum + value, 0) : null;
+  }
+  return 1;
+}
+
 async function responseError(response: Response): Promise<string> {
   const payload = await response.json().catch(() => ({}));
   return payload.message || payload.detail || `Request failed (${response.status})`;
@@ -98,6 +185,12 @@ export default function HealthAdminPanel({ isAdmin, section }: { isAdmin: boolea
   const [loadFailed, setLoadFailed] = useState(false);
   const [importFailed, setImportFailed] = useState(false);
   const [message, setMessage] = useState("");
+  const [metricData, setMetricData] = useState<SamsungMetricData | null>(null);
+  const [metricSelection, setMetricSelection] = useState<string[]>([]);
+  const [metricsLoading, setMetricsLoading] = useState(section === "overview" || section === "running");
+  const [metricsFailed, setMetricsFailed] = useState(false);
+  const [savingMetrics, setSavingMetrics] = useState(false);
+  const [metricsSaved, setMetricsSaved] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -111,14 +204,36 @@ export default function HealthAdminPanel({ isAdmin, section }: { isAdmin: boolea
     } finally {
       setLoading(false);
     }
-  }, [isAdmin]);
+
+    if (section === "overview" || section === "running") {
+      setMetricsLoading(true);
+      try {
+        const endpoint = isAdmin ? "/api/health/exercises/admin/config" : "/api/health/exercises/public";
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+          credentials: isAdmin ? "include" : "omit",
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        });
+        if (!response.ok) throw new Error(`Samsung Health metrics request failed (${response.status})`);
+        const next = await response.json() as SamsungMetricData;
+        setMetricData(next);
+        setMetricSelection(next.selectedMetrics || []);
+        setMetricsFailed(false);
+      } catch (reason) {
+        reportUiFailure("SamsungHealth.loadMetricConfig", reason);
+        setMetricsFailed(true);
+      } finally {
+        setMetricsLoading(false);
+      }
+    }
+  }, [isAdmin, section]);
 
   useEffect(() => {
     void refresh();
 
     const onHealthDataUpdated = (event: Event) => {
-      const detail = (event as CustomEvent<{ source?: HealthPanelSection }>).detail;
-      if (detail?.source !== section) void refresh();
+      const detail = (event as CustomEvent<{ source?: HealthPanelSection | "metrics" }>).detail;
+      if (detail?.source !== section || detail?.source === "metrics") void refresh();
     };
     window.addEventListener("health-data-updated", onHealthDataUpdated);
     return () => window.removeEventListener("health-data-updated", onHealthDataUpdated);
@@ -130,97 +245,40 @@ export default function HealthAdminPanel({ isAdmin, section }: { isAdmin: boolea
     setError("");
     setImportFailed(false);
     if (!files.length) {
-      setError("Choose at least one Samsung Health ZIP, CSV, or JSON file.");
+      setImportFailed(true);
       return;
     }
-
-    const submitImport = async (endpoint: string) => {
-      const body = new FormData();
-      files.forEach((file) => body.append("files", file, file.name));
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const body = new FormData();
+    files.forEach((file) => body.append("files", file, file.name));
+    setUploading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/health/admin/import`, {
         method: "POST",
         credentials: "include",
         body,
         headers: { Accept: "application/json" },
       });
-      const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
-      return {
-        ok: response.ok,
-        status: response.status,
-        payload,
-        message: typeof payload.message === "string" ? payload.message : `Request failed (${response.status})`,
+      const payload = await response.json().catch(() => ({})) as {
+        message?: string;
+        filesProcessed?: number;
+        sourceFilesProcessed?: number;
+        stepDaysProcessed?: number;
+        runSessionsProcessed?: number;
+        heartRateSamplesProcessed?: number;
+        exerciseSessionsProcessed?: number;
       };
-    };
-
-    setUploading(true);
-    try {
-      // Keep one Samsung Health file picker. Send the selected export to the
-      // existing steps/running/heart-rate importer and to the exercise parser.
-      const [healthResult, exerciseResult] = await Promise.all([
-        submitImport("/api/health/admin/import"),
-        submitImport("/api/health/pushups/admin/import"),
-      ]);
-
-      const noGeneralRecords = !healthResult.ok &&
-        /No supported records found|No CSV or JSON files were found/i.test(healthResult.message);
-      const noPushupRecords = !exerciseResult.ok &&
-        /No Push-ups sessions were found|No push-up records were found/i.test(exerciseResult.message);
-
-      const unexpectedFailures = [
-        !healthResult.ok && !noGeneralRecords
-          ? { source: "SamsungHealth.importMetrics", message: healthResult.message }
-          : null,
-        !exerciseResult.ok && !noPushupRecords
-          ? { source: "SamsungHealth.importExerciseData", message: exerciseResult.message }
-          : null,
-      ].filter((item): item is { source: string; message: string } => item !== null);
-
-      for (const failure of unexpectedFailures) {
-        reportUiFailure(failure.source, new Error(failure.message));
-      }
-
-      if ((!healthResult.ok && !noGeneralRecords) || (!exerciseResult.ok && !noPushupRecords)) {
-        if (!healthResult.ok && !exerciseResult.ok) {
-          throw new Error("The selected Samsung Health export could not be imported.");
-        }
-      }
-      if (!healthResult.ok && !exerciseResult.ok) {
-        throw new Error("No supported Samsung Health records were found in the selected files.");
-      }
-
-      const counts: string[] = [];
-      if (healthResult.ok) {
-        const data = healthResult.payload as {
-          filesProcessed?: number;
-          stepDaysProcessed?: number;
-          runSessionsProcessed?: number;
-          heartRateSamplesProcessed?: number;
-        };
-        counts.push(
-          `${Number(data.stepDaysProcessed || 0)} daily step record(s)`,
-          `${Number(data.runSessionsProcessed || 0)} run session(s)`,
-          `${Number(data.heartRateSamplesProcessed || 0)} standalone heart-rate sample(s)`,
-        );
-      }
-      if (exerciseResult.ok) {
-        const data = exerciseResult.payload as { sessionsProcessed?: number };
-        counts.push(`${Number(data.sessionsProcessed || 0)} push-up session(s)`);
-      }
-      if (unexpectedFailures.length) {
-        setImportFailed(true);
-        setMessage(`Import partially completed: ${counts.join(", ")}. Some record types could not be imported.`);
-      } else {
-        setMessage(`Samsung Health import complete: ${counts.join(", ")}.`);
-        setImportFailed(false);
-      }
-
-      if (!unexpectedFailures.length) {
-        setFiles([]);
-        const input = document.getElementById("health-samsung-files") as HTMLInputElement | null;
-        if (input) input.value = "";
-      }
-      window.dispatchEvent(new CustomEvent("health-data-updated", { detail: { source: "overview" } }));
-      await refresh();
+      if (!response.ok) throw new Error(payload.message || `Request failed (${response.status})`);
+      const counts = [
+        `${Number(payload.stepDaysProcessed || 0)} daily step record(s)`,
+        `${Number(payload.runSessionsProcessed || 0)} run session(s)`,
+        `${Number(payload.heartRateSamplesProcessed || 0)} standalone heart-rate sample(s)`,
+        `${Number(payload.exerciseSessionsProcessed || 0)} exercise session(s)`,
+      ];
+      setMessage(`Samsung Health import complete: ${counts.join(", ")}.`);
+      setFiles([]);
+      const input = document.getElementById("health-samsung-files") as HTMLInputElement | null;
+      if (input) input.value = "";
+      window.dispatchEvent(new CustomEvent("health-data-updated", { detail: { source: "metrics" } }));
     } catch (reason) {
       reportUiFailure("HealthAdminPanel.import", reason);
       setImportFailed(true);
@@ -228,6 +286,33 @@ export default function HealthAdminPanel({ isAdmin, section }: { isAdmin: boolea
       setUploading(false);
     }
   };
+
+  const saveMetricSelection = async () => {
+    setSavingMetrics(true);
+    setMetricsSaved(false);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/health/exercises/admin/config`, {
+        method: "PUT",
+        credentials: "include",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ selectedMetrics: metricSelection }),
+      });
+      const payload = await response.json().catch(() => ({})) as { message?: string; selectedMetrics?: string[]; availableMetrics?: SamsungMetric[] };
+      if (!response.ok) throw new Error(payload.message || `Request failed (${response.status})`);
+      setMetricSelection(payload.selectedMetrics || []);
+      setMetricData((previous) => previous ? { ...previous, selectedMetrics: payload.selectedMetrics || [], availableMetrics: payload.availableMetrics || previous.availableMetrics } : previous);
+      setMetricsFailed(false);
+      setMetricsSaved(true);
+      window.dispatchEvent(new CustomEvent("health-data-updated", { detail: { source: "metrics" } }));
+    } catch (reason) {
+      reportUiFailure("SamsungHealth.saveMetricSelection", reason);
+      setMetricsFailed(true);
+    } finally {
+      setSavingMetrics(false);
+    }
+  };
+
 
   const recentDays = summary?.steps.recentDays || [];
   const chartMaximum = Math.max(1, ...recentDays.map((day) => day.steps));
@@ -265,7 +350,7 @@ export default function HealthAdminPanel({ isAdmin, section }: { isAdmin: boolea
             onChange={(event) => setFiles(Array.from(event.currentTarget.files || []))}
             disabled={uploading}
           />
-          <p className="health-import-hint">Choose <strong>activity.day_summary</strong> or <strong>tracker.pedometer_day_summary</strong> for steps; <strong>exercise CSV</strong> plus its matching <strong>live_data JSON</strong> for running/BPM; and <strong>tracker.heart_rate CSV</strong> for standalone heart-rate history. The same export is also scanned for available Push-ups fields. Upload a full ZIP or select files individually.</p>
+          <p className="health-import-hint">Import one Samsung Health ZIP or choose CSV/JSON files individually. The same import scans daily steps, running, heart-rate records, and exercise activities.</p>
           {files.length > 0 && <p className="health-selected-files">{files.length} file(s) selected: {files.map((file) => file.name).join(", ")}</p>}
           <div className="health-import-actions">
             <button className="showcase-outline-button health-import-button" type="submit" disabled={uploading || files.length === 0}>
@@ -279,6 +364,51 @@ export default function HealthAdminPanel({ isAdmin, section }: { isAdmin: boolea
           {importFailed && <AssetStateBox status="error" compact onRetry={() => { document.querySelector<HTMLFormElement>(".health-import-form")?.requestSubmit(); }} />}
         </form>}
 
+        {isAdmin && (
+          <details className="health-metric-settings">
+            <summary>Customize displayed Samsung Health metrics</summary>
+            <div className="health-metric-settings-body">
+              {metricsLoading ? <AssetStateBox status="loading" compact /> : metricsFailed ? (
+                <AssetStateBox status="error" compact onRetry={() => void refresh()} />
+              ) : !metricData?.availableMetrics?.length ? (
+                <p className="health-muted">Import a Samsung Health export first. Available metric options will appear here automatically.</p>
+              ) : (
+                <>
+                  <p className="health-metric-settings-hint">Choose up to three exercise fields. The selected fields appear in the Exercise & Other Activities section here and in the existing Samsung Health Feed card.</p>
+                  <div className="health-metric-settings-options">
+                    {metricData.availableMetrics.map((metric) => {
+                      const checked = metricSelection.includes(metric.id);
+                      const disabled = !checked && metricSelection.length >= 3;
+                      return (
+                        <label className={`health-metric-option ${checked ? "is-selected" : ""}`} key={metric.id}>
+                          <input type="checkbox" checked={checked} disabled={disabled || savingMetrics} onChange={(event) => {
+                            const isChecked = event.currentTarget.checked;
+                            setMetricsSaved(false);
+                            setMetricSelection((current) => isChecked
+                              ? [...current.filter((id) => id !== metric.id), metric.id]
+                              : current.filter((id) => id !== metric.id));
+                          }} />
+                          <span><strong>{metric.label}</strong><small>{metric.description}</small></span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <div className="health-metric-settings-footer">
+                    <span>{metricSelection.length}/3 selected</span>
+                    <button type="button" className="showcase-outline-button" onClick={() => void saveMetricSelection()} disabled={savingMetrics || metricSelection.length > 3}>
+                      {savingMetrics ? "Saving…" : "Save display"}
+                    </button>
+                  </div>
+                  {metricsSaved && <p className="health-feedback is-success" role="status">Display preferences saved.</p>}
+                  {metricsFailed && <AssetStateBox status="error" compact onRetry={() => void saveMetricSelection()} />}
+                </>
+              )}
+            </div>
+          </details>
+        )}
+
+        {/* Exercise metrics render in their own activity section, not beside the file picker. */}
+
         {isAdmin && <div className="health-last-import">
           {summary?.latestImport ? <>
             <strong>Last import</strong>
@@ -286,7 +416,6 @@ export default function HealthAdminPanel({ isAdmin, section }: { isAdmin: boolea
             <details><summary>Show imported filenames</summary><ul>{summary.latestImport.filenames.map((name, index) => <li key={`${name}-${index}`}>{name}</li>)}</ul></details>
           </> : <span>No import history yet.</span>}
         </div>}
-        {isAdmin && <PushupsAdminPanel />}
       </section>
       )}
 
@@ -337,6 +466,7 @@ export default function HealthAdminPanel({ isAdmin, section }: { isAdmin: boolea
       )}
 
       {section === "running" && (
+      <>
       <section className="account-showcase-section account-health-card health-admin-running" aria-labelledby="health-running-title">
         <div className="health-column-heading">
           <p className="account-eyebrow">RUNNING AND BPM</p>
@@ -379,6 +509,82 @@ export default function HealthAdminPanel({ isAdmin, section }: { isAdmin: boolea
           </div>
         </>}
       </section>
+
+      <section className="account-showcase-section account-health-card health-selected-exercise" aria-labelledby="health-exercise-title">
+        <div className="health-column-heading">
+          <p className="account-eyebrow">EXERCISE & OTHER ACTIVITIES</p>
+          <h3 id="health-exercise-title">Exercise sessions</h3>
+        </div>
+        {metricsLoading ? <AssetStateBox status="loading" compact /> : metricsFailed ? (
+          <AssetStateBox status="error" compact onRetry={() => void refresh()} />
+        ) : !metricData || (!(metricData.sessions?.length) && !metricData.latestSession) ? (
+          <p className="health-muted">Exercise records will appear here after importing a Samsung Health export containing supported exercise activities.</p>
+        ) : (
+          <>
+            <div className="health-selected-exercise-heading">
+              <div><strong>{metricData.sessions?.[0]?.activityName || metricData.latestSession?.activityName || "Exercise"}</strong></div>
+              <span>{formatDate(metricData.sessions?.[0]?.startedAt || metricData.latestSession?.startedAt)}</span>
+            </div>
+            {metricData.selectedMetrics.length ? (
+              <div className="health-selected-exercise-cards">
+                {metricData.selectedMetrics.map((id) => {
+                  const shown = getMetricValue(id, metricData);
+                  return <article className="health-selected-exercise-card" key={id}>
+                    <span>{METRIC_LABELS[id] || id}</span><strong>{shown.value}</strong>{shown.detail && <small>{shown.detail}</small>}
+                  </article>;
+                })}
+              </div>
+            ) : <p className="health-muted">No exercise fields are currently selected. Open “Customize displayed Samsung Health metrics” in the import card to choose up to three fields.</p>}
+
+            <details className="health-exercise-details">
+              <summary>Expand exercise history and trend</summary>
+              {(() => {
+                const sessions = (metricData.sessions || metricData.recentSessions || []).slice(0, 8).reverse();
+                const trendMetric = metricData.selectedMetrics.find((id) => id !== "history") || (metricData.selectedMetrics.includes("history") ? "history" : undefined);
+                const numberFrom = (value: unknown): number | null => typeof value === "number" && Number.isFinite(value) ? value : null;
+                let points: Array<{ key: string; label: string; value: number }> = [];
+                if (trendMetric === "history") {
+                  const counts = new Map<string, number>();
+                  sessions.forEach((session) => {
+                    const day = new Date(session.startedAt).toISOString().slice(0, 10);
+                    counts.set(day, (counts.get(day) || 0) + 1);
+                  });
+                  points = [...counts.entries()].map(([day, value]) => ({ key: day, label: day, value }));
+                } else if (trendMetric) {
+                  points = sessions.map((session) => {
+                    const value = metricTrendNumber(trendMetric, session);
+                    return value === null ? null : { key: session.startedAt, label: session.startedAt, value };
+                  }).filter((point): point is { key: string; label: string; value: number } => point !== null && numberFrom(point.value) !== null);
+                }
+                const maximum = Math.max(1, ...points.map((point) => point.value));
+                return <>
+                  {sessions.length > 0 && <div className="health-exercise-session-list">
+                    {sessions.slice().reverse().map((session, index) => {
+                      const values = session.values ?? {};
+                      const count = session.repetitions ?? (typeof values.repetitions === "number" ? values.repetitions : null);
+                      return (
+                        <div className="health-exercise-session-row" key={`${session.sessionId || session.startedAt}-${index}`}>
+                          <strong>{session.activityName || "Exercise"}</strong>
+                          <span>{formatDate(session.startedAt)}</span>
+                          <span>{count == null ? "" : `${count.toLocaleString()} count / reps`}</span>
+                        </div>
+                      );
+                    })}
+                  </div>}
+                  {points.length > 0 && <div className="health-exercise-trend">
+                    <div className="health-admin-subheading"><h4>Recent activity trend · {METRIC_LABELS[trendMetric || "history"]}</h4><span>{sessions.length} sessions</span></div>
+                    <div className="health-exercise-trend-bars" role="img" aria-label={`Recent exercise trend for ${METRIC_LABELS[trendMetric || "history"].toLowerCase()}`}>
+                      {points.map((point) => <span key={point.key} title={`${new Date(point.label).toLocaleDateString()} · ${point.value}`}><i style={{ height: `${Math.max(6, (point.value / maximum) * 100)}%` }} /><small>{new Date(point.label).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</small></span>)}
+                    </div>
+                  </div>}
+                  {!sessions.length && <p className="health-muted">No exercise history is available.</p>}
+                </>;
+              })()}
+            </details>
+          </>
+        )}
+      </section>
+      </>
       )}
     </>
   );

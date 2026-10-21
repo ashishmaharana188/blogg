@@ -19,14 +19,14 @@ type HealthPublicSummary = {
     avgHeartRate: number | null;
   } | null;
 };
-type PushupMetricId = "repetitions" | "sets" | "duration" | "heart_rate" | "calories" | "history";
-type PushupPublicData = {
-  selectedMetrics?: PushupMetricId[];
-  latestSession?: { startedAt: string; values: Record<string, unknown> } | null;
+type ExerciseMetricId = "repetitions" | "sets" | "duration" | "heart_rate" | "calories" | "history";
+type ExercisePublicData = {
+  selectedMetrics?: ExerciseMetricId[];
+  latestSession?: { startedAt: string; activityName?: string; exerciseType?: number; values: Record<string, unknown> } | null;
 };
 
-const PUSHUP_LABELS: Record<PushupMetricId, string> = {
-  repetitions: "PUSH-UPS",
+const EXERCISE_LABELS: Record<ExerciseMetricId, string> = {
+  repetitions: "COUNT / REPS",
   sets: "SETS",
   duration: "WORKOUT TIME",
   heart_rate: "HEART RATE",
@@ -48,7 +48,7 @@ function formatDuration(seconds?: number | null): string {
   return `${minutes}:${String(remainder).padStart(2, "0")}`;
 }
 
-function formatPushupValue(id: PushupMetricId, values: Record<string, unknown>): string {
+function formatExerciseValue(id: ExerciseMetricId, values: Record<string, unknown>): string {
   if (id === "repetitions") {
     return typeof values.repetitions === "number" ? values.repetitions.toLocaleString() : "—";
   }
@@ -72,23 +72,24 @@ function formatPushupValue(id: PushupMetricId, values: Record<string, unknown>):
     if (!hr || typeof hr.average !== "number") return "—";
     return `${Math.round(hr.average)} avg · ${typeof hr.minimum === "number" ? Math.round(hr.minimum) : "—"}–${typeof hr.maximum === "number" ? Math.round(hr.maximum) : "—"} BPM`;
   }
-  const history = values.history as { sessionCount?: unknown; totalRepetitions?: unknown } | undefined;
+  const history = values.history as { sessionCount?: unknown; totalCount?: unknown; totalRepetitions?: unknown } | undefined;
+  const total = typeof history?.totalCount === "number" ? history.totalCount : history?.totalRepetitions;
   return history && typeof history.sessionCount === "number"
-    ? `${history.sessionCount} session(s) · ${typeof history.totalRepetitions === "number" ? history.totalRepetitions.toLocaleString() : 0} reps`
+    ? `${history.sessionCount} session(s) · ${typeof total === "number" ? total.toLocaleString() : 0} count / reps`
     : "—";
 }
 
 export default function HealthWidget() {
   const [summary, setSummary] = useState<HealthPublicSummary | null>(null);
-  const [pushupData, setPushupData] = useState<PushupPublicData | null>(null);
+  const [exerciseData, setExerciseData] = useState<ExercisePublicData | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
-  const [pushupsFailed, setPushupsFailed] = useState(false);
+  const [exerciseFailed, setExerciseFailed] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoaded(false);
     setLoadFailed(false);
-    setPushupsFailed(false);
+    setExerciseFailed(false);
 
     const healthRequest = fetch(`${API_BASE_URL}/api/health/public-summary`, {
       credentials: "omit",
@@ -99,16 +100,16 @@ export default function HealthWidget() {
       return response.json() as Promise<HealthPublicSummary>;
     });
 
-    const pushupsRequest = fetch(`${API_BASE_URL}/api/health/pushups/public`, {
+    const exerciseRequest = fetch(`${API_BASE_URL}/api/health/exercises/public`, {
       credentials: "omit",
       cache: "no-store",
       headers: { Accept: "application/json" },
     }).then(async (response) => {
-      if (!response.ok) throw new Error(`Samsung Health metric request failed (${response.status})`);
-      return response.json() as Promise<PushupPublicData>;
+      if (!response.ok) throw new Error(`Samsung Health exercise request failed (${response.status})`);
+      return response.json() as Promise<ExercisePublicData>;
     });
 
-    const [healthResult, pushupsResult] = await Promise.allSettled([healthRequest, pushupsRequest]);
+    const [healthResult, exerciseResult] = await Promise.allSettled([healthRequest, exerciseRequest]);
     if (healthResult.status === "fulfilled") {
       setSummary(healthResult.value);
     } else {
@@ -116,17 +117,20 @@ export default function HealthWidget() {
       setLoadFailed(true);
     }
 
-    if (pushupsResult.status === "fulfilled") {
-      setPushupData(pushupsResult.value);
+    if (exerciseResult.status === "fulfilled") {
+      setExerciseData(exerciseResult.value);
     } else {
-      reportUiFailure("HealthWidget.loadSelectedMetrics", pushupsResult.reason);
-      setPushupsFailed(true);
+      reportUiFailure("HealthWidget.loadExerciseMetrics", exerciseResult.reason);
+      setExerciseFailed(true);
     }
     setLoaded(true);
   }, []);
 
   useEffect(() => {
     void refresh();
+    const onHealthDataUpdated = () => void refresh();
+    window.addEventListener("health-data-updated", onHealthDataUpdated);
+    return () => window.removeEventListener("health-data-updated", onHealthDataUpdated);
   }, [refresh]);
 
   const steps = summary?.steps;
@@ -136,9 +140,9 @@ export default function HealthWidget() {
   const latestBpm = summary?.latestHeartRate?.bpm ?? run?.avgHeartRate ?? null;
   const todayValue = steps?.today;
   const hasHealthRecords = todayValue != null || Boolean(run) || Boolean(summary?.latestHeartRate);
-  const selectedPushupMetrics = (pushupData?.selectedMetrics || []).slice(0, 3);
-  const hasPushupRecords = Boolean(pushupData?.latestSession && selectedPushupMetrics.length);
-  const hasRecords = hasHealthRecords || hasPushupRecords;
+  const selectedExerciseMetrics = (exerciseData?.selectedMetrics || []).slice(0, 3);
+  const hasExerciseRecords = Boolean(exerciseData?.latestSession && selectedExerciseMetrics.length);
+  const hasRecords = hasHealthRecords || hasExerciseRecords;
 
   return (
     <aside className="blog-feed-health-widget" aria-label="Personal metrics, Samsung Health">
@@ -158,12 +162,13 @@ export default function HealthWidget() {
 
       {!loaded ? (
         <AssetStateBox status="loading" compact />
-      ) : loadFailed ? (
+      ) : !hasRecords && (loadFailed || exerciseFailed) ? (
         <AssetStateBox status="error" compact onRetry={() => void refresh()} />
-      ) : !hasRecords && !pushupsFailed ? (
+      ) : !hasRecords ? (
         <p className="blog-feed-health-empty">No health data imported yet.</p>
       ) : (
         <>
+          {loadFailed ? <AssetStateBox status="error" compact onRetry={() => void refresh()} /> : null}
           {hasHealthRecords && (
             <>
               <div className="blog-feed-health-primary">
@@ -210,21 +215,21 @@ export default function HealthWidget() {
             </>
           )}
 
-          {pushupsFailed ? (
+          {exerciseFailed ? (
             <AssetStateBox status="error" compact onRetry={() => void refresh()} />
-          ) : hasPushupRecords ? (
-            <div className="blog-feed-health-pushups">
-              <div className="blog-feed-health-pushups-heading">
-                <span>PUSH-UPS</span>
-                <time dateTime={pushupData!.latestSession!.startedAt}>
-                  {new Date(pushupData!.latestSession!.startedAt).toLocaleDateString(undefined, { day: "numeric", month: "short" })}
+          ) : hasExerciseRecords ? (
+            <div className="blog-feed-health-exercises">
+              <div className="blog-feed-health-exercises-heading">
+                <span>{(exerciseData!.latestSession!.activityName || "EXERCISE").toUpperCase()}</span>
+                <time dateTime={exerciseData!.latestSession!.startedAt}>
+                  {new Date(exerciseData!.latestSession!.startedAt).toLocaleDateString(undefined, { day: "numeric", month: "short" })}
                 </time>
               </div>
-              <div className="blog-feed-health-pushup-metrics">
-                {selectedPushupMetrics.map((id) => (
-                  <div className="blog-feed-health-pushup-metric" key={id}>
-                    <span>{PUSHUP_LABELS[id]}</span>
-                    <strong>{formatPushupValue(id, pushupData!.latestSession!.values)}</strong>
+              <div className="blog-feed-health-exercise-metrics">
+                {selectedExerciseMetrics.map((id) => (
+                  <div className="blog-feed-health-exercise-metric" key={id}>
+                    <span>{EXERCISE_LABELS[id]}</span>
+                    <strong>{formatExerciseValue(id, exerciseData!.latestSession!.values)}</strong>
                   </div>
                 ))}
               </div>

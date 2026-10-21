@@ -172,41 +172,41 @@
   line-height: 1.55;
   overflow-wrap: anywhere;
 }
-.blog-feed-health-pushups {
+.blog-feed-health-exercises {
   margin-top: 11px;
   padding-top: 10px;
   border-top: 1px solid #edf0f4;
 }
-.blog-feed-health-pushups-heading {
+.blog-feed-health-exercises-heading {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 8px;
 }
-.blog-feed-health-pushups-heading > span,
-.blog-feed-health-pushup-metric > span {
+.blog-feed-health-exercises-heading > span,
+.blog-feed-health-exercise-metric > span {
   color: #8792a0;
   font-size: .49rem;
   font-weight: 700;
   letter-spacing: .1em;
 }
-.blog-feed-health-pushups-heading time {
+.blog-feed-health-exercises-heading time {
   color: #9aa3af;
   font-size: .52rem;
 }
-.blog-feed-health-pushup-metrics {
+.blog-feed-health-exercise-metrics {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
-.blog-feed-health-pushup-metric {
+.blog-feed-health-exercise-metric {
   display: flex;
   flex-direction: column;
   gap: 3px;
   min-width: 0;
 }
-.blog-feed-health-pushup-metric strong {
+.blog-feed-health-exercise-metric strong {
   color: #273246;
   font-size: .77rem;
   line-height: 1.35;

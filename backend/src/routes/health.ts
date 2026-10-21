@@ -10,7 +10,7 @@ const router = Router();
 const ADMIN_GUARD = [authenticationMiddleware, adminMiddleware] as const;
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { files: 40, fileSize: 12 * 1024 * 1024, fieldSize: 1024 * 1024 },
+  limits: { files: 40, fileSize: 20 * 1024 * 1024, fieldSize: 1024 * 1024 },
 });
 const INDIA_TZ = "Asia/Kolkata";
 
@@ -208,6 +208,166 @@ type Run = {
   samples: HeartRatePoint[];
 };
 type HrReading = { sampleId: string; measuredAt: string; bpm: number };
+
+
+// Exercise data is an extension of Samsung Health, using the existing uploader,
+// archive expansion, database client, and import transaction.
+const PUSHUPS_EXERCISE_TYPE = 10004;
+const EXERCISE_METRICS = [
+  { id: "repetitions", label: "Repetitions / count", description: "Exercise count recorded for the latest session", requires: "repetitions" },
+  { id: "sets", label: "Set breakdown", description: "Repetitions recorded in each set", requires: "sets_json" },
+  { id: "duration", label: "Workout duration", description: "Elapsed time for the latest session", requires: "duration_seconds" },
+  { id: "heart_rate", label: "Heart rate", description: "Average and minimum/maximum BPM", requires: "avg_hr" },
+  { id: "calories", label: "Calories", description: "Calories recorded for the latest session", requires: "calories" },
+  { id: "history", label: "Workout history", description: "Number of recorded sessions and total count / repetitions", requires: "session_id" },
+] as const;
+type ExerciseMetricId = (typeof EXERCISE_METRICS)[number]["id"];
+type ExerciseSet = { reps: number; durationSeconds?: number; weight?: number; weightUnit?: string };
+type ExerciseSession = {
+  sessionId: string; exerciseType: number; activityName: string; startedAt: string; endedAt: string | null; durationSeconds: number | null;
+  repetitions: number | null; calories: number | null; avgHeartRate: number | null;
+  minHeartRate: number | null; maxHeartRate: number | null; sets: ExerciseSet[];
+  heartRateSamples: Array<{ time: string; bpm: number }>;
+};
+function exerciseActivityName(exerciseType: number): string {
+  if (exerciseType === PUSHUPS_EXERCISE_TYPE) return "Push-ups";
+  return `Exercise type ${exerciseType}`;
+}
+
+// The legacy table names are kept to preserve existing imported sessions and saved metric preferences.
+let exerciseTablesReady: Promise<void> | null = null;
+async function ensureExerciseTables(client: Awaited<ReturnType<typeof getPgClient>>): Promise<void> {
+  if (!exerciseTablesReady) {
+    exerciseTablesReady = client.query(`
+      CREATE TABLE IF NOT EXISTS health_pushup_sessions (
+        session_id TEXT PRIMARY KEY, exercise_type INTEGER NOT NULL DEFAULT 10004,
+        started_at TIMESTAMPTZ NOT NULL, ended_at TIMESTAMPTZ,
+        duration_seconds INTEGER, repetitions INTEGER CHECK (repetitions IS NULL OR repetitions >= 0),
+        calories DOUBLE PRECISION, avg_hr DOUBLE PRECISION, min_hr DOUBLE PRECISION, max_hr DOUBLE PRECISION,
+        sets_json JSONB NOT NULL DEFAULT '[]'::jsonb, samples_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+        imported_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      ALTER TABLE health_pushup_sessions ADD COLUMN IF NOT EXISTS exercise_type INTEGER NOT NULL DEFAULT 10004;
+      CREATE INDEX IF NOT EXISTS health_pushup_sessions_started_at_idx ON health_pushup_sessions (started_at DESC);
+      CREATE INDEX IF NOT EXISTS health_pushup_sessions_type_started_idx ON health_pushup_sessions (exercise_type, started_at DESC);
+      CREATE TABLE IF NOT EXISTS health_pushup_widget_config (
+        id SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+        selected_metrics JSONB NOT NULL DEFAULT '[]'::jsonb, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `).then(() => undefined).catch((error: unknown) => { exerciseTablesReady = null; throw error; });
+  }
+  await exerciseTablesReady;
+}
+function decodeJsonArray(value: unknown): unknown[] {
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string") { try { const parsed: unknown = JSON.parse(value); return Array.isArray(parsed) ? parsed : []; } catch { return []; } }
+  return [];
+}
+function parseExerciseSets(raw: string): ExerciseSet[] {
+  if (!raw) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.flatMap((item): ExerciseSet[] => {
+      if (!item || typeof item !== "object") return [];
+      const set = item as Record<string, unknown>;
+      const reps = numeric(set.reps);
+      if (reps === null || reps < 0) return [];
+      const duration = numeric(set.duration), weight = numeric(set.weight);
+      const weightUnit = typeof set.weight_unit === "string" ? set.weight_unit.slice(0, 12) : undefined;
+      return [{ reps: Math.round(reps), ...(duration !== null && duration >= 0 ? { durationSeconds: duration } : {}), ...(weight !== null && weight >= 0 ? { weight } : {}), ...(weightUnit ? { weightUnit } : {}) }];
+    });
+  } catch { return []; }
+}
+function parseExerciseSessions(files: Express.Multer.File[]): ExerciseSession[] {
+  const jsonFiles = jsonFileMap(files);
+  const sessions = new Map<string, ExerciseSession>();
+  for (const file of files) {
+    const name = file.originalname.toLowerCase();
+    if (!name.includes("exercise") || !name.endsWith(".csv")) continue;
+    for (const row of csvTable(file.originalname, file.buffer.toString("utf8"))) {
+      const parsedExerciseType = numeric(field(row, "com.samsung.health.exercise.exercise_type", "exercise_type"));
+      // Running (1002) is parsed into the established running-session section.
+      // Other exercise types are stored here and rendered in the Exercise & Other Activities section.
+      if (parsedExerciseType === null || Math.round(parsedExerciseType) === 1002) continue;
+      const exerciseType = Math.round(parsedExerciseType);
+      const offset = field(row, "com.samsung.health.exercise.time_offset", "time_offset");
+      const startedAt = parseTimestamp(field(row, "com.samsung.health.exercise.start_time", "start_time"), offset);
+      if (!startedAt) continue;
+      const endedAt = parseTimestamp(field(row, "com.samsung.health.exercise.end_time", "end_time"), offset);
+      const rawId = field(row, "com.samsung.health.exercise.datauuid", "datauuid");
+      const sessionId = rawId || createHash("sha256").update(`${file.originalname}|${startedAt}`).digest("hex");
+      const liveName = field(row, "com.samsung.health.exercise.live_data", "live_data").split(/[\\/]/).pop()?.toLowerCase();
+      const samples = parseRunSamples(liveName ? jsonFiles.get(liveName) : undefined)
+        .filter((point): point is HeartRatePoint & { bpm: number } => typeof point.bpm === "number")
+        .map((point) => ({ time: point.time, bpm: Math.round(point.bpm) }));
+      const sets = parseExerciseSets(field(row, "subset_data", "com.samsung.health.exercise.subset_data"));
+      let repetitions = numeric(field(row, "com.samsung.health.exercise.count", "count"));
+      if (repetitions === null && sets.length) repetitions = sets.reduce((sum, set) => sum + set.reps, 0);
+      const durationSeconds = secondsFromSamsung(field(row, "com.samsung.health.exercise.duration", "duration")) ??
+        (endedAt ? Math.max(0, Math.round((Date.parse(endedAt) - Date.parse(startedAt)) / 1000)) : null);
+      const avgSamples = samples.length ? samples.reduce((sum, item) => sum + item.bpm, 0) / samples.length : null;
+      const avgHr = numeric(field(row, "com.samsung.health.exercise.mean_heart_rate", "mean_heart_rate")) ?? avgSamples;
+      const minHr = numeric(field(row, "com.samsung.health.exercise.min_heart_rate", "min_heart_rate")) ?? (samples.length ? Math.min(...samples.map((item) => item.bpm)) : null);
+      const maxHr = numeric(field(row, "com.samsung.health.exercise.max_heart_rate", "max_heart_rate")) ?? (samples.length ? Math.max(...samples.map((item) => item.bpm)) : null);
+      const session: ExerciseSession = {
+        sessionId, exerciseType, activityName: exerciseActivityName(exerciseType), startedAt, endedAt, durationSeconds,
+        repetitions: repetitions === null ? null : Math.max(0, Math.round(repetitions)),
+        calories: numeric(field(row, "com.samsung.health.exercise.calorie", "calorie", "total_calorie")),
+        avgHeartRate: avgHr === null ? null : Math.round(avgHr), minHeartRate: minHr === null ? null : Math.round(minHr),
+        maxHeartRate: maxHr === null ? null : Math.round(maxHr), sets, heartRateSamples: samples,
+      };
+      const previous = sessions.get(sessionId);
+      if (!previous || session.heartRateSamples.length > previous.heartRateSamples.length) sessions.set(sessionId, session);
+    }
+  }
+  return [...sessions.values()].sort((a, b) => a.startedAt.localeCompare(b.startedAt));
+}
+async function getAvailableExerciseMetrics(client: Awaited<ReturnType<typeof getPgClient>>) {
+  const result = await client.query("SELECT session_id, repetitions, duration_seconds, calories, avg_hr, min_hr, max_hr, sets_json FROM health_pushup_sessions ORDER BY started_at DESC LIMIT 200");
+  const rows = result.rows as Array<Record<string, unknown>>;
+  return EXERCISE_METRICS.filter((metric) => {
+    if (!rows.length) return false;
+    if (metric.id === "history") return true;
+    if (metric.id === "sets") return rows.some((row) => decodeJsonArray(row.sets_json).length > 0);
+    if (metric.id === "heart_rate") return rows.some((row) => [row.avg_hr, row.min_hr, row.max_hr].some((value) => value !== null && value !== undefined && value !== ""));
+    return rows.some((row) => { const value = row[metric.requires]; return value !== null && value !== undefined && value !== ""; });
+  }).map(({ id, label, description }) => ({ id, label, description }));
+}
+async function readSelectedExerciseMetrics(client: Awaited<ReturnType<typeof getPgClient>>): Promise<ExerciseMetricId[]> {
+  const result = await client.query("SELECT selected_metrics FROM health_pushup_widget_config WHERE id = 1");
+  return decodeJsonArray(result.rows[0]?.selected_metrics).filter((id): id is ExerciseMetricId => typeof id === "string" && EXERCISE_METRICS.some((metric) => metric.id === id)).slice(0, 3);
+}
+function exerciseSessionFromRow(row: Record<string, unknown>): ExerciseSession {
+  const sets = decodeJsonArray(row.sets_json).filter((item): item is ExerciseSet => Boolean(item) && typeof item === "object" && typeof (item as ExerciseSet).reps === "number");
+  const samples = decodeJsonArray(row.samples_json).filter((item): item is { time: string; bpm: number } => Boolean(item) && typeof item === "object" && typeof (item as { time?: unknown }).time === "string" && typeof (item as { bpm?: unknown }).bpm === "number");
+  const exerciseType = Math.round(numeric(row.exercise_type) ?? PUSHUPS_EXERCISE_TYPE);
+  return {
+    sessionId: String(row.session_id), exerciseType, activityName: exerciseActivityName(exerciseType),
+    startedAt: new Date(String(row.started_at)).toISOString(), endedAt: row.ended_at ? new Date(String(row.ended_at)).toISOString() : null,
+    durationSeconds: numeric(row.duration_seconds), repetitions: numeric(row.repetitions), calories: numeric(row.calories), avgHeartRate: numeric(row.avg_hr),
+    minHeartRate: numeric(row.min_hr), maxHeartRate: numeric(row.max_hr), sets, heartRateSamples: samples,
+  };
+}
+async function loadExerciseData(client: Awaited<ReturnType<typeof getPgClient>>) {
+  const sessionsResult = await client.query("SELECT * FROM health_pushup_sessions ORDER BY started_at DESC LIMIT 30");
+  const countResult = await client.query("SELECT COUNT(*)::int AS session_count, COALESCE(SUM(repetitions), 0)::int AS total_repetitions FROM health_pushup_sessions");
+  return { sessions: (sessionsResult.rows as Array<Record<string, unknown>>).map(exerciseSessionFromRow), sessionCount: Number(countResult.rows[0]?.session_count || 0), totalRepetitions: Number(countResult.rows[0]?.total_repetitions || 0) };
+}
+function exerciseValuesForSession(session: ExerciseSession, selected: ExerciseMetricId[], sessionCount: number, totalRepetitions: number): Record<string, unknown> {
+  const values: Record<string, unknown> = {};
+  for (const id of selected) {
+    switch (id) {
+      case "repetitions": values.repetitions = session.repetitions; break;
+      case "sets": values.sets = session.sets.map((set) => set.reps); break;
+      case "duration": values.durationSeconds = session.durationSeconds; break;
+      case "heart_rate": values.heartRate = { average: session.avgHeartRate, minimum: session.minHeartRate, maximum: session.maxHeartRate }; break;
+      case "calories": values.calories = session.calories; break;
+      case "history": values.history = { sessionCount, totalCount: totalRepetitions, totalRepetitions }; break;
+    }
+  }
+  return values;
+}
 
 function clean(value: unknown): string {
   return typeof value === "string" ? value.replace(/^\uFEFF/, "").trim() : value == null ? "" : String(value).trim();
@@ -615,12 +775,14 @@ router.post("/health/admin/import", ...ADMIN_GUARD, upload.array("files", 40), a
   const stepDays = parseStepDays(files);
   const runs = parseRuns(files);
   const heartRates = parseStandaloneHeartRate(files);
-  if (!stepDays.length && !runs.length && !heartRates.length) {
-    return res.status(400).json({ message: "No supported records found. Choose a pedometer_day_summary or activity.day_summary CSV, an exercise CSV with matching live_data JSON files, and/or a tracker.heart_rate CSV." });
+  const exerciseSessions = parseExerciseSessions(files);
+  if (!stepDays.length && !runs.length && !heartRates.length && !exerciseSessions.length) {
+    return res.status(400).json({ message: "No supported records found. The import needs daily steps, running, heart-rate records, or a supported Samsung Health exercise session." });
   }
 
   const client = await getPgClient();
   try {
+    await ensureExerciseTables(client);
     await client.query("BEGIN");
     for (const day of stepDays) {
       await client.query(
@@ -640,16 +802,94 @@ router.post("/health/admin/import", ...ADMIN_GUARD, upload.array("files", 40), a
         [reading.sampleId, reading.measuredAt, reading.bpm],
       );
     }
+    for (const session of exerciseSessions) {
+      await client.query(
+        "INSERT INTO health_pushup_sessions (session_id, exercise_type, started_at, ended_at, duration_seconds, repetitions, calories, avg_hr, min_hr, max_hr, sets_json, samples_json, imported_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb, NOW()) ON CONFLICT (session_id) DO UPDATE SET exercise_type = EXCLUDED.exercise_type, started_at = EXCLUDED.started_at, ended_at = EXCLUDED.ended_at, duration_seconds = EXCLUDED.duration_seconds, repetitions = EXCLUDED.repetitions, calories = EXCLUDED.calories, avg_hr = EXCLUDED.avg_hr, min_hr = EXCLUDED.min_hr, max_hr = EXCLUDED.max_hr, sets_json = CASE WHEN jsonb_array_length(EXCLUDED.sets_json) > 0 THEN EXCLUDED.sets_json ELSE health_pushup_sessions.sets_json END, samples_json = CASE WHEN jsonb_array_length(EXCLUDED.samples_json) > 0 THEN EXCLUDED.samples_json ELSE health_pushup_sessions.samples_json END, imported_at = NOW()",
+        [session.sessionId, session.exerciseType, session.startedAt, session.endedAt, session.durationSeconds, session.repetitions, session.calories, session.avgHeartRate, session.minHeartRate, session.maxHeartRate, JSON.stringify(session.sets), JSON.stringify(session.heartRateSamples)],
+      );
+    }
+    if (exerciseSessions.length) {
+      const existingConfig = await client.query("SELECT id FROM health_pushup_widget_config WHERE id = 1");
+      if (!existingConfig.rows.length) {
+        const available = await getAvailableExerciseMetrics(client);
+        const defaults = ["repetitions", "duration", "heart_rate", "sets", "calories", "history"]
+          .filter((id) => available.some((metric) => metric.id === id))
+          .slice(0, 3);
+        await client.query(
+          "INSERT INTO health_pushup_widget_config (id, selected_metrics, updated_at) VALUES (1, $1::jsonb, NOW()) ON CONFLICT (id) DO NOTHING",
+          [JSON.stringify(defaults)],
+        );
+      }
+    }
     await client.query(
       "INSERT INTO health_imports (filenames, step_days_processed, run_sessions_processed, heart_rate_samples_processed, created_at) VALUES ($1::jsonb, $2, $3, $4, NOW())",
-      [JSON.stringify(files.map((file) => file.originalname.slice(0, 240))), stepDays.length, runs.length, heartRates.length],
+      [JSON.stringify(uploadedFiles.map((file) => file.originalname.slice(0, 240))), stepDays.length, runs.length, heartRates.length],
     );
     await client.query("COMMIT");
-    return res.json({ success: true, message: "Samsung Health data imported.", filesProcessed: files.length, stepDaysProcessed: stepDays.length, runSessionsProcessed: runs.length, heartRateSamplesProcessed: heartRates.length });
+    return res.json({ success: true, message: "Samsung Health data imported.", filesProcessed: uploadedFiles.length, sourceFilesProcessed: files.length, stepDaysProcessed: stepDays.length, runSessionsProcessed: runs.length, heartRateSamplesProcessed: heartRates.length, exerciseSessionsProcessed: exerciseSessions.length });
   } catch (error) {
     await client.query("ROLLBACK").catch(() => undefined);
     next(error);
   } finally { client.release(); }
+});
+
+
+
+// Display configuration for the existing PERSONAL METRICS / Samsung Health card.
+router.get("/health/exercises/admin/config", ...ADMIN_GUARD, async (_req, res, next) => {
+  const client = await getPgClient();
+  try {
+    await ensureExerciseTables(client);
+    const selectedMetrics = await readSelectedExerciseMetrics(client);
+    const availableMetrics = await getAvailableExerciseMetrics(client);
+    const data = await loadExerciseData(client);
+    res.setHeader("Cache-Control", "private, no-store");
+    return res.json({ selectedMetrics, availableMetrics, ...data });
+  } catch (error) { return next(error); }
+  finally { client.release(); }
+});
+
+router.put("/health/exercises/admin/config", ...ADMIN_GUARD, async (req, res, next) => {
+  const client = await getPgClient();
+  try {
+    await ensureExerciseTables(client);
+    const candidate = req.body?.selectedMetrics;
+    if (!Array.isArray(candidate) || candidate.length > 3 || candidate.some((item: unknown) => typeof item !== "string")) {
+      return res.status(400).json({ message: "Select no more than three available Samsung Health metrics." });
+    }
+    const selected = [...new Set(candidate)] as string[];
+    if (selected.length !== candidate.length || selected.some((id) => !EXERCISE_METRICS.some((metric) => metric.id === id))) {
+      return res.status(400).json({ message: "The selected metric list contains an unknown or duplicate metric." });
+    }
+    const available = await getAvailableExerciseMetrics(client);
+    const availableIds = new Set(available.map((metric) => metric.id));
+    if (selected.some((id) => !availableIds.has(id))) {
+      return res.status(400).json({ message: "One or more selected metrics are not present in the imported Samsung Health data." });
+    }
+    await client.query("INSERT INTO health_pushup_widget_config (id, selected_metrics, updated_at) VALUES (1, $1::jsonb, NOW()) ON CONFLICT (id) DO UPDATE SET selected_metrics = EXCLUDED.selected_metrics, updated_at = NOW()", [JSON.stringify(selected)]);
+    res.setHeader("Cache-Control", "private, no-store");
+    return res.json({ success: true, selectedMetrics: selected, availableMetrics: available });
+  } catch (error) { return next(error); }
+  finally { client.release(); }
+});
+
+router.get("/health/exercises/public", async (_req, res, next) => {
+  const client = await getPgClient();
+  try {
+    await ensureExerciseTables(client);
+    const selectedMetrics = await readSelectedExerciseMetrics(client);
+    const data = await loadExerciseData(client);
+    const latest = data.sessions[0] || null;
+    const result = {
+      selectedMetrics,
+      latestSession: latest && selectedMetrics.length ? { startedAt: latest.startedAt, exerciseType: latest.exerciseType, activityName: latest.activityName, values: exerciseValuesForSession(latest, selectedMetrics, data.sessionCount, data.totalRepetitions) } : null,
+      recentSessions: selectedMetrics.length ? data.sessions.slice(0, 12).map((session) => ({ startedAt: session.startedAt, exerciseType: session.exerciseType, activityName: session.activityName, values: exerciseValuesForSession(session, selectedMetrics, data.sessionCount, data.totalRepetitions) })) : [],
+      ...(selectedMetrics.includes("history") ? { sessionCount: data.sessionCount, totalRepetitions: data.totalRepetitions } : {}),
+    };
+    res.setHeader("Cache-Control", "public, max-age=60");
+    return res.json(result);
+  } catch (error) { return next(error); }
+  finally { client.release(); }
 });
 
 export default router;
