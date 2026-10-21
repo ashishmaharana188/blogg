@@ -205,7 +205,7 @@ const HomePage = () => {
   useEffect(() => { void loadFeed(); }, [loadFeed]);
   useEffect(() => {
     void refreshNowPlaying();
-    const interval = window.setInterval(() => { void refreshNowPlaying(); }, 60_000);
+    const interval = window.setInterval(() => { void refreshNowPlaying(); }, 300_000);
     return () => window.clearInterval(interval);
   }, [refreshNowPlaying]);
   const stackById = useMemo(() => new Map(stacks.map((stack) => [stack.stack_id, stack])), [stacks]);

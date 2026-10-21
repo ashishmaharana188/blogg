@@ -810,7 +810,7 @@ export default function AccountPage() {
     if (!isAdmin) return;
     const pollId = window.setInterval(() => {
       void refreshIntegrations();
-    }, 30_000);
+    }, 300_000);
     return () => window.clearInterval(pollId);
   }, [refreshShowcase, refreshIntegrations, refreshYoutubePlaylists, isAdmin]);
 
@@ -1090,10 +1090,6 @@ export default function AccountPage() {
 
   useEffect(() => {
     void refreshYtmusicPublic();
-    const pollId = window.setInterval(() => {
-      void refreshYtmusicPublic();
-    }, 60_000);
-    return () => window.clearInterval(pollId);
   }, [refreshYtmusicPublic]);
 
   useEffect(() => {
