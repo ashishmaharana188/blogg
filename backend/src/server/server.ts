@@ -20,6 +20,7 @@ import linkPreviewRouter from "../routes/linkPreview.ts";
 import healthRouter from "../routes/health.ts";
 import currentReadingRouter from "../routes/currentReading.ts";
 import clientUiLogsRouter from "../routes/clientUiLogs.ts";
+import healthPushupsRouter from "../routes/healthPushups.ts";
 
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
@@ -50,6 +51,7 @@ app.use("/api", clientUiLogsRouter);
 // continues to provide Spotify playback, regular YouTube playlists, and featured links.
 app.use("/api", youtubeMusicApiRouter);
 app.use("/api", healthRouter);
+app.use("/api", healthPushupsRouter);
 app.use("/api", currentReadingRouter);
 app.use("/api", adminShowcaseRouter);
 app.use(canvasViewInterceptor);

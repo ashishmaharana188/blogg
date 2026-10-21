@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { API_BASE_URL } from "../services/apiBase";
+import AssetStateBox from "./AssetStateBox";
+import { reportUiFailure } from "../utils/uiDiagnostics";
 import "./pushupsFeedWidget.css";
 
 type MetricId = "repetitions" | "sets" | "duration" | "heart_rate" | "calories" | "history";
@@ -33,7 +35,11 @@ function valueFor(id: MetricId, values: Record<string, unknown>): string {
 export default function PushupsFeedWidget() {
   const [data, setData] = useState<PushupPublicData | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   useEffect(() => {
+    setFailed(false);
+    setLoaded(false);
     let cancelled = false;
     void fetch(`${API_BASE_URL}/api/health/pushups/public`, { credentials: "omit", cache: "no-store", headers: { Accept: "application/json" } })
       .then(async (response) => {
@@ -41,13 +47,18 @@ export default function PushupsFeedWidget() {
         return response.json() as Promise<PushupPublicData>;
       })
       .then((result) => { if (!cancelled) setData(result); })
-      .catch((reason) => { console.warn("Could not load public push-up widget:", reason); })
+      .catch((reason) => {
+        if (!cancelled) {
+          reportUiFailure("PushupsFeedWidget.load", reason);
+          setFailed(true);
+        }
+      })
       .finally(() => { if (!cancelled) setLoaded(true); });
     return () => { cancelled = true; };
-  }, []);
+  }, [retryCount]);
 
   const selected = (data?.selectedMetrics || []).slice(0, 3);
-  if (loaded && !selected.length) return null;
+  if (loaded && !failed && !selected.length) return null;
   const values = data?.latestSession?.values || {};
   return (
     <aside className="blog-feed-pushups-widget" aria-label="Push-up summary">
@@ -55,7 +66,7 @@ export default function PushupsFeedWidget() {
         <span className="blog-feed-pushups-icon" aria-hidden="true">↗</span>
         <div><span className="blog-feed-pushups-eyebrow">EXERCISE</span><strong>Push-ups</strong></div>
       </div>
-      {!loaded ? <p className="blog-feed-pushups-empty">Loading…</p> : !data?.latestSession ? <p className="blog-feed-pushups-empty">No push-up session available.</p> : (
+      {!loaded ? <AssetStateBox status="loading" compact /> : failed ? <AssetStateBox status="error" compact onRetry={() => setRetryCount((current) => current + 1)} /> : !data?.latestSession ? <p className="blog-feed-pushups-empty">No push-up session available.</p> : (
         <>
           <p className="blog-feed-pushups-date">{new Date(data.latestSession.startedAt).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</p>
           <div className="blog-feed-pushups-metrics">

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { API_BASE_URL } from "../../services/apiBase";
 import AssetStateBox from "../../components/AssetStateBox";
+import PushupsAdminPanel from "../../components/PushupsAdminPanel";
 import { reportUiFailure } from "../../utils/uiDiagnostics";
 import "./healthAdminPanel.css";
 
@@ -132,29 +133,93 @@ export default function HealthAdminPanel({ isAdmin, section }: { isAdmin: boolea
       setError("Choose at least one Samsung Health ZIP, CSV, or JSON file.");
       return;
     }
-    const body = new FormData();
-    files.forEach((file) => body.append("files", file, file.name));
-    setUploading(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/health/admin/import`, {
+
+    const submitImport = async (endpoint: string) => {
+      const body = new FormData();
+      files.forEach((file) => body.append("files", file, file.name));
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: "POST",
         credentials: "include",
         body,
         headers: { Accept: "application/json" },
       });
-      if (!response.ok) throw new Error(await responseError(response));
-      const result = await response.json() as {
-        filesProcessed: number;
-        stepDaysProcessed: number;
-        runSessionsProcessed: number;
-        heartRateSamplesProcessed: number;
+      const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
+      return {
+        ok: response.ok,
+        status: response.status,
+        payload,
+        message: typeof payload.message === "string" ? payload.message : `Request failed (${response.status})`,
       };
-      setMessage(`Imported ${result.filesProcessed} file(s): ${result.stepDaysProcessed} daily step record(s), ${result.runSessionsProcessed} run session(s), ${result.heartRateSamplesProcessed} standalone heart-rate sample(s).`);
-      setImportFailed(false);
-      setFiles([]);
-      const input = document.getElementById("health-samsung-files") as HTMLInputElement | null;
-      if (input) input.value = "";
-      window.dispatchEvent(new CustomEvent("health-data-updated", { detail: { source: section } }));
+    };
+
+    setUploading(true);
+    try {
+      // Keep one Samsung Health file picker. Send the selected export to the
+      // existing steps/running/heart-rate importer and to the exercise parser.
+      const [healthResult, exerciseResult] = await Promise.all([
+        submitImport("/api/health/admin/import"),
+        submitImport("/api/health/pushups/admin/import"),
+      ]);
+
+      const noGeneralRecords = !healthResult.ok &&
+        /No supported records found|No CSV or JSON files were found/i.test(healthResult.message);
+      const noPushupRecords = !exerciseResult.ok &&
+        /No Push-ups sessions were found|No push-up records were found/i.test(exerciseResult.message);
+
+      const unexpectedFailures = [
+        !healthResult.ok && !noGeneralRecords
+          ? { source: "SamsungHealth.importMetrics", message: healthResult.message }
+          : null,
+        !exerciseResult.ok && !noPushupRecords
+          ? { source: "SamsungHealth.importExerciseData", message: exerciseResult.message }
+          : null,
+      ].filter((item): item is { source: string; message: string } => item !== null);
+
+      for (const failure of unexpectedFailures) {
+        reportUiFailure(failure.source, new Error(failure.message));
+      }
+
+      if ((!healthResult.ok && !noGeneralRecords) || (!exerciseResult.ok && !noPushupRecords)) {
+        if (!healthResult.ok && !exerciseResult.ok) {
+          throw new Error("The selected Samsung Health export could not be imported.");
+        }
+      }
+      if (!healthResult.ok && !exerciseResult.ok) {
+        throw new Error("No supported Samsung Health records were found in the selected files.");
+      }
+
+      const counts: string[] = [];
+      if (healthResult.ok) {
+        const data = healthResult.payload as {
+          filesProcessed?: number;
+          stepDaysProcessed?: number;
+          runSessionsProcessed?: number;
+          heartRateSamplesProcessed?: number;
+        };
+        counts.push(
+          `${Number(data.stepDaysProcessed || 0)} daily step record(s)`,
+          `${Number(data.runSessionsProcessed || 0)} run session(s)`,
+          `${Number(data.heartRateSamplesProcessed || 0)} standalone heart-rate sample(s)`,
+        );
+      }
+      if (exerciseResult.ok) {
+        const data = exerciseResult.payload as { sessionsProcessed?: number };
+        counts.push(`${Number(data.sessionsProcessed || 0)} push-up session(s)`);
+      }
+      if (unexpectedFailures.length) {
+        setImportFailed(true);
+        setMessage(`Import partially completed: ${counts.join(", ")}. Some record types could not be imported.`);
+      } else {
+        setMessage(`Samsung Health import complete: ${counts.join(", ")}.`);
+        setImportFailed(false);
+      }
+
+      if (!unexpectedFailures.length) {
+        setFiles([]);
+        const input = document.getElementById("health-samsung-files") as HTMLInputElement | null;
+        if (input) input.value = "";
+      }
+      window.dispatchEvent(new CustomEvent("health-data-updated", { detail: { source: "overview" } }));
       await refresh();
     } catch (reason) {
       reportUiFailure("HealthAdminPanel.import", reason);
@@ -200,7 +265,7 @@ export default function HealthAdminPanel({ isAdmin, section }: { isAdmin: boolea
             onChange={(event) => setFiles(Array.from(event.currentTarget.files || []))}
             disabled={uploading}
           />
-          <p className="health-import-hint">Choose <strong>activity.day_summary</strong> or <strong>tracker.pedometer_day_summary</strong> for steps; <strong>exercise CSV</strong> plus its matching <strong>live_data JSON</strong> for running/BPM; and <strong>tracker.heart_rate CSV</strong> for standalone heart-rate history. You can upload the complete export as a ZIP or select the files individually.</p>
+          <p className="health-import-hint">Choose <strong>activity.day_summary</strong> or <strong>tracker.pedometer_day_summary</strong> for steps; <strong>exercise CSV</strong> plus its matching <strong>live_data JSON</strong> for running/BPM; and <strong>tracker.heart_rate CSV</strong> for standalone heart-rate history. The same export is also scanned for available Push-ups fields. Upload a full ZIP or select files individually.</p>
           {files.length > 0 && <p className="health-selected-files">{files.length} file(s) selected: {files.map((file) => file.name).join(", ")}</p>}
           <div className="health-import-actions">
             <button className="showcase-outline-button health-import-button" type="submit" disabled={uploading || files.length === 0}>
@@ -209,7 +274,7 @@ export default function HealthAdminPanel({ isAdmin, section }: { isAdmin: boolea
             <button className="showcase-outline-button" type="button" onClick={() => { setFiles([]); const input = document.getElementById("health-samsung-files") as HTMLInputElement | null; if (input) input.value = ""; }} disabled={uploading || files.length === 0}>Clear selection</button>
           </div>
           {message && <p className="health-feedback is-success" role="status">{message}</p>}
-          {error && <p className="health-feedback is-error" role="alert">{error}</p>}
+          {error && <AssetStateBox status="error" compact />}
           {uploading && <AssetStateBox status="loading" compact />}
           {importFailed && <AssetStateBox status="error" compact onRetry={() => { document.querySelector<HTMLFormElement>(".health-import-form")?.requestSubmit(); }} />}
         </form>}
@@ -221,6 +286,7 @@ export default function HealthAdminPanel({ isAdmin, section }: { isAdmin: boolea
             <details><summary>Show imported filenames</summary><ul>{summary.latestImport.filenames.map((name, index) => <li key={`${name}-${index}`}>{name}</li>)}</ul></details>
           </> : <span>No import history yet.</span>}
         </div>}
+        {isAdmin && <PushupsAdminPanel />}
       </section>
       )}
 
