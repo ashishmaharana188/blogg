@@ -14,10 +14,17 @@ import cookieParser from "cookie-parser";
 import { errorHandler } from "../middleware/errorHandler.ts";
 import adminStatusRouter from "../routes/adminStatus.ts";
 import adminShowcaseRouter from "../routes/adminShowcase.ts";
+import youtubeMusicApiRouter from "../routes/youtubeMusicApi.ts";
 import linkPreviewRouter from "../routes/linkPreview.ts";
 
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
+
+// YouTube Music now uses the existing YouTube Data API OAuth token. Clear legacy
+// companion settings so older integration-status helpers cannot call the retired
+// Python service while still serving unrelated YouTube Library routes.
+process.env.YTMUSIC_SERVICE_URL = "";
+process.env.YTMUSIC_SERVICE_TOKEN = "";
 
 app.use(
   cors({
@@ -37,6 +44,9 @@ app.use(sharePreviewRouter);
 app.use("/api/auth", authenticationRouter);
 app.use("/api/admin", adminStatusRouter);
 app.use("/api", linkPreviewRouter);
+// Mount replacement routes before the legacy showcase router so the Python
+// YouTube Music companion is no longer used by any active YT Music endpoint.
+app.use("/api", youtubeMusicApiRouter);
 app.use("/api", adminShowcaseRouter);
 app.use(canvasViewInterceptor);
 app.use(blogInterceptRouter);

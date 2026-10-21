@@ -34,6 +34,7 @@ type YtMusicPublicResponse = {
   connected?: boolean;
   lastPlayed?: MusicTrack | null;
   tracks?: MusicTrack[];
+  fallbackTrack?: MusicTrack | null;
 };
 
 type FeedNowPlayingTrack = {
@@ -42,7 +43,7 @@ type FeedNowPlayingTrack = {
   thumbnail?: string;
   url?: string;
   provider: "spotify" | "ytmusic";
-  label: "NOW PLAYING" | "LAST PLAYED" | "PUBLIC PICK";
+  label: "NOW PLAYING" | "LAST PLAYED" | "PUBLIC PICK" | "LIKED TRACK";
 };
 
 async function fetchPublicJson<T>(path: string): Promise<T> {
@@ -167,7 +168,8 @@ const HomePage = () => {
       : null;
     const lastPlayedTrack = validMusicTrack(ytmusic?.lastPlayed, "ytmusic", "LAST PLAYED");
     const publicPick = validMusicTrack(ytmusic?.tracks?.[0], "ytmusic", "PUBLIC PICK");
-    setNowPlayingTrack(spotifyTrack || lastPlayedTrack || publicPick);
+    const likedMusicFallback = validMusicTrack(ytmusic?.fallbackTrack, "ytmusic", "LIKED TRACK");
+    setNowPlayingTrack(spotifyTrack || lastPlayedTrack || publicPick || likedMusicFallback);
   }, []);
 
   const loadFeed = useCallback(async () => {
