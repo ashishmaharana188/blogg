@@ -177,10 +177,6 @@ export default function AccountShareButton({
             aria-labelledby="account-share-dialog-title"
           >
             <header className="account-share-dialog-header">
-              <div>
-                <p className="account-share-eyebrow">PUBLIC DASHBOARD</p>
-                <h2 id="account-share-dialog-title">Share the public view</h2>
-              </div>
               <button
                 type="button"
                 className="account-share-close"
@@ -204,8 +200,6 @@ export default function AccountShareButton({
                 <p className="account-share-preview-kicker">
                   BLOGG <span>·</span> PUBLIC PROFILE
                 </p>
-
-                <small>{window.location.host}</small>
               </div>
             </article>
 

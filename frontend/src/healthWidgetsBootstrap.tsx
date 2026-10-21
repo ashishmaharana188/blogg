@@ -216,6 +216,65 @@ function ensurePublicWidget(rail: HTMLElement) {
   mountRoot(host, <HealthWidget />);
 }
 
+/** Hide admin input forms while keeping their parent dashboard sections visible.
+ * The Account page contains the Featured Links form and Samsung Health form. We
+ * hide every form inside this page in public mode, not just two class names, and
+ * apply the rule inline so component CSS cannot override it.
+ */
+let publicInputObserver: MutationObserver | null = null;
+let publicInputObserverPage: HTMLElement | null = null;
+
+function syncPublicAdminInputVisibility(page: HTMLElement, publicView: boolean) {
+  const selector = "form, .health-import-form, .showcase-add-link-form";
+  page.dataset.accountShareView = publicView ? "public" : "admin";
+  page.querySelectorAll<HTMLElement>(selector).forEach((element) => {
+    const isManaged = element.hasAttribute("data-public-view-hidden-input");
+
+    if (publicView) {
+      if (!isManaged) {
+        element.dataset.publicViewOriginalDisplay = element.style.getPropertyValue("display");
+        element.dataset.publicViewOriginalDisplayPriority = element.style.getPropertyPriority("display");
+        element.setAttribute("data-public-view-hidden-input", "true");
+      }
+      element.style.setProperty("display", "none", "important");
+      return;
+    }
+
+    if (!isManaged) return;
+    const originalDisplay = element.dataset.publicViewOriginalDisplay || "";
+    const originalPriority = element.dataset.publicViewOriginalDisplayPriority || "";
+    if (originalDisplay) element.style.setProperty("display", originalDisplay, originalPriority);
+    else element.style.removeProperty("display");
+    delete element.dataset.publicViewOriginalDisplay;
+    delete element.dataset.publicViewOriginalDisplayPriority;
+    element.removeAttribute("data-public-view-hidden-input");
+  });
+}
+
+function enforcePublicInputVisibility(page: HTMLElement, publicView: boolean) {
+  syncPublicAdminInputVisibility(page, publicView);
+
+  // The health panels are mounted into separate React roots after AccountPage
+  // first renders. Watch for later form insertions so they are hidden immediately.
+  if (publicView) {
+    if (publicInputObserverPage !== page) {
+      publicInputObserver?.disconnect();
+      publicInputObserverPage = page;
+      publicInputObserver = new MutationObserver(() => {
+        syncPublicAdminInputVisibility(page, true);
+      });
+      publicInputObserver.observe(page, { childList: true, subtree: true });
+    }
+    return;
+  }
+
+  if (publicInputObserverPage === page) {
+    publicInputObserver?.disconnect();
+    publicInputObserver = null;
+    publicInputObserverPage = null;
+  }
+}
+
 function showSnapshotCaptureStatus(message: string, isError = false) {
   let status = document.getElementById("account-share-snapshot-status");
   if (!status) {
@@ -305,8 +364,19 @@ function syncHealthWidgets() {
     const forcePublicView = params.get("view") === "public";
     const wantsSnapshot = forcePublicView && params.get("captureSnapshot") === "1";
     const accountPage = document.querySelector<HTMLElement>(".account-page");
-    accountPage?.classList.toggle("account-share-public-view", forcePublicView);
     const statusCard = document.querySelector<HTMLElement>(".account-dashboard-status");
+    const main = document.querySelector<HTMLElement>(".account-page-main");
+    if (main) ensureAdminPanel(main);
+
+    // Public display mode also applies to anonymous/non-admin visitors on the
+    // ordinary /account URL. The state is set after the admin-only summary
+    // endpoint rejects their session; the body MutationObserver runs this sync
+    // again, at which point the admin-only heading cards are removed as well.
+    const adminState = main ? adminAccessByMain.get(main) : undefined;
+    const publicDisplay = forcePublicView || adminState === "denied" || adminState === "public";
+    accountPage?.classList.toggle("account-share-public-view", publicDisplay);
+    if (accountPage) enforcePublicInputVisibility(accountPage, publicDisplay);
+
     if (forcePublicView) {
       if (statusCard) {
         const shareHost = statusCard.querySelector<HTMLElement>(":scope > [data-account-share-host='true']");
@@ -320,8 +390,6 @@ function syncHealthWidgets() {
         }
       }
     }
-    const main = document.querySelector<HTMLElement>(".account-page-main");
-    if (main) ensureAdminPanel(main);
     if (!forcePublicView && statusCard) {
       ensureAccountShareButton(statusCard, main ? adminAccessByMain.get(main) === "allowed" : false);
     }

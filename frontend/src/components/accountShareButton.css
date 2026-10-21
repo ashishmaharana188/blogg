@@ -118,12 +118,29 @@
 }
 
 
-/* When the account dashboard is opened as a public share/capture, an active
-   administrator cookie must not expose editing, connection, or import controls. */
+/* In public mode, remove the two admin-only heading panels entirely. Health
+   data remains in the Steps and Runs cards, and published Featured Link cards
+   remain in their distributed card lists. Only these admin/input containers
+   disappear for anonymous viewers and for the captured public share view. */
+.account-page.account-share-public-view .health-admin-overview,
+.account-page.account-share-public-view .account-dashboard-featured-header {
+  display: none !important;
+}
+
+/* Hide administrator-only input areas while keeping actual public data cards. */
+/* Hide all form-based admin inputs in public mode without hiding their cards. */
+.account-page.account-share-public-view form,
+.account-page[data-account-share-view="public"] form,
+.account-page.account-share-public-view .health-import-form,
+.account-page.account-share-public-view .showcase-add-link-form {
+  display: none !important;
+}
+
+/* Other administrator-only controls are also suppressed in public captures. */
 .account-page.account-share-public-view .account-dashboard-status .account-field-label,
 .account-page.account-share-public-view .account-dashboard-status .account-activity-select,
 .account-page.account-share-public-view .account-dashboard-status .account-message,
-.account-page.account-share-public-view .account-dashboard-status .account-status-actions,
+.account-page.account-share-public-view .account-dashboard-status .account-status-actions > button,
 .account-page.account-share-public-view .showcase-add-link-form,
 .account-page.account-share-public-view .health-import-form,
 .account-page.account-share-public-view .health-import-actions,
