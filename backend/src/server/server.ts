@@ -9,6 +9,7 @@ import blogInterceptRouter from "../routes/bloggDocument/bloggDocumentIndex.ts";
 import canvasViewInterceptor from "../routes/canvasView/canvasViewIndex.ts";
 import flipBookInterceptor from "../routes/flipBook/flipBookIndex.ts";
 import authenticationRouter from "../routes/authentication/authenticationIndex.ts";
+import accountSharePreviewRouter from "../routes/accountSharePreview.ts";
 import sharePreviewRouter from "../routes/sharePreview.ts";
 import cookieParser from "cookie-parser";
 import { errorHandler } from "../middleware/errorHandler.ts";
@@ -35,6 +36,8 @@ await warmupPgPool();
 await initializePostgresSchema();
 
 app.use(cookieParser());
+// Register the fixed route before /share/:bloggId so "account" is not treated as a note ID.
+app.use(accountSharePreviewRouter);
 app.use(sharePreviewRouter);
 app.use("/api/auth", authenticationRouter);
 app.use("/api/admin", adminStatusRouter);

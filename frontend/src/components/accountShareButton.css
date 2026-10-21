@@ -1,0 +1,89 @@
+.account-share-bootstrap-root {
+  margin-top: 14px;
+}
+.account-share-trigger {
+  position: static;
+  z-index: auto;
+  display: inline-flex;
+  margin-top: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 8px 13px;
+  border: 1px solid #cbd4de;
+  border-radius: 999px;
+  background: #fff;
+  color: #202b3b;
+  box-shadow: 0 2px 8px rgb(15 23 42 / 7%);
+  font-size: .75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.account-share-trigger:hover { background: #f7f9fb; border-color: #aab4c0; }
+.account-share-trigger:focus-visible,
+.account-share-dialog button:focus-visible,
+.account-share-url-row input:focus-visible {
+  outline: 2px solid #334155;
+  outline-offset: 3px;
+}
+.account-share-backdrop {
+  position: fixed;
+  z-index: 3000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  overflow-y: auto;
+  background: rgb(15 23 42 / 45%);
+  backdrop-filter: blur(3px);
+}
+.account-share-dialog {
+  box-sizing: border-box;
+  width: min(100%, 520px);
+  max-height: min(92vh, 780px);
+  overflow-y: auto;
+  padding: 23px;
+  border: 1px solid #e1e6ec;
+  border-radius: 18px;
+  background: #fff;
+  color: #172033;
+  box-shadow: 0 24px 70px rgb(15 23 42 / 24%);
+}
+.account-share-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.account-share-dialog-header h2 { margin: 0; font-size: 1.15rem; line-height: 1.35; }
+.account-share-dialog-header > div > p:last-child { margin: 7px 0 0; color: #687586; font-family: Arial, sans-serif; font-size: .82rem; line-height: 1.5; }
+.account-share-eyebrow { margin: 0 0 7px; color: #8a94a2; font-size: .62rem; font-weight: 700; letter-spacing: .14em; }
+.account-share-close { flex: 0 0 auto; width: 30px; height: 30px; padding: 0; border: 1px solid #e0e6ed; border-radius: 50%; background: #fff; color: #536174; font-size: 1.2rem; line-height: 1; cursor: pointer; }
+.account-share-preview-card { overflow: hidden; border: 1px solid #dfe5eb; border-radius: 13px; background: #f8fafc; }
+.account-share-preview-card > img { display: block; width: 100%; aspect-ratio: 1200 / 630; object-fit: cover; background: #eef2f7; }
+.account-share-preview-copy { padding: 13px 15px 15px; }
+.account-share-preview-kicker { margin: 0 0 7px; color: #7b8794; font-size: .59rem; font-weight: 700; letter-spacing: .12em; }
+.account-share-preview-kicker span { padding: 0 4px; color: #b0b7c1; }
+.account-share-preview-copy h3 { margin: 0; color: #172033; font-size: .98rem; line-height: 1.4; }
+.account-share-preview-copy > p:not(.account-share-preview-kicker) { margin: 6px 0 9px; color: #667085; font-family: Arial, sans-serif; font-size: .78rem; line-height: 1.5; }
+.account-share-preview-copy small { color: #8a94a2; font-family: Arial, sans-serif; font-size: .68rem; }
+.account-share-link-label { display: block; margin: 17px 0 7px; color: #465266; font-size: .7rem; font-weight: 700; }
+.account-share-url-row { display: flex; gap: 8px; min-width: 0; }
+.account-share-url-row input { box-sizing: border-box; flex: 1 1 auto; width: 0; min-width: 0; padding: 10px 11px; border: 1px solid #d5dbe3; border-radius: 8px; background: #fff; color: #475569; font-family: Arial, sans-serif; font-size: .72rem; }
+.account-share-url-row button,
+.account-share-actions button { min-height: 38px; padding: 9px 13px; border: 1px solid #cbd4de; border-radius: 8px; background: #fff; color: #273246; font-family: inherit; font-size: .72rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.account-share-url-row button:hover,
+.account-share-secondary:hover { background: #f6f8fa; }
+.account-share-actions { display: flex; gap: 9px; margin-top: 10px; }
+.account-share-actions .account-share-primary { border-color: #172033; background: #172033; color: #fff; }
+.account-share-actions .account-share-primary:hover { background: #2d3a50; }
+.account-share-feedback { margin: 12px 0 0; color: #536174; font-family: Arial, sans-serif; font-size: .75rem; line-height: 1.5; }
+@media (max-width: 680px) {
+  .account-share-trigger { min-height: 34px; padding: 7px 10px; font-size: .7rem; }
+  .account-share-dialog { padding: 17px; border-radius: 15px; }
+  .account-share-url-row { flex-direction: column; }
+  .account-share-url-row input { width: 100%; min-height: 39px; }
+  .account-share-url-row button { align-self: flex-end; }
+}

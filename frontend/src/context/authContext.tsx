@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import authenticationService from "../pages/Authentication/services/authenticationService";
 
 type User = {
@@ -48,4 +49,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+/** Shared dashboard links intentionally render in public mode, even in an admin's browser. */
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  const location = useLocation();
+  const isPublicDashboard =
+    location.pathname.replace(/\/+$/, "") === "/account" &&
+    new URLSearchParams(location.search).get("view") === "public";
+
+  if (!isPublicDashboard) return context;
+
+  return {
+    ...context,
+    user: context.user ? { ...context.user, isAdmin: false } : null,
+    isAdmin: false,
+  };
+};

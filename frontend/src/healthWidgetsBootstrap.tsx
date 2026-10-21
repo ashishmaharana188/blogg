@@ -2,10 +2,11 @@ import { createRoot, type Root } from "react-dom/client";
 import type { ReactNode } from "react";
 import HealthAdminPanel from "./pages/Account/HealthAdminPanel";
 import HealthWidget from "./pages/BloggFeed/HealthWidget";
+import AccountShareButton from "./components/AccountShareButton";
 import { API_BASE_URL } from "./services/apiBase";
 
 const mountedRoots = new Map<HTMLElement, Root>();
-type AdminAccessState = "pending" | "allowed" | "denied";
+type AdminAccessState = "pending" | "allowed" | "denied" | "public";
 const adminAccessByMain = new WeakMap<HTMLElement, AdminAccessState>();
 
 function mountRoot(host: HTMLElement, element: ReactNode) {
@@ -54,6 +55,7 @@ function ensureAdminPanel(main: HTMLElement) {
   if (!dashboard) return;
 
   const state = adminAccessByMain.get(main);
+  const forcePublicView = new URLSearchParams(window.location.search).get("view") === "public";
 
   const placements = adminHealthPlacements.map((placement) => {
     const column = dashboard.querySelector<HTMLElement>(placement.columnSelector);
@@ -92,6 +94,40 @@ function ensureAdminPanel(main: HTMLElement) {
   const hosts = placements.map((placement) => placement.host);
   if (hosts.some((host) => !host)) return;
 
+  if (forcePublicView) {
+    // Force every embedded health panel to read the public endpoint and remove any
+    // already-mounted admin UI when an administrator opens their own shared link.
+    if (state !== "public") {
+      adminAccessByMain.set(main, "public");
+      placements.forEach(({ host }) => {
+        if (!host) return;
+        const existingRoot = mountedRoots.get(host);
+        if (existingRoot) {
+          existingRoot.unmount();
+          mountedRoots.delete(host);
+        }
+      });
+    }
+    placements.forEach(({ section, host }) => {
+      if (host) mountRoot(host, <HealthAdminPanel isAdmin={false} section={section} />);
+    });
+    return;
+  }
+
+  // Support switching back from the public share URL to the owner's admin view
+  // without requiring a full reload.
+  if (state === "public") {
+    adminAccessByMain.delete(main);
+    placements.forEach(({ host }) => {
+      if (!host) return;
+      const existingRoot = mountedRoots.get(host);
+      if (existingRoot) {
+        existingRoot.unmount();
+        mountedRoots.delete(host);
+      }
+    });
+  }
+
   if (state === "pending") return;
   if (state === "denied") {
     placements.forEach(({ section, host }) => {
@@ -118,6 +154,9 @@ function ensureAdminPanel(main: HTMLElement) {
       currentHosts.forEach((host) => host?.remove());
       return;
     }
+    // A request started in admin mode must not switch public mode back to admin
+    // if its response arrives after the shared URL has been opened.
+    if (adminAccessByMain.get(main) === "public") return;
     if (!response.ok) {
       adminAccessByMain.set(main, "denied");
       placements.forEach(({ section, host }) => {
@@ -130,11 +169,34 @@ function ensureAdminPanel(main: HTMLElement) {
       if (host) mountRoot(host, <HealthAdminPanel isAdmin={true} section={section} />);
     });
   }).catch(() => {
+    if (adminAccessByMain.get(main) === "public") return;
     adminAccessByMain.set(main, "denied");
     placements.forEach(({ section, host }) => {
       if (host) mountRoot(host, <HealthAdminPanel isAdmin={false} section={section} />);
     });
   });
+}
+
+function ensureAccountShareButton(statusCard: HTMLElement) {
+  let host = statusCard.querySelector<HTMLDivElement>(
+    ":scope > [data-account-share-host='true']",
+  );
+  if (!host) {
+    host = createHost("account-share-bootstrap-root", "data-account-share-host");
+  }
+
+  const presenceRow = statusCard.querySelector<HTMLElement>(
+    ":scope > .account-presence-row",
+  );
+  if (presenceRow && presenceRow.parentElement === statusCard) {
+    if (host.parentElement !== statusCard || host.previousElementSibling !== presenceRow) {
+      presenceRow.insertAdjacentElement("afterend", host);
+    }
+  } else if (host.parentElement !== statusCard) {
+    statusCard.append(host);
+  }
+
+  mountRoot(host, <AccountShareButton />);
 }
 
 function ensurePublicWidget(rail: HTMLElement) {
@@ -154,6 +216,8 @@ function syncHealthWidgets() {
 
   const path = window.location.pathname.replace(/\/+$/, "") || "/";
   if (path === "/account") {
+    const statusCard = document.querySelector<HTMLElement>(".account-dashboard-status");
+    if (statusCard) ensureAccountShareButton(statusCard);
     const main = document.querySelector<HTMLElement>(".account-page-main");
     if (main) ensureAdminPanel(main);
   }
