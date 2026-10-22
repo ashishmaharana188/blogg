@@ -379,97 +379,93 @@
   }
 }
 
-/* Sleep and exercise histories use the same compact vertical-bar visual language as BPM history.
-   Dates and numeric values remain visible; bars are retained as the visual comparison. */
+/* Sleep and exercise are bar-only histories using the heart-rate chart geometry.
+   Position the rotated bar absolutely so its visual bounds fit the 54px chart
+   without changing the column's layout size or overflowing the health card. */
 .health-sleep-section .health-step-history,
 .health-exercise-history .health-step-history {
   display: flex;
   flex-direction: row;
   align-items: stretch;
-  justify-content: flex-start;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 2px;
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
-  min-height: 112px;
-  padding: 4px 2px 8px;
-  overflow-x: auto;
+  height: 54px;
+  min-height: 54px;
+  padding: 5px 0 0;
+  border-bottom: 1px solid #dce3eb;
+  overflow-x: hidden;
   overflow-y: hidden;
 }
 .health-sleep-section .health-step-day,
 .health-exercise-history .health-step-day {
+  position: relative;
   display: flex;
-  flex: 1 0 58px;
+  flex: 1 1 0;
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-  gap: 2px;
-  min-width: 58px;
-  min-height: 100px;
-  padding: 0 2px 3px;
-  border-bottom: 0;
-}
-.health-exercise-history .health-step-day {
-  flex-basis: 78px;
-  min-width: 78px;
-  max-width: 110px;
+  gap: 0;
+  width: auto;
+  min-width: 1px;
+  max-width: 8px;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  border: 0;
+  overflow: visible;
 }
 .health-sleep-section .health-step-day-date,
-.health-exercise-history .health-step-day-date {
-  order: 2;
-  width: 100%;
-  min-width: 0;
-  color: #687586;
-  font-size: 0.62rem;
-  line-height: 1.25;
-  text-align: center;
-  overflow-wrap: anywhere;
-}
-.health-sleep-section .health-step-day strong,
-.health-exercise-history .health-step-day strong {
-  order: 0;
-  max-width: 100%;
-  color: #344054;
-  font-size: 0.62rem;
-  line-height: 1.25;
-  text-align: center;
-  white-space: normal;
-  overflow-wrap: anywhere;
+.health-sleep-section .health-step-day > strong,
+.health-exercise-history .health-step-day-date,
+.health-exercise-history .health-step-day > strong {
+  display: none;
 }
 .health-sleep-section .health-step-bar,
 .health-exercise-history .health-step-bar {
-  order: 1;
+  position: absolute;
+  left: 50%;
+  top: 50%;
   display: block;
-  flex: 0 0 auto;
+  flex: none;
   width: 54px;
   height: 7px;
-  margin: 23px 0;
+  min-height: 7px;
+  margin: 0;
+  padding: 0;
   overflow: hidden;
+  border: 0;
   border-radius: 2px 2px 0 0;
   background: #edf1f5;
-  transform: rotate(-90deg);
+  transform: translate(-50%, -50%) rotate(-90deg);
   transform-origin: center;
+  box-sizing: border-box;
 }
 .health-sleep-section .health-step-bar > span,
 .health-exercise-history .health-step-bar > span {
   display: block;
+  width: auto;
   height: 100%;
   min-width: 0;
   border-radius: inherit;
   background: #b96969;
 }
-.health-exercise-history .health-step-day-date {
-  font-weight: 500;
-}
 @media (max-width: 720px) {
   .health-sleep-section .health-step-history,
   .health-exercise-history .health-step-history {
-    gap: 6px;
+    gap: 2px;
+    height: 54px;
+    min-height: 54px;
+    padding-left: 0;
+    padding-right: 0;
   }
-  .health-sleep-section .health-step-day {
-    flex-basis: 54px;
-    min-width: 54px;
-  }
+  .health-sleep-section .health-step-day,
   .health-exercise-history .health-step-day {
-    flex-basis: 72px;
-    min-width: 72px;
+    min-width: 1px;
+    max-width: 8px;
   }
 }

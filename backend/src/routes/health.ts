@@ -220,6 +220,7 @@ const EXERCISE_METRICS = [
   { id: "heart_rate", label: "Heart rate", description: "Average and minimum/maximum BPM", requires: "avg_hr" },
   { id: "calories", label: "Calories", description: "Calories recorded for the latest session", requires: "calories" },
   { id: "history", label: "Workout history", description: "Number of recorded sessions and total count / repetitions", requires: "session_id" },
+  { id: "sleep", label: "Sleep", description: "Most recent sleep duration, efficiency and score", requires: "sleep" },
 ] as const;
 type ExerciseMetricId = (typeof EXERCISE_METRICS)[number]["id"];
 type ExerciseSet = { reps: number; durationSeconds?: number; weight?: number; weightUnit?: string };
@@ -230,8 +231,18 @@ type ExerciseSession = {
   heartRateSamples: Array<{ time: string; bpm: number }>;
 };
 function exerciseActivityName(exerciseType: number): string {
-  if (exerciseType === PUSHUPS_EXERCISE_TYPE) return "Push-ups";
-  return `Exercise type ${exerciseType}`;
+  const names: Record<number, string> = {
+    1001: "Walking", 1002: "Running", 10001: "Stretching", 10002: "Jump rope",
+    10003: "Hula-hooping", 10004: "Push-ups", 10005: "Pull-ups", 10006: "Sit-ups",
+    10007: "Circuit training", 10008: "Mountain climbers", 10009: "Jumping jacks",
+    10010: "Burpees", 10011: "Bench press", 10012: "Squats", 10013: "Lunges",
+    10014: "Leg presses", 10015: "Leg extensions", 10016: "Leg curls",
+    10017: "Back extensions", 10018: "Lat pull-downs", 10019: "Deadlifts",
+    10020: "Shoulder presses", 10021: "Front raises", 10022: "Lateral raises",
+    10023: "Crunches", 10024: "Leg raises", 10025: "Plank", 10026: "Arm curls",
+    10027: "Arm extensions",
+  };
+  return names[exerciseType] || `Other exercise (${exerciseType})`;
 }
 
 // The legacy table names are kept to preserve existing imported sessions and saved metric preferences.
@@ -327,6 +338,7 @@ async function getAvailableExerciseMetrics(client: Awaited<ReturnType<typeof get
   const result = await client.query("SELECT session_id, repetitions, duration_seconds, calories, avg_hr, min_hr, max_hr, sets_json FROM health_pushup_sessions ORDER BY started_at DESC LIMIT 200");
   const rows = result.rows as Array<Record<string, unknown>>;
   return EXERCISE_METRICS.filter((metric) => {
+    if (metric.id === "sleep") return true;
     if (!rows.length) return false;
     if (metric.id === "history") return true;
     if (metric.id === "sets") return rows.some((row) => decodeJsonArray(row.sets_json).length > 0);
@@ -364,6 +376,7 @@ function exerciseValuesForSession(session: ExerciseSession, selected: ExerciseMe
       case "heart_rate": values.heartRate = { average: session.avgHeartRate, minimum: session.minHeartRate, maximum: session.maxHeartRate }; break;
       case "calories": values.calories = session.calories; break;
       case "history": values.history = { sessionCount, totalCount: totalRepetitions, totalRepetitions }; break;
+      case "sleep": break; // Rendered from the dedicated sleep-summary endpoint in the UI.
     }
   }
   return values;
