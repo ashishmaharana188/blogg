@@ -119,6 +119,20 @@ function ensureAdminNewsletter() {
   });
 }
 
+/* Start the public music chooser collapsed, but only once per mounted button.
+   The account page owns the chooser state; this sets its initial UI after React mounts. */
+function collapsePublicMusicPickerByDefault() {
+  const buttons = document.querySelectorAll<HTMLButtonElement>(
+    ".showcase-ytmusic-admin-heading .showcase-ytmusic-collapse-toggle",
+  );
+  for (const button of buttons) {
+    const title = button.querySelector<HTMLElement>(".showcase-ytmusic-section-title")?.textContent?.trim();
+    if (title !== "Choose public tracks" || button.dataset.initialStateHandled === "true") continue;
+    button.dataset.initialStateHandled = "true";
+    if (button.getAttribute("aria-expanded") === "true") button.click();
+  }
+}
+
 function syncNewsletterUi() {
   for (const [host, root] of roots) {
     if (!host.isConnected) {
@@ -128,7 +142,10 @@ function syncNewsletterUi() {
   }
   const path = window.location.pathname.replace(/\/+$/, "") || "/";
   if (path === "/feed") ensureFeedNewsletter();
-  if (path === "/account") ensureAdminNewsletter();
+  if (path === "/account") {
+    collapsePublicMusicPickerByDefault();
+    ensureAdminNewsletter();
+  }
 }
 
 if (typeof document !== "undefined" && document.body) {

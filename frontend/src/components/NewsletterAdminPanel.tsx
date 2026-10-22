@@ -186,29 +186,52 @@ export default function NewsletterAdminPanel() {
     field: string,
     label: string,
     suffix = "",
+    step = 1,
   ) => {
     const value = (healthConfig[metric] as unknown as Record<string, number>)[
       field
     ];
     const id = `newsletter-health-${metric}-${field}`;
     return (
-      <label className="newsletter-admin-health-field" htmlFor={id} key={id}>
-        <span>
+      <div className="newsletter-admin-health-field" key={id}>
+        <label htmlFor={id} title={`${label}${suffix ? ` (${suffix})` : ""}`}>
           {label}
-          {suffix ? ` (${suffix})` : ""}
-        </span>
-        <input
-          id={id}
-          className="newsletter-admin-input"
-          type="number"
-          min="0"
-          step="1"
-          value={value}
-          onChange={(event) =>
-            updateHealthRange(metric, field, event.target.value)
-          }
-        />
-      </label>
+        </label>
+        <div className="newsletter-admin-health-stepper">
+          <button
+            type="button"
+            className="newsletter-admin-health-step"
+            aria-label={`Decrease ${label}`}
+            disabled={value <= 0 || Boolean(busy)}
+            onClick={() =>
+              updateHealthRange(metric, field, String(Math.max(0, value - step)))
+            }
+          >
+            −
+          </button>
+          <input
+            id={id}
+            className="newsletter-admin-input"
+            type="number"
+            min="0"
+            step={step}
+            value={value}
+            disabled={Boolean(busy)}
+            onChange={(event) =>
+              updateHealthRange(metric, field, event.target.value)
+            }
+          />
+          <button
+            type="button"
+            className="newsletter-admin-health-step"
+            aria-label={`Increase ${label}`}
+            disabled={Boolean(busy)}
+            onClick={() => updateHealthRange(metric, field, String(value + step))}
+          >
+            +
+          </button>
+        </div>
+      </div>
     );
   };
 
@@ -403,85 +426,83 @@ export default function NewsletterAdminPanel() {
           : "Send to all subscribers"}
       </button>
       <div className="newsletter-admin-divider" />
-      <section
+      <details
         className="newsletter-admin-health-config"
         aria-labelledby="newsletter-health-config-title"
       >
-        <div className="newsletter-admin-health-heading">
-          <div>
-            <p className="newsletter-admin-eyebrow">SENDER WIDGET</p>
-            <h3 id="newsletter-health-config-title">WELLNESS INDEX RANGES</h3>
+        <summary className="newsletter-admin-health-heading">
+          <h3 id="newsletter-health-config-title">WELLNESS INDEX RANGES</h3>
+          <div className="newsletter-admin-health-heading-actions">
+            <span className="newsletter-admin-health-badge">7d</span>
           </div>
-          <span className="newsletter-admin-health-badge">7-day average</span>
+        </summary>
+        <div className="newsletter-admin-health-content">
+          <label
+            className="newsletter-admin-health-enable"
+            title="Enable wellness metrics"
+          >
+            <input
+              type="checkbox"
+              aria-label="Enable wellness metrics"
+              checked={healthConfig.enabled}
+              onChange={(event) =>
+                setHealthConfig((current) => ({
+                  ...current,
+                  enabled: event.target.checked,
+                }))
+              }
+            />
+            <span>Include wellness metrics</span>
+          </label>
+          <div className="newsletter-admin-health-grid">
+            <div className="newsletter-admin-health-metric">
+              <h4>Steps</h4>
+              <div className="newsletter-admin-health-fields">
+                {rangeField("steps", "poor", "Low", "steps", 500)}
+                {rangeField("steps", "target", "Target", "steps", 500)}
+              </div>
+            </div>
+            <div className="newsletter-admin-health-metric">
+              <h4>Reps</h4>
+              <div className="newsletter-admin-health-fields">
+                {rangeField("reps", "poor", "Low", "reps")}
+                {rangeField("reps", "target", "Target", "reps")}
+              </div>
+            </div>
+            <div className="newsletter-admin-health-metric">
+              <h4>Sleep</h4>
+              <div className="newsletter-admin-health-fields">
+                {rangeField("sleep", "poorLow", "Low", "min", 5)}
+                {rangeField("sleep", "goodLow", "Good min", "min", 5)}
+                {rangeField("sleep", "goodHigh", "Good max", "min", 5)}
+                {rangeField("sleep", "poorHigh", "High", "min", 5)}
+              </div>
+            </div>
+            <div className="newsletter-admin-health-metric">
+              <h4>BPM</h4>
+              <div className="newsletter-admin-health-fields">
+                {rangeField("bpm", "poorLow", "Low", "BPM")}
+                {rangeField("bpm", "goodLow", "Good min", "BPM")}
+                {rangeField("bpm", "goodHigh", "Good max", "BPM")}
+                {rangeField("bpm", "poorHigh", "High", "BPM")}
+              </div>
+            </div>
+          </div>
+          <div className="newsletter-admin-health-assets" aria-label="Wellness image counts">
+            <span>L {moodImageCounts.low}</span>
+            <span>M {moodImageCounts.medium}</span>
+            <span>H {moodImageCounts.high}</span>
+          </div>
+          <button
+            className="newsletter-admin-secondary"
+            type="button"
+            onClick={() => void saveHealthRanges()}
+            disabled={Boolean(busy)}
+          >
+            {busy === "save-health" ? "Saving ranges…" : "Save health ranges"}
+          </button>
         </div>
-        <label className="newsletter-admin-health-enable">
-          <input
-            type="checkbox"
-            checked={healthConfig.enabled}
-            onChange={(event) =>
-              setHealthConfig((current) => ({
-                ...current,
-                enabled: event.target.checked,
-              }))
-            }
-          />
-          <span>
-            Include the sender’s health metrics and wellness image in every
-            newsletter
-          </span>
-        </label>
-        <div className="newsletter-admin-health-grid">
-          <div className="newsletter-admin-health-metric">
-            <h4>Average daily steps</h4>
-
-            <div className="newsletter-admin-health-fields">
-              {rangeField("steps", "poor", "0-point threshold", "steps/day")}
-              {rangeField("steps", "target", "100-point target", "steps/day")}
-            </div>
-          </div>
-          <div className="newsletter-admin-health-metric">
-            <h4>Average daily repetitions</h4>
-
-            <div className="newsletter-admin-health-fields">
-              {rangeField("reps", "poor", "0-point threshold", "reps/day")}
-              {rangeField("reps", "target", "100-point target", "reps/day")}
-            </div>
-          </div>
-          <div className="newsletter-admin-health-metric">
-            <h4>Average sleep</h4>
-
-            <div className="newsletter-admin-health-fields">
-              {rangeField("sleep", "poorLow", "Poor at/below", "minutes")}
-              {rangeField("sleep", "goodLow", "Good from", "minutes")}
-              {rangeField("sleep", "goodHigh", "Good through", "minutes")}
-              {rangeField("sleep", "poorHigh", "Poor at/above", "minutes")}
-            </div>
-          </div>
-          <div className="newsletter-admin-health-metric">
-            <h4>Average recorded BPM</h4>
-
-            <div className="newsletter-admin-health-fields">
-              {rangeField("bpm", "poorLow", "Poor at/below", "BPM")}
-              {rangeField("bpm", "goodLow", "Good from", "BPM")}
-              {rangeField("bpm", "goodHigh", "Good through", "BPM")}
-              {rangeField("bpm", "poorHigh", "Poor at/above", "BPM")}
-            </div>
-          </div>
-        </div>
-        <div className="newsletter-admin-health-assets">
-          <span>LOW images: {moodImageCounts.low}</span>
-          <span>MEDIUM images: {moodImageCounts.medium}</span>
-          <span>HIGH images: {moodImageCounts.high}</span>
-        </div>
-        <button
-          className="newsletter-admin-secondary"
-          type="button"
-          onClick={() => void saveHealthRanges()}
-          disabled={Boolean(busy)}
-        >
-          {busy === "save-health" ? "Saving ranges…" : "Save health ranges"}
-        </button>
-      </section>
+      </details>
       {message && (
         <p
           className={`newsletter-admin-message ${messageError ? "is-error" : ""}`}

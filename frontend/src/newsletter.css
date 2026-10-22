@@ -685,7 +685,6 @@
   margin-top: 3px;
 }
 
-
 /* Tablet: a flexible Health column plus a genuinely mini newsletter card.
    Older rail rules capped Health at ~310px, leaving unused space to its right. */
 @media (min-width: 721px) and (max-width: 1248px) {
@@ -890,4 +889,429 @@
   .blog-feed-page .blog-feed-newsletter-kicker { display: none !important; }
   .blog-feed-page .blog-feed-newsletter-heading h2 { font-size: .82rem !important; }
   .blog-feed-page .blog-feed-newsletter-fields { gap: 7px 9px !important; }
+}
+
+/* Wellness range controls: one consistent panel, no nested metric cards. */
+.newsletter-admin-health-config {
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 12px;
+}
+
+.newsletter-admin-health-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.newsletter-admin-health-heading h3 {
+  min-width: 0;
+  margin: 0;
+  font-size: .84rem;
+  line-height: 1.25;
+  letter-spacing: .025em;
+}
+
+.newsletter-admin-health-heading-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.newsletter-admin-health-badge {
+  padding: 2px 6px;
+  font-size: .62rem;
+  line-height: 1.25;
+}
+
+.newsletter-admin-health-enable {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  line-height: 1;
+}
+
+.newsletter-admin-health-enable input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: #263449;
+}
+
+.newsletter-admin-health-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 7px;
+}
+
+/* Metrics stay in one flat list. Dividers provide structure without nested boxes. */
+.newsletter-admin-health-metric {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  min-width: 0;
+  padding: 7px 0;
+  border: 0;
+  border-bottom: 1px solid var(--newsletter-border, #dce3eb);
+  border-radius: 0;
+  background: transparent;
+}
+
+.newsletter-admin-health-metric:last-child {
+  border-bottom: 0;
+}
+
+.newsletter-admin-health-metric h4 {
+  min-width: 0;
+  margin: 3px 0 0;
+  font-size: .7rem;
+  font-weight: 650;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.newsletter-admin-health-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 6px 8px;
+  min-width: 0;
+}
+
+.newsletter-admin-health-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  color: var(--newsletter-muted, #718096);
+  font-size: .61rem;
+  line-height: 1.2;
+}
+
+.newsletter-admin-health-field > label {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: .61rem;
+  line-height: 1.2;
+}
+
+.newsletter-admin-health-stepper {
+  display: grid;
+  grid-template-columns: 22px minmax(34px, 1fr) 22px;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* Plain text-like controls: keep the tap targets usable without drawing boxes. */
+.newsletter-admin-health-step {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  min-width: 22px;
+  min-height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #344054;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.newsletter-admin-health-step:hover:not(:disabled) {
+  color: #111827;
+}
+
+.newsletter-admin-health-step:focus-visible {
+  outline: 1px dotted currentColor;
+  outline-offset: -2px;
+}
+
+.newsletter-admin-health-step:disabled {
+  opacity: .35;
+  cursor: default;
+}
+
+.newsletter-admin-health-field .newsletter-admin-health-stepper .newsletter-admin-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 30px;
+  padding: 3px 0 2px;
+  border: 0;
+  border-bottom: 1px solid var(--newsletter-border, #cfd7e1);
+  border-radius: 0;
+  background: transparent;
+  color: #253044;
+  box-shadow: none;
+  text-align: center;
+  font-size: .72rem;
+  font-variant-numeric: tabular-nums;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.newsletter-admin-health-field .newsletter-admin-health-stepper .newsletter-admin-input:focus {
+  border-bottom-color: #64748b;
+  outline: none;
+  box-shadow: none;
+}
+
+.newsletter-admin-health-field .newsletter-admin-health-stepper input::-webkit-outer-spin-button,
+.newsletter-admin-health-field .newsletter-admin-health-stepper input::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+.newsletter-admin-health-assets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 7px 0;
+}
+
+.newsletter-admin-health-assets span {
+  padding: 3px 6px;
+  border: 1px dashed var(--newsletter-border, #dce3eb);
+  border-radius: 5px;
+  color: var(--newsletter-muted, #718096);
+  font-size: .6rem;
+}
+
+.newsletter-admin-health-config > .newsletter-admin-secondary {
+  min-height: 32px;
+  margin-top: 5px;
+  padding: 6px 9px;
+}
+
+@media (max-width: 520px) {
+  .newsletter-admin-health-config {
+    padding: 9px;
+  }
+
+  .newsletter-admin-health-metric {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 7px;
+    padding: 6px 0;
+  }
+
+  .newsletter-admin-health-fields {
+    gap: 6px;
+  }
+
+  .newsletter-admin-health-stepper {
+    grid-template-columns: 20px minmax(30px, 1fr) 20px;
+    gap: 1px;
+  }
+
+  .newsletter-admin-health-step {
+    width: 20px;
+    min-width: 20px;
+  }
+}
+
+/* Tablet: every feed widget shares one flex-wrap flow instead of a fixed grid. */
+@media (min-width: 721px) and (max-width: 1248px) {
+  .blog-feed-page .blog-feed-content > .blog-feed-side-rails {
+    position: static !important;
+    display: flex !important;
+    flex-flow: row wrap !important;
+    align-items: stretch !important;
+    align-content: flex-start !important;
+    justify-content: flex-start !important;
+    gap: 16px clamp(12px, 2vw, 20px) !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 8px 0 24px !important;
+    box-sizing: border-box !important;
+  }
+
+  .blog-feed-page .blog-feed-content > .blog-feed-side-rails > .blog-feed-widget-rail {
+    display: contents !important;
+    position: static !important;
+    flex: none !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+
+  .blog-feed-page .blog-feed-content > .blog-feed-side-rails > .blog-feed-widget-rail > .blog-feed-now-playing-teaser,
+  .blog-feed-page .blog-feed-content > .blog-feed-side-rails > .blog-feed-widget-rail > .current-reading-feed-bootstrap-host {
+    flex: 0 1 184px !important;
+    width: 184px !important;
+    min-width: 0 !important;
+    max-width: 184px !important;
+    margin: 0 !important;
+  }
+
+  .blog-feed-page .blog-feed-content > .blog-feed-side-rails > .blog-feed-widget-rail > .blog-feed-health-widget-root {
+    flex: 1 1 340px !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 196px !important;
+    max-height: none !important;
+    margin: 0 !important;
+  }
+
+  .blog-feed-page .blog-feed-content > .blog-feed-side-rails > .blog-feed-newsletter-rail {
+    position: static !important;
+    display: block !important;
+    flex: 0 1 232px !important;
+    grid-column: auto !important;
+    width: 232px !important;
+    min-width: 208px !important;
+    max-width: 232px !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-rail > .blog-feed-newsletter-root,
+  .blog-feed-page .blog-feed-newsletter-rail .blog-feed-newsletter-card {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .blog-feed-page .blog-feed-content > .blog-feed-side-rails[data-newsletter-visible="false"] > .blog-feed-newsletter-rail {
+    display: none !important;
+  }
+}
+
+/* Compact, collapsed-by-default wellness range disclosure. */
+.newsletter-admin-health-config {
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.newsletter-admin-health-config > .newsletter-admin-health-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0;
+  padding: 11px 13px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.newsletter-admin-health-config > .newsletter-admin-health-heading::-webkit-details-marker {
+  display: none;
+}
+
+.newsletter-admin-health-config > .newsletter-admin-health-heading::marker {
+  content: "";
+}
+
+.newsletter-admin-health-config > .newsletter-admin-health-heading h3 {
+  min-width: 0;
+  margin: 0;
+}
+
+.newsletter-admin-health-config > .newsletter-admin-health-heading::after {
+  content: "+";
+  display: inline-flex;
+  flex: 0 0 18px;
+  align-items: center;
+  justify-content: center;
+  color: #475467;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.newsletter-admin-health-config[open] > .newsletter-admin-health-heading {
+  border-bottom: 1px solid var(--newsletter-border, #dce3eb);
+}
+
+.newsletter-admin-health-config[open] > .newsletter-admin-health-heading::after {
+  content: "−";
+}
+
+.newsletter-admin-health-config > .newsletter-admin-health-heading:focus-visible {
+  outline: 2px solid #64748b;
+  outline-offset: -3px;
+}
+
+.newsletter-admin-health-content {
+  padding: 10px 13px 12px;
+}
+
+.newsletter-admin-health-content > .newsletter-admin-health-enable {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--newsletter-muted, #718096);
+  font-size: .68rem;
+  line-height: 1.3;
+}
+
+.newsletter-admin-health-content > .newsletter-admin-health-enable input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: #263449;
+}
+
+.newsletter-admin-health-content > .newsletter-admin-health-grid {
+  margin-top: 2px;
+}
+
+.newsletter-admin-health-content > .newsletter-admin-secondary {
+  min-height: 32px;
+  margin-top: 5px;
+  padding: 6px 9px;
+}
+
+@media (max-width: 520px) {
+  .newsletter-admin-health-config {
+    padding: 0 !important;
+  }
+
+  .newsletter-admin-health-config > .newsletter-admin-health-heading {
+    padding: 10px 11px;
+  }
+
+  .newsletter-admin-health-content {
+    padding: 8px 10px 10px;
+  }
+}
+
+/* Admin Newsletter belongs after all dashboard content on tablet and mobile. */
+@media (max-width: 980px) {
+  .newsletter-admin-bootstrap-root {
+    order: 99 !important;
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    margin-top: 2px !important;
+  }
 }
