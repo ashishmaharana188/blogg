@@ -1373,3 +1373,79 @@
     margin: 0 !important;
   }
 }
+
+
+/* Flatten the Newsletter admin controls: retain one outer section, not boxes inside boxes. */
+.newsletter-admin-panel .newsletter-admin-secondary,
+.newsletter-admin-panel .newsletter-admin-primary {
+  justify-content: flex-start;
+  width: auto;
+  min-height: 32px;
+  margin-top: 6px;
+  padding: 5px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #29364a;
+  text-align: left;
+}
+
+.newsletter-admin-panel .newsletter-admin-secondary:hover:not(:disabled),
+.newsletter-admin-panel .newsletter-admin-primary:hover:not(:disabled) {
+  border-color: transparent;
+  background: transparent;
+  color: #111827;
+  text-decoration: underline;
+}
+
+.newsletter-admin-panel .newsletter-admin-primary {
+  font-weight: 750;
+}
+
+.newsletter-admin-panel > .newsletter-admin-input {
+  min-height: 34px;
+  padding: 5px 0;
+  border: 0;
+  border-bottom: 1px solid #cfd7e1;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.newsletter-admin-panel > .newsletter-admin-input:focus {
+  border-bottom-color: #64748b;
+  box-shadow: none;
+}
+
+.newsletter-admin-panel .newsletter-admin-dates .newsletter-admin-input {
+  min-height: 34px;
+  padding: 5px 0;
+  border: 0;
+  border-bottom: 1px solid #cfd7e1;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.newsletter-admin-panel .newsletter-admin-dates .newsletter-admin-label {
+  margin-top: 9px;
+}
+
+.newsletter-admin-panel .newsletter-admin-divider {
+  margin: 12px 0 9px;
+}
+
+.newsletter-admin-panel .newsletter-admin-health-config {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.newsletter-admin-panel .newsletter-admin-health-assets span {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}

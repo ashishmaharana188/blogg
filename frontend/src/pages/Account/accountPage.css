@@ -799,3 +799,73 @@
 .showcase-now-playing-toggle { white-space: normal; line-height: 1.35; }
 .showcase-now-playing-toggle.is-active { border-color: #b8dfc8; background: #f1faf4; color: #236347; font-weight: 700; }
 .showcase-now-playing-toggle:disabled { opacity: .72; cursor: default; }
+
+
+/* Keep the Featured Links admin input area flat, in line with the other account sections. */
+.account-showcase-featured-section .showcase-add-link-form {
+  margin: 0 0 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.account-showcase-featured-section .showcase-add-link-form > label {
+  margin-bottom: 6px;
+  color: #687586;
+  font-size: .72rem;
+  font-weight: 600;
+}
+
+.account-showcase-featured-section .showcase-add-link-row {
+  align-items: center;
+  gap: 10px;
+}
+
+.account-showcase-featured-section .showcase-add-link-row input {
+  min-height: 38px;
+  padding: 7px 0;
+  border: 0;
+  border-bottom: 1px solid #cfd6de;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  font-size: .78rem;
+}
+
+.account-showcase-featured-section .showcase-add-link-row input:focus {
+  border-bottom-color: #64748b;
+  outline: none;
+}
+
+.account-showcase-featured-section .showcase-add-link-row button {
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #263449;
+  font-size: .72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.account-showcase-featured-section .showcase-add-link-row button:hover:not(:disabled) {
+  background: #f5f7f9;
+}
+
+.account-showcase-featured-section .showcase-add-link-row button:focus-visible {
+  outline: 2px solid #64748b;
+  outline-offset: 2px;
+}
+
+@media (max-width: 680px) {
+  .account-showcase-featured-section .showcase-add-link-row {
+    align-items: stretch;
+    gap: 4px;
+  }
+
+  .account-showcase-featured-section .showcase-add-link-row button {
+    align-self: flex-end;
+  }
+}
