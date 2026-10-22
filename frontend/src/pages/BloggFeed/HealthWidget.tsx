@@ -384,7 +384,7 @@ export default function HealthWidget() {
     ? exerciseData.recentSessions
     : [];
   const exerciseMetrics = selectedMetrics.filter(
-    (id): id is ExerciseDisplayMetricId => id !== "sleep" && id !== "sets",
+    (id): id is ExerciseDisplayMetricId => id !== "sleep",
   );
   const allExerciseAggregates = exerciseAggregates?.aggregates;
   const aggregateHasExerciseData = Boolean(
@@ -529,7 +529,6 @@ export default function HealthWidget() {
           )}
           {hasExerciseRecords && (
             <div className="blog-feed-health-exercises">
-              <div className="blog-feed-health-exercises-heading"></div>
               <div className="blog-feed-health-exercise-metrics">
                 {exerciseMetrics.map((id) => (
                   <div className="blog-feed-health-exercise-metric" key={id}>
@@ -545,7 +544,6 @@ export default function HealthWidget() {
 
           {selectedMetrics.includes("sleep") && (
             <div className="blog-feed-health-exercises blog-feed-health-sleep">
-              <div className="blog-feed-health-exercises-heading"></div>
               {sleepFailed ? (
                 <AssetStateBox
                   status="error"
