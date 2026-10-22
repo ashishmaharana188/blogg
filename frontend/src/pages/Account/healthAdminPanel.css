@@ -402,8 +402,9 @@
   display: flex;
   flex-flow: row nowrap;
   align-items: flex-end;
-  justify-content: space-between;
-  gap: 2px;
+  /* Keep short histories centred as a compact group instead of throwing two bars to opposite ends. */
+  justify-content: center;
+  gap: clamp(5px, 1vw, 8px);
   width: 100%;
   max-width: 100%;
   min-width: 0;
@@ -412,8 +413,13 @@
   box-sizing: border-box;
   margin: 0;
   padding: 5px 0 0;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
   border-bottom: 1px solid #dce3eb;
+}
+.health-selectable-bar-chart::-webkit-scrollbar {
+  display: none;
 }
 .health-selectable-bar-chart > .health-chart-bar,
 .health-hr-history-chart > .health-heart-rate-bar {

@@ -152,109 +152,6 @@ const METRIC_LABELS: Record<string, string> = {
   sleep: "Sleep",
 };
 
-function getMetricValue(
-  metricId: string,
-  data: SamsungMetricData,
-  sleepSummary?: SleepSummary,
-): { value: string; detail?: string } {
-  const session = data.sessions?.[0];
-  const latest = data.latestSession;
-  const values = session?.values ?? latest?.values ?? {};
-  const numberValue = (value: unknown): number | null =>
-    typeof value === "number" && Number.isFinite(value) ? value : null;
-  if (metricId === "repetitions") {
-    const value =
-      numberValue(session?.repetitions) ?? numberValue(values.repetitions);
-    return {
-      value: value === null ? "—" : value.toLocaleString(),
-      detail: "Latest session",
-    };
-  }
-  if (metricId === "sets") {
-    const sessionSets = session?.sets?.map((set) => set.reps);
-    const rawSets = Array.isArray(values.sets)
-      ? values.sets.filter(
-          (value): value is number => typeof value === "number",
-        )
-      : [];
-    const sets = sessionSets?.length ? sessionSets : rawSets;
-    return {
-      value: sets.length ? sets.join(" + ") : "—",
-      detail: sets.length ? `${sets.length} set(s)` : "No set data",
-    };
-  }
-  if (metricId === "duration") {
-    const value =
-      numberValue(session?.durationSeconds) ??
-      numberValue(values.durationSeconds);
-    return {
-      value: value === null ? "—" : formatDuration(value),
-      detail: "Latest session",
-    };
-  }
-  if (metricId === "calories") {
-    const value =
-      numberValue(session?.calories) ?? numberValue(values.calories);
-    return {
-      value: value === null ? "—" : `${value.toFixed(1)} kcal`,
-      detail: "Latest session",
-    };
-  }
-  if (metricId === "heart_rate") {
-    const raw = values.heartRate as
-      | { average?: unknown; minimum?: unknown; maximum?: unknown }
-      | undefined;
-    const average =
-      numberValue(session?.avgHeartRate) ?? numberValue(raw?.average);
-    const minimum =
-      numberValue(session?.minHeartRate) ?? numberValue(raw?.minimum);
-    const maximum =
-      numberValue(session?.maxHeartRate) ?? numberValue(raw?.maximum);
-    return {
-      value: average === null ? "—" : `${Math.round(average)} bpm`,
-      detail:
-        minimum !== null || maximum !== null
-          ? `${minimum === null ? "—" : Math.round(minimum)}–${maximum === null ? "—" : Math.round(maximum)} BPM range`
-          : "Latest session average",
-    };
-  }
-  if (metricId === "sleep") {
-    const minutes = sleepSummary?.lastNightMinutes;
-    const score = sleepSummary?.lastNightScore;
-    const efficiency = sleepSummary?.lastNightEfficiency;
-    const latestDay = sleepSummary?.recentDays?.[0]?.day;
-    const dateLabel = latestDay
-      ? new Date(String(latestDay) + "T12:00:00").toLocaleDateString(undefined, { day: "numeric", month: "short" })
-      : "";
-    const details = [
-      score == null ? "" : "Score " + (Math.round(score * 10) / 10) + "/100",
-      efficiency == null ? "" : "Efficiency " + (Math.round(efficiency * 10) / 10) + "%",
-      dateLabel,
-    ].filter(Boolean);
-    return {
-      value: minutes == null ? "—" : formatSleep(minutes),
-      detail: details.join(" · ") || (sleepSummary ? "Most recent recorded night" : "No sleep records available"),
-    };
-  }
-  const history = values.history as
-    | {
-        sessionCount?: unknown;
-        totalRepetitions?: unknown;
-        totalCount?: unknown;
-      }
-    | undefined;
-  const count = data.sessionCount ?? numberValue(history?.sessionCount) ?? 0;
-  const total =
-    data.totalRepetitions ??
-    numberValue(history?.totalCount) ??
-    numberValue(history?.totalRepetitions) ??
-    0;
-  return {
-    value: `${count.toLocaleString()} session(s)`,
-    detail: `${total.toLocaleString()} total count / reps`,
-  };
-}
-
 function getSessionHeartRate(session: ExerciseSession): {
   average: number | null;
   minimum: number | null;
@@ -675,7 +572,6 @@ export default function HealthAdminPanel({
   const exerciseMetricIds = (metricData?.selectedMetrics || []).filter(
     (id) => id !== "heart_rate",
   );
-  const exerciseTrendIds = exerciseMetricIds.filter((id) => id !== "history" && id !== "sleep");
   const hasExerciseData = Boolean(
     (metricData?.selectedMetrics?.includes("sleep") && (summary?.sleep?.observedNights7d || 0) > 0) ||
     (isAdmin && (metricData?.sessions?.length || metricData?.latestSession)) ||
@@ -1303,7 +1199,6 @@ export default function HealthAdminPanel({
                   const sessionKey = (session: ExerciseSession) => session.sessionId || String(session.exerciseType || "") + "|" + session.startedAt + "|" + (session.activityName || "");
                   const uniqueSessions: ExerciseSession[] = [];
                   for (const session of rawSessions) {
-                    const key = sessionKey(session);
                     const duplicateIndex = uniqueSessions.findIndex((existing) => {
                       if (session.sessionId && existing.sessionId && session.sessionId === existing.sessionId) return true;
                       if (displayExerciseActivityName(session) !== displayExerciseActivityName(existing)) return false;
