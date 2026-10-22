@@ -6,6 +6,7 @@ import {
   renameGroupRequest,
   deleteStackRequest,
   deleteGroupRequest,
+  deleteBloggRequest,
   fetchBloggByGroupRequest,
 } from "../../services/canvasViewService";
 import { fetchStackAndGroup } from "../../services/canvasViewService";
@@ -147,8 +148,15 @@ export default function useBloggSectionState() {
     }
   }, [activeGroupId]);
 
-  const handleDeleteNote = useCallback(() => {
-    console.log("Delete Note Logic Pending DB Implementation");
+  const handleDeleteNote = useCallback(async (bloggId: string) => {
+    if (!bloggId || !window.confirm("Permanently delete this note? This cannot be undone.")) return;
+    try {
+      await deleteBloggRequest({ blogg_id: bloggId });
+      setCurrentBlogg((previous) => previous.filter((blog) => blog.blogg_id !== bloggId));
+    } catch (error) {
+      console.error("Could not delete note:", error);
+      window.alert(error instanceof Error ? error.message : "Could not delete note.");
+    }
   }, []);
 
   return {

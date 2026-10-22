@@ -83,7 +83,7 @@ export async function renameGroupRequest(payload: {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  if (!response.ok) throw new Error("Could not rename group");
+  if (!response.ok) throw new Error("Could not rename stack");
   return response.json();
 }
 
@@ -129,4 +129,18 @@ export async function fetchBloggByIdRequest(payload: { blogg_id: string }) {
   if (!response.ok) throw new Error("Could not fetch note");
   const result = await response.json();
   return result.bloggs;
+}
+
+export async function deleteBloggRequest(payload: { blogg_id: string }) {
+  const response = await fetch(`${API_BASE_URL}/canvas/blogg/deleteBlogg`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(result.message || `Could not delete note (${response.status})`);
+  }
+  return result;
 }

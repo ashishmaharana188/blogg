@@ -608,14 +608,34 @@ export default function HealthAdminPanel({
     (isAdmin && (metricData?.sessions?.length || metricData?.latestSession)) ||
     (allExerciseSessions.length && exerciseMetricIds.length > 0),
   );
-  const heartMetricSessions = allExerciseSessions
+  // Running sessions are stored separately from other exercises by the backend.
+  // Merge them here so the heart-rate panel reports every activity with HR data.
+  const runningHeartRateSessions: ExerciseSession[] = (summary?.recentRuns || []).map((run) => ({
+    sessionId: run.sessionId,
+    exerciseType: 1002,
+    activityName: "Running",
+    startedAt: run.startedAt,
+    durationSeconds: run.durationSeconds,
+    calories: run.calories,
+    avgHeartRate: run.avgHeartRate,
+    minHeartRate: run.minHeartRate,
+    maxHeartRate: run.maxHeartRate,
+    values: {
+      heartRate: {
+        average: run.avgHeartRate,
+        minimum: run.minHeartRate,
+        maximum: run.maxHeartRate,
+      },
+    },
+  }));
+  const heartMetricSessions = [...allExerciseSessions, ...runningHeartRateSessions]
     .filter((session) => {
       const heart = getSessionHeartRate(session);
-      return (
-        heart.average != null || heart.minimum != null || heart.maximum != null
-      );
+      return heart.average != null || heart.minimum != null || heart.maximum != null;
     })
+    .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())
     .slice(0, 5);
+
   const hasHeartData = Boolean(
     summary?.latestHeartRate ||
     (summary?.recentHeartRates?.length || 0) > 0 ||

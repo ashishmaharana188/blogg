@@ -10,6 +10,7 @@ import {
   getBloggContent,
   assignUngroupedBlogsToDefaultFolder,
 } from "./bloggDocumentUtil.ts";
+import { deleteBloggById } from "./deleteBloggUtil.ts";
 
 const blogInterceptRouter = express.Router();
 
@@ -48,6 +49,21 @@ blogInterceptRouter.post(
   trace("GROUP_BLOGS_FETCH", async (req) => {
     const bloggs = await getBloggContent(req.body);
     return { success: true, message: "BLOG_ID_CONTENT_FETCH", bloggs };
+  }),
+);
+
+blogInterceptRouter.post(
+  "/canvas/blogg/deleteBlogg",
+  authenticationMiddleware,
+  adminMiddleware,
+  trace("BLOG_DELETE", async (req) => {
+    const bloggId = typeof req.body?.blogg_id === "string" ? req.body.blogg_id.trim() : "";
+    if (!bloggId) throw new Error("A note ID is required.");
+
+    const result = await deleteBloggById({ blogg_id: bloggId });
+    if (result.deletedCount !== 1) throw new Error("Note not found or already deleted.");
+
+    return { success: true, message: "BLOG_DELETED", blogg_id: bloggId };
   }),
 );
 

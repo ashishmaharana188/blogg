@@ -40,6 +40,13 @@ function u32(buffer: Buffer, offset: number): number {
   return buffer.readUInt32LE(offset);
 }
 
+function isSleepSummaryFile(name: string): boolean {
+  const lowerName = name.toLowerCase();
+  if (!lowerName.includes("sleep")) return false;
+  // These files contain stage intervals, raw points, or goals, not sleep-session summaries.
+  return !/sleep[_-]?(?:stage|raw[_-]?data|goal)/i.test(lowerName);
+}
+
 function zipSleepFiles(archiveFile: Express.Multer.File): Express.Multer.File[] {
   const archive = archiveFile.buffer;
   if (!Buffer.isBuffer(archive) || archive.length < 22) throw new InvalidSleepArchiveError(`"${archiveFile.originalname}" is not a valid ZIP archive.`);
@@ -82,7 +89,8 @@ function zipSleepFiles(archiveFile: Express.Multer.File): Express.Multer.File[] 
     if (!archiveName || archiveName.endsWith("/")) continue;
     const lowerName = archiveName.toLowerCase();
     const extension = lowerName.match(/\.(csv|json)$/)?.[1];
-    if (!extension || !lowerName.includes("sleep")) continue;
+    // Ignore non-summary sleep artifacts before extracting or parsing them.
+    if (!extension || !isSleepSummaryFile(lowerName)) continue;
     if (archiveName.startsWith("/") || /^[a-z]:/i.test(archiveName) || archiveName.split("/").some((part) => part === "..")) throw new InvalidSleepArchiveError("The sleep ZIP contains an unsafe file path.");
     if ((flags & 0x1) !== 0) throw new InvalidSleepArchiveError(`The sleep ZIP entry "${archiveName}" is encrypted and cannot be imported.`);
     if (compressedSize === 0xffffffff || uncompressedSize === 0xffffffff || localOffset === 0xffffffff) throw new InvalidSleepArchiveError("ZIP64 entries are not supported.");
@@ -115,7 +123,7 @@ function expandSleepFiles(uploadedFiles: Express.Multer.File[]): Express.Multer.
   for (const file of uploadedFiles) {
     const name = file.originalname.toLowerCase();
     if (name.endsWith(".zip")) result.push(...zipSleepFiles(file));
-    else if (name.includes("sleep") && /\.(csv|json)$/i.test(name)) result.push(file);
+    else if (/\.(csv|json)$/i.test(name) && isSleepSummaryFile(name)) result.push(file);
   }
   return result;
 }
@@ -124,37 +132,41 @@ function parseCsvRecords(input: string): string[][] {
   const source = input.replace(/^\uFEFF/, "");
   const rows: string[][] = [];
   let row: string[] = [];
-  let field = "";
+  let currentField = "";
   let quoted = false;
   for (let index = 0; index < source.length; index += 1) {
     const char = source[index];
     if (quoted) {
-      if (char === '"' && source[index + 1] === '"') { field += '"'; index += 1; }
+      if (char === '"' && source[index + 1] === '"') { currentField += '"'; index += 1; }
       else if (char === '"') quoted = false;
-      else field += char;
-    } else if (char === '"' && field.length === 0) quoted = true;
-    else if (char === ",") { row.push(field); field = ""; }
+      else currentField += char;
+    } else if (char === '"' && currentField.length === 0) quoted = true;
+    else if (char === ",") { row.push(currentField); currentField = ""; }
     else if (char === "\n") {
-      row.push(field.replace(/\r$/, ""));
+      row.push(currentField.replace(/\r$/, ""));
       if (row.some((cell) => cell.trim() !== "")) rows.push(row);
-      row = []; field = "";
-    } else field += char;
+      row = []; currentField = "";
+    } else currentField += char;
   }
-  if (field.length || row.length) {
-    row.push(field.replace(/\r$/, ""));
+  if (currentField.length || row.length) {
+    row.push(currentField.replace(/\r$/, ""));
     if (row.some((cell) => cell.trim() !== "")) rows.push(row);
   }
   return rows;
 }
 
 function normalizedKey(value: string): string { return value.replace(/^\uFEFF/, "").toLowerCase().replace(/[^a-z0-9]/g, ""); }
+
+// Try each requested alias in priority order. A suffix like "score" must not match
+// "wake_score" before the more specific "sleep_score" field is checked.
 function field(row: CsvRow, ...suffixes: string[]): string {
-  const wanted = suffixes.map(normalizedKey);
-  for (const [key, value] of Object.entries(row)) {
-    const normalized = normalizedKey(key);
-    if (wanted.some((suffix) => normalized === suffix || normalized.endsWith(suffix))) {
-      if (typeof value === "string" && value.trim() !== "") return value.trim();
-    }
+  const entries = Object.entries(row);
+  for (const suffix of suffixes) {
+    const wanted = normalizedKey(suffix);
+    const exact = entries.find(([key, value]) => normalizedKey(key) === wanted && typeof value === "string" && value.trim() !== "");
+    if (exact) return exact[1].trim();
+    const qualified = entries.find(([key, value]) => normalizedKey(key).endsWith(wanted) && typeof value === "string" && value.trim() !== "");
+    if (qualified) return qualified[1].trim();
   }
   return "";
 }
@@ -194,6 +206,8 @@ function normalizedScore(value: unknown): number | null {
 }
 
 function sleepSessionFromRow(row: CsvRow): SleepSession | null {
+  // Prefer the real start/end timestamps. The alias lookup now checks these ahead
+  // of derived numeric fields such as original_bed_time and goal_wake_up_time.
   const startedAt = timestamp(field(row, "start_time", "startTime", "bed_time", "original_bed_time"));
   const endedAt = timestamp(field(row, "end_time", "endTime", "wake_up_time", "original_wake_up_time"));
   if (!startedAt || !endedAt) return null;
@@ -228,15 +242,19 @@ function recordsFromJson(value: unknown, result: Record<string, unknown>[] = [],
   return result;
 }
 function objectField(row: Record<string, unknown>, ...suffixes: string[]): unknown {
-  const wanted = suffixes.map(normalizedKey);
-  for (const [key, value] of Object.entries(row)) {
-    const normalized = normalizedKey(key);
-    if (wanted.some((suffix) => normalized === suffix || normalized.endsWith(suffix))) return value;
+  const entries = Object.entries(row);
+  for (const suffix of suffixes) {
+    const wanted = normalizedKey(suffix);
+    const exact = entries.find(([key, value]) => normalizedKey(key) === wanted && value != null && String(value).trim() !== "");
+    if (exact) return exact[1];
+    const qualified = entries.find(([key, value]) => normalizedKey(key).endsWith(wanted) && value != null && String(value).trim() !== "");
+    if (qualified) return qualified[1];
   }
   return undefined;
 }
 function parseSleepFile(file: Express.Multer.File): SleepSession[] {
   const name = file.originalname.toLowerCase();
+  if (!isSleepSummaryFile(name)) return [];
   if (name.endsWith(".json")) {
     let payload: unknown;
     try { payload = JSON.parse(file.buffer.toString("utf8")); } catch { return []; }
@@ -259,8 +277,11 @@ function parseSleepFile(file: Express.Multer.File): SleepSession[] {
   const rows = parseCsvRecords(file.buffer.toString("utf8"));
   const headerIndex = rows.findIndex((candidate) => {
     const keys = candidate.map(normalizedKey);
-    return keys.some((key) => key.endsWith("starttime") || key.endsWith("bedtime"))
-      && keys.some((key) => key.endsWith("endtime") || key.endsWith("wakeuptime"));
+    const hasStart = keys.some((key) => key.endsWith("starttime") || key.endsWith("bedtime"));
+    const hasEnd = keys.some((key) => key.endsWith("endtime") || key.endsWith("wakeuptime"));
+    // Defensive guard for a renamed/loosely named sleep-stage CSV.
+    const isStageTable = keys.some((key) => key.endsWith("sleepid")) && keys.some((key) => key === "stage" || key.endsWith("stage")) && !keys.some((key) => key.endsWith("sleepscore"));
+    return hasStart && hasEnd && !isStageTable;
   });
   if (headerIndex < 0) return [];
   const headers = rows[headerIndex].map((key) => key.trim());
@@ -353,13 +374,19 @@ router.post("/health/admin/sleep/import", ...ADMIN_GUARD, upload.array("files", 
   const deduped = [...new Map(sessions.map((session) => [session.sessionId, session])).values()];
   if (!deduped.length) {
     res.setHeader("Cache-Control", "no-store");
-    return res.json({ success: true, sessionsProcessed: 0, message: "No sleep records were found in this upload." });
+    return res.json({ success: true, sessionsProcessed: 0, message: "No sleep summary records were found in this upload." });
   }
   const client = await getPgClient();
   try {
     await ensureSleepTable(client);
     await client.query("BEGIN");
     for (const session of deduped) {
+      // Remove short stage fragments imported by earlier versions when they sit wholly
+      // inside the proper summary interval. This repairs already-imported bad rows on re-import.
+      await client.query(
+        "DELETE FROM health_sleep_sessions WHERE session_id <> $1 AND duration_minutes <= 30 AND started_at >= $2 AND ended_at <= $3",
+        [session.sessionId, session.startedAt, session.endedAt],
+      );
       await client.query(
         "INSERT INTO health_sleep_sessions (session_id, started_at, ended_at, duration_minutes, sleep_score, efficiency, imported_at) VALUES ($1, $2, $3, $4, $5, $6, NOW()) ON CONFLICT (session_id) DO UPDATE SET started_at = EXCLUDED.started_at, ended_at = EXCLUDED.ended_at, duration_minutes = EXCLUDED.duration_minutes, sleep_score = EXCLUDED.sleep_score, efficiency = EXCLUDED.efficiency, imported_at = NOW()",
         [session.sessionId, session.startedAt, session.endedAt, session.durationMinutes, session.sleepScore, session.efficiency],
