@@ -3,12 +3,22 @@ import { API_BASE_URL } from "../services/apiBase";
 
 type AdminSummary = { subscriberCount?: number };
 type TopicsResponse = { topics?: string[] };
-type SendResult = { sent?: number; failed?: number; message?: string; providerError?: string };
+type SendResult = {
+  sent?: number;
+  failed?: number;
+  message?: string;
+  providerError?: string;
+};
 type HealthConfig = {
   enabled: boolean;
   steps: { poor: number; target: number };
   reps: { poor: number; target: number };
-  sleep: { poorLow: number; goodLow: number; goodHigh: number; poorHigh: number };
+  sleep: {
+    poorLow: number;
+    goodLow: number;
+    goodHigh: number;
+    poorHigh: number;
+  };
   bpm: { poorLow: number; goodLow: number; goodHigh: number; poorHigh: number };
 };
 type HealthRangeMetric = Exclude<keyof HealthConfig, "enabled">;
@@ -37,8 +47,11 @@ async function readJson<T>(path: string): Promise<T> {
     cache: "no-store",
     headers: { Accept: "application/json" },
   });
-  const data = await response.json().catch(() => ({})) as T & { message?: string };
-  if (!response.ok) throw new Error(data.message || `Request failed (${response.status})`);
+  const data = (await response.json().catch(() => ({}))) as T & {
+    message?: string;
+  };
+  if (!response.ok)
+    throw new Error(data.message || `Request failed (${response.status})`);
   return data;
 }
 
@@ -52,14 +65,22 @@ export default function NewsletterAdminPanel() {
     date.setDate(date.getDate() - 30);
     return localDateInput(date);
   });
-  const [busy, setBusy] = useState<"export" | "send" | "save-health" | "" >("");
-  const [healthConfig, setHealthConfig] = useState<HealthConfig>(DEFAULT_HEALTH_CONFIG);
-  const [moodImageCounts, setMoodImageCounts] = useState({ low: 0, medium: 0, high: 0 });
+  const [busy, setBusy] = useState<"export" | "send" | "save-health" | "">("");
+  const [healthConfig, setHealthConfig] = useState<HealthConfig>(
+    DEFAULT_HEALTH_CONFIG,
+  );
+  const [moodImageCounts, setMoodImageCounts] = useState({
+    low: 0,
+    medium: 0,
+    high: 0,
+  });
   const [message, setMessage] = useState("");
   const [messageError, setMessageError] = useState(false);
 
   const refreshSummary = async () => {
-    const summary = await readJson<AdminSummary>("/api/newsletter/admin/summary");
+    const summary = await readJson<AdminSummary>(
+      "/api/newsletter/admin/summary",
+    );
     setSubscriberCount(Number(summary.subscriberCount || 0));
   };
 
@@ -69,31 +90,51 @@ export default function NewsletterAdminPanel() {
       readJson<AdminSummary>("/api/newsletter/admin/summary"),
       readJson<TopicsResponse>("/api/newsletter/topics"),
       readJson<HealthConfigResponse>("/api/newsletter/admin/health-config"),
-    ]).then(([summary, topicsResult, healthResult]) => {
-      if (cancelled) return;
-      setSubscriberCount(Number(summary.subscriberCount || 0));
-      setTopics(Array.isArray(topicsResult.topics) ? topicsResult.topics : []);
-      setHealthConfig(healthResult.config || DEFAULT_HEALTH_CONFIG);
-      setMoodImageCounts({
-        low: Number(healthResult.moodImageCounts?.low || 0),
-        medium: Number(healthResult.moodImageCounts?.medium || 0),
-        high: Number(healthResult.moodImageCounts?.high || 0),
+    ])
+      .then(([summary, topicsResult, healthResult]) => {
+        if (cancelled) return;
+        setSubscriberCount(Number(summary.subscriberCount || 0));
+        setTopics(
+          Array.isArray(topicsResult.topics) ? topicsResult.topics : [],
+        );
+        setHealthConfig(healthResult.config || DEFAULT_HEALTH_CONFIG);
+        setMoodImageCounts({
+          low: Number(healthResult.moodImageCounts?.low || 0),
+          medium: Number(healthResult.moodImageCounts?.medium || 0),
+          high: Number(healthResult.moodImageCounts?.high || 0),
+        });
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setMessage(
+            error instanceof Error
+              ? error.message
+              : "Could not load newsletter settings.",
+          );
+          setMessageError(true);
+        }
       });
-    }).catch((error) => {
-      if (!cancelled) {
-        setMessage(error instanceof Error ? error.message : "Could not load newsletter settings.");
-        setMessageError(true);
-      }
-    });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const updateHealthRange = (metric: HealthRangeMetric, field: string, rawValue: string) => {
+  const updateHealthRange = (
+    metric: HealthRangeMetric,
+    field: string,
+    rawValue: string,
+  ) => {
     const value = Number(rawValue);
-    setHealthConfig((current) => ({
-      ...current,
-      [metric]: { ...current[metric], [field]: Number.isFinite(value) ? value : 0 },
-    } as HealthConfig));
+    setHealthConfig(
+      (current) =>
+        ({
+          ...current,
+          [metric]: {
+            ...current[metric],
+            [field]: Number.isFinite(value) ? value : 0,
+          },
+        }) as HealthConfig,
+    );
   };
 
   const saveHealthRanges = async () => {
@@ -101,32 +142,72 @@ export default function NewsletterAdminPanel() {
     setMessage("");
     setMessageError(false);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/newsletter/admin/health-config`, {
-        method: "PUT",
-        credentials: "include",
-        cache: "no-store",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ config: healthConfig }),
-      });
-      const result = await response.json().catch(() => ({})) as HealthConfigResponse & { message?: string; success?: boolean };
-      if (!response.ok) throw new Error(result.message || `Could not save health ranges (${response.status})`);
+      const response = await fetch(
+        `${API_BASE_URL}/api/newsletter/admin/health-config`,
+        {
+          method: "PUT",
+          credentials: "include",
+          cache: "no-store",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({ config: healthConfig }),
+        },
+      );
+      const result = (await response
+        .json()
+        .catch(() => ({}))) as HealthConfigResponse & {
+        message?: string;
+        success?: boolean;
+      };
+      if (!response.ok)
+        throw new Error(
+          result.message || `Could not save health ranges (${response.status})`,
+        );
       if (result.config) setHealthConfig(result.config);
-      setMessage("Health score ranges saved. The next newsletter will use them.");
+      setMessage(
+        "Health score ranges saved. The next newsletter will use them.",
+      );
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not save health score ranges.");
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not save health score ranges.",
+      );
       setMessageError(true);
     } finally {
       setBusy("");
     }
   };
 
-  const rangeField = (metric: HealthRangeMetric, field: string, label: string, suffix = "") => {
-    const value = (healthConfig[metric] as unknown as Record<string, number>)[field];
+  const rangeField = (
+    metric: HealthRangeMetric,
+    field: string,
+    label: string,
+    suffix = "",
+  ) => {
+    const value = (healthConfig[metric] as unknown as Record<string, number>)[
+      field
+    ];
     const id = `newsletter-health-${metric}-${field}`;
     return (
       <label className="newsletter-admin-health-field" htmlFor={id} key={id}>
-        <span>{label}{suffix ? ` (${suffix})` : ""}</span>
-        <input id={id} className="newsletter-admin-input" type="number" min="0" step="1" value={value} onChange={(event) => updateHealthRange(metric, field, event.target.value)} />
+        <span>
+          {label}
+          {suffix ? ` (${suffix})` : ""}
+        </span>
+        <input
+          id={id}
+          className="newsletter-admin-input"
+          type="number"
+          min="0"
+          step="1"
+          value={value}
+          onChange={(event) =>
+            updateHealthRange(metric, field, event.target.value)
+          }
+        />
       </label>
     );
   };
@@ -136,14 +217,21 @@ export default function NewsletterAdminPanel() {
     setMessage("");
     setMessageError(false);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/newsletter/admin/subscribers.csv`, {
-        credentials: "include",
-        cache: "no-store",
-        headers: { Accept: "text/csv" },
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/api/newsletter/admin/subscribers.csv`,
+        {
+          credentials: "include",
+          cache: "no-store",
+          headers: { Accept: "text/csv" },
+        },
+      );
       if (!response.ok) {
-        const body = await response.json().catch(() => ({})) as { message?: string };
-        throw new Error(body.message || `CSV export failed (${response.status})`);
+        const body = (await response.json().catch(() => ({}))) as {
+          message?: string;
+        };
+        throw new Error(
+          body.message || `CSV export failed (${response.status})`,
+        );
       }
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
@@ -156,7 +244,11 @@ export default function NewsletterAdminPanel() {
       URL.revokeObjectURL(url);
       setMessage("CSV downloaded.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not export the email list.");
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not export the email list.",
+      );
       setMessageError(true);
     } finally {
       setBusy("");
@@ -175,28 +267,49 @@ export default function NewsletterAdminPanel() {
       return;
     }
     const topicLabel = topic === "all" ? "all topics" : `topic “${topic}”`;
-    if (!window.confirm(`Send the ${topicLabel} newsletter for ${fromDate} to ${toDate} to ${subscriberCount} subscribers?`)) return;
+    if (
+      !window.confirm(
+        `Send the ${topicLabel} newsletter for ${fromDate} to ${toDate} to ${subscriberCount} subscribers?`,
+      )
+    )
+      return;
 
     setBusy("send");
     setMessage("");
     setMessageError(false);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/newsletter/admin/send`, {
-        method: "POST",
-        credentials: "include",
-        cache: "no-store",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ topic, fromDate, toDate }),
-      });
-      const result = await response.json().catch(() => ({})) as SendResult;
+      const response = await fetch(
+        `${API_BASE_URL}/api/newsletter/admin/send`,
+        {
+          method: "POST",
+          credentials: "include",
+          cache: "no-store",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({ topic, fromDate, toDate }),
+        },
+      );
+      const result = (await response.json().catch(() => ({}))) as SendResult;
       if (!response.ok && typeof result.sent !== "number") {
-        throw new Error(result.message || result.providerError || `Newsletter send failed (${response.status})`);
+        throw new Error(
+          result.message ||
+            result.providerError ||
+            `Newsletter send failed (${response.status})`,
+        );
       }
-      setMessage(`Sent: ${Number(result.sent || 0)} · Failed: ${Number(result.failed || 0)}`);
+      setMessage(
+        `Sent: ${Number(result.sent || 0)} · Failed: ${Number(result.failed || 0)}`,
+      );
       setMessageError(Number(result.failed || 0) > 0);
       await refreshSummary();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not send the newsletter.");
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not send the newsletter.",
+      );
       setMessageError(true);
     } finally {
       setBusy("");
@@ -204,38 +317,96 @@ export default function NewsletterAdminPanel() {
   };
 
   return (
-    <section className="newsletter-admin-panel" aria-labelledby="newsletter-admin-title">
+    <section
+      className="newsletter-admin-panel"
+      aria-labelledby="newsletter-admin-title"
+    >
       <div className="newsletter-admin-heading">
         <div>
           <p className="newsletter-admin-eyebrow">ADMIN</p>
           <h2 id="newsletter-admin-title">NEWSLETTER</h2>
         </div>
-        <span className="newsletter-admin-count">{subscriberCount.toLocaleString()} subscribers</span>
+        <span className="newsletter-admin-count">
+          {subscriberCount.toLocaleString()} subscribers
+        </span>
       </div>
-      <button className="newsletter-admin-secondary" type="button" onClick={() => void exportCsv()} disabled={Boolean(busy)}>
+      <button
+        className="newsletter-admin-secondary"
+        type="button"
+        onClick={() => void exportCsv()}
+        disabled={Boolean(busy)}
+      >
         {busy === "export" ? "Preparing CSV…" : "Download emails CSV"}
       </button>
       <div className="newsletter-admin-divider" />
-      <label className="newsletter-admin-label" htmlFor="newsletter-admin-topic">Topic</label>
-      <select id="newsletter-admin-topic" className="newsletter-admin-input" value={topic} onChange={(event) => setTopic(event.target.value)}>
+      <label
+        className="newsletter-admin-label"
+        htmlFor="newsletter-admin-topic"
+      >
+        Topic
+      </label>
+      <select
+        id="newsletter-admin-topic"
+        className="newsletter-admin-input"
+        value={topic}
+        onChange={(event) => setTopic(event.target.value)}
+      >
         <option value="all">All topics</option>
-        {topics.map((item) => <option key={item} value={item}>{item}</option>)}
+        {topics.map((item) => (
+          <option key={item} value={item}>
+            {item}
+          </option>
+        ))}
       </select>
       <div className="newsletter-admin-dates">
         <div>
-          <label className="newsletter-admin-label" htmlFor="newsletter-admin-from">From</label>
-          <input id="newsletter-admin-from" className="newsletter-admin-input" type="date" value={fromDate} max={toDate || undefined} onChange={(event) => setFromDate(event.target.value)} />
+          <label
+            className="newsletter-admin-label"
+            htmlFor="newsletter-admin-from"
+          >
+            From
+          </label>
+          <input
+            id="newsletter-admin-from"
+            className="newsletter-admin-input"
+            type="date"
+            value={fromDate}
+            max={toDate || undefined}
+            onChange={(event) => setFromDate(event.target.value)}
+          />
         </div>
         <div>
-          <label className="newsletter-admin-label" htmlFor="newsletter-admin-to">To</label>
-          <input id="newsletter-admin-to" className="newsletter-admin-input" type="date" value={toDate} min={fromDate || undefined} onChange={(event) => setToDate(event.target.value)} />
+          <label
+            className="newsletter-admin-label"
+            htmlFor="newsletter-admin-to"
+          >
+            To
+          </label>
+          <input
+            id="newsletter-admin-to"
+            className="newsletter-admin-input"
+            type="date"
+            value={toDate}
+            min={fromDate || undefined}
+            onChange={(event) => setToDate(event.target.value)}
+          />
         </div>
       </div>
-      <button className="newsletter-admin-primary" type="button" onClick={() => void sendToAll()} disabled={Boolean(busy)}>
-        {busy === "send" ? "Sending to subscribers…" : "Send to all subscribers"}
+      <button
+        className="newsletter-admin-primary"
+        type="button"
+        onClick={() => void sendToAll()}
+        disabled={Boolean(busy)}
+      >
+        {busy === "send"
+          ? "Sending to subscribers…"
+          : "Send to all subscribers"}
       </button>
       <div className="newsletter-admin-divider" />
-      <section className="newsletter-admin-health-config" aria-labelledby="newsletter-health-config-title">
+      <section
+        className="newsletter-admin-health-config"
+        aria-labelledby="newsletter-health-config-title"
+      >
         <div className="newsletter-admin-health-heading">
           <div>
             <p className="newsletter-admin-eyebrow">SENDER WIDGET</p>
@@ -243,19 +414,26 @@ export default function NewsletterAdminPanel() {
           </div>
           <span className="newsletter-admin-health-badge">7-day average</span>
         </div>
-        <p className="newsletter-admin-health-note">Adjust what earns points. Scores above 80 use a high image, 50–80 use medium, and below 50 use low. This is an editorial score, not medical advice.</p>
         <label className="newsletter-admin-health-enable">
           <input
             type="checkbox"
             checked={healthConfig.enabled}
-            onChange={(event) => setHealthConfig((current) => ({ ...current, enabled: event.target.checked }))}
+            onChange={(event) =>
+              setHealthConfig((current) => ({
+                ...current,
+                enabled: event.target.checked,
+              }))
+            }
           />
-          <span>Include the sender’s health metrics and wellness image in every newsletter</span>
+          <span>
+            Include the sender’s health metrics and wellness image in every
+            newsletter
+          </span>
         </label>
         <div className="newsletter-admin-health-grid">
           <div className="newsletter-admin-health-metric">
             <h4>Average daily steps</h4>
-            <p>Score rises from the poor threshold to the full-score target.</p>
+
             <div className="newsletter-admin-health-fields">
               {rangeField("steps", "poor", "0-point threshold", "steps/day")}
               {rangeField("steps", "target", "100-point target", "steps/day")}
@@ -263,7 +441,7 @@ export default function NewsletterAdminPanel() {
           </div>
           <div className="newsletter-admin-health-metric">
             <h4>Average daily repetitions</h4>
-            <p>Average daily exercise reps across recorded sessions.</p>
+
             <div className="newsletter-admin-health-fields">
               {rangeField("reps", "poor", "0-point threshold", "reps/day")}
               {rangeField("reps", "target", "100-point target", "reps/day")}
@@ -271,7 +449,7 @@ export default function NewsletterAdminPanel() {
           </div>
           <div className="newsletter-admin-health-metric">
             <h4>Average sleep</h4>
-            <p>Points peak inside the good range and taper outside it.</p>
+
             <div className="newsletter-admin-health-fields">
               {rangeField("sleep", "poorLow", "Poor at/below", "minutes")}
               {rangeField("sleep", "goodLow", "Good from", "minutes")}
@@ -281,7 +459,7 @@ export default function NewsletterAdminPanel() {
           </div>
           <div className="newsletter-admin-health-metric">
             <h4>Average recorded BPM</h4>
-            <p>Uses recorded readings and workout averages, not resting-only BPM.</p>
+
             <div className="newsletter-admin-health-fields">
               {rangeField("bpm", "poorLow", "Poor at/below", "BPM")}
               {rangeField("bpm", "goodLow", "Good from", "BPM")}
@@ -295,11 +473,24 @@ export default function NewsletterAdminPanel() {
           <span>MEDIUM images: {moodImageCounts.medium}</span>
           <span>HIGH images: {moodImageCounts.high}</span>
         </div>
-        <button className="newsletter-admin-secondary" type="button" onClick={() => void saveHealthRanges()} disabled={Boolean(busy)}>
+        <button
+          className="newsletter-admin-secondary"
+          type="button"
+          onClick={() => void saveHealthRanges()}
+          disabled={Boolean(busy)}
+        >
           {busy === "save-health" ? "Saving ranges…" : "Save health ranges"}
         </button>
       </section>
-      {message && <p className={`newsletter-admin-message ${messageError ? "is-error" : ""}`} role="status" aria-live="polite">{message}</p>}
+      {message && (
+        <p
+          className={`newsletter-admin-message ${messageError ? "is-error" : ""}`}
+          role="status"
+          aria-live="polite"
+        >
+          {message}
+        </p>
+      )}
     </section>
   );
 }
