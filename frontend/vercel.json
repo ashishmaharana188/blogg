@@ -7,10 +7,36 @@
     },
     {
       "source": "/share/account",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|Facebot|Twitterbot|LinkedInBot|Slackbot|Discordbot|WhatsApp|TelegramBot|Pinterest|Googlebot|bingbot|Applebot|redditbot|Embedly|Quora Link Preview|vkShare|SkypeUriPreview|Mastodon|Iframely|iframely|MetaInspector).*"
+        }
+      ],
+      "missing": [
+        {
+          "type": "header",
+          "key": "sec-fetch-dest"
+        }
+      ],
       "destination": "https://blogg-api-m785.onrender.com/share/account"
     },
     {
       "source": "/share/:bloggId",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|Facebot|Twitterbot|LinkedInBot|Slackbot|Discordbot|WhatsApp|TelegramBot|Pinterest|Googlebot|bingbot|Applebot|redditbot|Embedly|Quora Link Preview|vkShare|SkypeUriPreview|Mastodon|Iframely|iframely|MetaInspector).*"
+        }
+      ],
+      "missing": [
+        {
+          "type": "header",
+          "key": "sec-fetch-dest"
+        }
+      ],
       "destination": "https://blogg-api-m785.onrender.com/share/:bloggId"
     },
     {

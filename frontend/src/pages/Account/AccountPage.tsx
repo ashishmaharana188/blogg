@@ -1339,7 +1339,6 @@ export default function AccountPage() {
                 <div className="showcase-section-heading">
                   <div>
                     <p className="account-eyebrow">YOUTUBE LIBRARY</p>
-                    <h2>Public playlists</h2>
                   </div>
                   {isAdmin && (
                     <button
@@ -1519,7 +1518,7 @@ export default function AccountPage() {
 
                 <section className="account-showcase-section account-showcase-mini-section account-showcase-ytmusic-section">
                   <div className="showcase-mini-heading">
-                    <h2>YouTube Music</h2>
+                    <h2>Now Playing - YouTube Music </h2>
                   </div>
                   <div className="showcase-mini-integration-layout">
                     <div className="showcase-mini-music-card">
@@ -1653,7 +1652,7 @@ export default function AccountPage() {
                             }
                           >
                             <span className="showcase-ytmusic-section-title">
-                              Selected for visitors
+                              Check these
                             </span>
                             <span
                               className="showcase-ytmusic-collapse-mark"
@@ -1663,7 +1662,7 @@ export default function AccountPage() {
                             </span>
                           </button>
                         ) : (
-                          <h3>Selected for visitors</h3>
+                          <h3>Check these</h3>
                         )}
                       </div>
                       {(!isAdmin || !selectedTracksCollapsed) && (

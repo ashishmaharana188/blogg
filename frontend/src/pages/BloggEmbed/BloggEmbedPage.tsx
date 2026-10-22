@@ -22,8 +22,8 @@ export default function BloggEmbedPage() {
       setStatus("loading");
       try {
         const [note, canvas] = await Promise.all([
-          fetchBloggByIdRequest({ blogg_id: bloggId }),
-          fetchStackAndGroup(),
+          fetchBloggByIdRequest({ blogg_id: bloggId }, { retryTransientErrors: true }),
+          fetchStackAndGroup({ publicReadOnly: true, retryTransientErrors: true }),
         ]);
         if (cancelled) return;
         if (!note) {

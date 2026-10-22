@@ -47,9 +47,11 @@ export default function BloggReadPage() {
     const load = async () => {
       setStatus("loading");
       try {
+        // The frontend page is available immediately. These read-only requests
+        // wake the backend and retry brief startup failures while the loading art stays visible.
         const [note, canvas] = await Promise.all([
-          fetchBloggByIdRequest({ blogg_id: bloggId }),
-          fetchStackAndGroup(),
+          fetchBloggByIdRequest({ blogg_id: bloggId }, { retryTransientErrors: true }),
+          fetchStackAndGroup({ publicReadOnly: true, retryTransientErrors: true }),
         ]);
         if (cancelled) return;
         if (!note) {

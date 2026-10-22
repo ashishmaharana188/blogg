@@ -910,7 +910,6 @@ export default function HealthAdminPanel({
         >
           <div className="health-column-heading">
             <p className="account-eyebrow">DAILY ACTIVITY</p>
-            <h3 id="health-steps-title">Steps and daily activity</h3>
           </div>
           {loading && !summary ? (
             <AssetStateBox status="loading" compact />
@@ -1008,7 +1007,7 @@ export default function HealthAdminPanel({
               {sleep && (
                 <div className="health-admin-subsection health-sleep-section">
                   <div className="health-admin-subheading">
-                    <h3>Sleep overview</h3>
+                    {/*<h3>Sleep overview</h3>*/}
                     <span>{sleep.observedNights7d || 0} recorded night(s)</span>
                   </div>
                   <div className="health-sleep-summary-card">

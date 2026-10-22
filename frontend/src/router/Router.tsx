@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useParams } from "react-router-dom";
 import Login from "../pages/Authentication/pages/login";
 import Register from "../pages/Authentication/pages/register";
 import HomePage from "../pages/BloggFeed/BlogFeed";
@@ -6,6 +6,12 @@ import BloggPage from "../pages/BloggPage/BloggPage";
 import BloggReadPage from "../pages/BloggReadPage";
 import BloggEmbedPage from "../pages/BloggEmbed/BloggEmbedPage";
 import AccountPage from "../pages/Account/AccountPage";
+
+/** Send a human visitor from a share URL into the frontend application. */
+function SharedBloggRedirect() {
+  const { bloggId = "" } = useParams<{ bloggId: string }>();
+  return <Navigate to={`/read/${encodeURIComponent(bloggId)}`} replace />;
+}
 
 /** Reading the feed and opening shared notes are public. Account routes remain optional. */
 const Router = () => (
@@ -19,6 +25,11 @@ const Router = () => (
     <Route path="/blog/:bloggId" element={<BloggPage />} />
     <Route path="/read/:bloggId" element={<BloggReadPage />} />
     <Route path="/embed/:bloggId" element={<BloggEmbedPage />} />
+    <Route
+      path="/share/account"
+      element={<Navigate to="/account?view=public" replace />}
+    />
+    <Route path="/share/:bloggId" element={<SharedBloggRedirect />} />
     <Route path="*" element={<Navigate to="/feed" replace />} />
   </Routes>
 );
