@@ -129,15 +129,22 @@ const EXERCISE_TYPE_LABELS: Record<number, string> = {
 function displayExerciseActivityName(
   session: Pick<ExerciseSession, "exerciseType" | "activityName">,
 ): string {
-  if (session.exerciseType != null && EXERCISE_TYPE_LABELS[session.exerciseType]) {
+  if (
+    session.exerciseType != null &&
+    EXERCISE_TYPE_LABELS[session.exerciseType]
+  ) {
     return EXERCISE_TYPE_LABELS[session.exerciseType];
   }
 
   const name = (session.activityName || "").trim();
-  const generic = name.match(/^exercise type\s+(\d+)$/i) || name.match(/^type\s+(\d+)$/i);
+  const generic =
+    name.match(/^exercise type\s+(\d+)$/i) || name.match(/^type\s+(\d+)$/i);
   if (generic) {
     const exerciseType = Number(generic[1]);
-    return EXERCISE_TYPE_LABELS[exerciseType] || "Other exercise (" + generic[1] + ")";
+    return (
+      EXERCISE_TYPE_LABELS[exerciseType] ||
+      "Other exercise (" + generic[1] + ")"
+    );
   }
   return name || "Exercise";
 }
@@ -290,9 +297,15 @@ export default function HealthAdminPanel({
   const [metricsFailed, setMetricsFailed] = useState(false);
   const [savingMetrics, setSavingMetrics] = useState(false);
   const [metricsSaved, setMetricsSaved] = useState(false);
-  const [selectedHeartRateSampleKey, setSelectedHeartRateSampleKey] = useState<string | null>(null);
-  const [selectedSleepDayKey, setSelectedSleepDayKey] = useState<string | null>(null);
-  const [selectedExerciseSessionKey, setSelectedExerciseSessionKey] = useState<string | null>(null);
+  const [selectedHeartRateSampleKey, setSelectedHeartRateSampleKey] = useState<
+    string | null
+  >(null);
+  const [selectedSleepDayKey, setSelectedSleepDayKey] = useState<string | null>(
+    null,
+  );
+  const [selectedExerciseSessionKey, setSelectedExerciseSessionKey] = useState<
+    string | null
+  >(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -553,7 +566,13 @@ export default function HealthAdminPanel({
   const chartMaximum = Math.max(1, ...recentDays.map((day) => day.steps));
   const recentBpm = (summary?.recentHeartRates || []).slice().reverse();
   const bpmValues = recentBpm.map((sample) => sample.bpm);
-  const selectedHeartRateSample = recentBpm.find((sample) => `${sample.measuredAt}|${sample.bpm}` === selectedHeartRateSampleKey) ?? recentBpm[recentBpm.length - 1] ?? null;
+  const selectedHeartRateSample =
+    recentBpm.find(
+      (sample) =>
+        `${sample.measuredAt}|${sample.bpm}` === selectedHeartRateSampleKey,
+    ) ??
+    recentBpm[recentBpm.length - 1] ??
+    null;
   const bpmMinimum = bpmValues.length ? Math.min(...bpmValues) : 0;
   const bpmRange = Math.max(
     1,
@@ -564,8 +583,14 @@ export default function HealthAdminPanel({
     recentDays.find((day) => day.day === summary?.steps.date) || null;
   const sleep = summary?.sleep || null;
   const sleepDaysForChart = (sleep?.recentDays || []).slice().reverse();
-  const sleepBarsMaximum = Math.max(1, ...sleepDaysForChart.map((day) => day.minutes));
-  const selectedSleepDay = sleepDaysForChart.find((day) => day.day === selectedSleepDayKey) ?? sleepDaysForChart[sleepDaysForChart.length - 1] ?? null;
+  const sleepBarsMaximum = Math.max(
+    1,
+    ...sleepDaysForChart.map((day) => day.minutes),
+  );
+  const selectedSleepDay =
+    sleepDaysForChart.find((day) => day.day === selectedSleepDayKey) ??
+    sleepDaysForChart[sleepDaysForChart.length - 1] ??
+    null;
   const allExerciseSessions = metricData?.sessions?.length
     ? metricData.sessions
     : metricData?.recentSessions || [];
@@ -573,13 +598,17 @@ export default function HealthAdminPanel({
     (id) => id !== "heart_rate",
   );
   const hasExerciseData = Boolean(
-    (metricData?.selectedMetrics?.includes("sleep") && (summary?.sleep?.observedNights7d || 0) > 0) ||
+    (metricData?.selectedMetrics?.includes("sleep") &&
+      (summary?.sleep?.observedNights7d || 0) > 0) ||
     (isAdmin && (metricData?.sessions?.length || metricData?.latestSession)) ||
-    (allExerciseSessions.length && exerciseMetricIds.some((id) => id !== "sleep")),
+    (allExerciseSessions.length &&
+      exerciseMetricIds.some((id) => id !== "sleep")),
   );
   // Running sessions are stored separately from other exercises by the backend.
   // Merge them here so the heart-rate panel reports every activity with HR data.
-  const runningHeartRateSessions: ExerciseSession[] = (summary?.recentRuns || []).map((run) => ({
+  const runningHeartRateSessions: ExerciseSession[] = (
+    summary?.recentRuns || []
+  ).map((run) => ({
     sessionId: run.sessionId,
     exerciseType: 1002,
     activityName: "Running",
@@ -601,20 +630,37 @@ export default function HealthAdminPanel({
   // different IDs. Collapse matching activity/start times and retain all available BPM fields.
   const heartRateByWorkout: ExerciseSession[] = [];
   const activityKeyFor = (session: ExerciseSession): string => {
-    if (session.exerciseType === 1002 || /\brun(?:ning)?\b/i.test(session.activityName || "")) return "running";
+    if (
+      session.exerciseType === 1002 ||
+      /\brun(?:ning)?\b/i.test(session.activityName || "")
+    )
+      return "running";
     if (session.exerciseType != null) return `type:${session.exerciseType}`;
-    return (session.activityName || "exercise").trim().toLocaleLowerCase().replace(/\s+/g, " ");
+    return (session.activityName || "exercise")
+      .trim()
+      .toLocaleLowerCase()
+      .replace(/\s+/g, " ");
   };
   for (const session of [...allExerciseSessions, ...runningHeartRateSessions]) {
     const heart = getSessionHeartRate(session);
-    if (heart.average == null && heart.minimum == null && heart.maximum == null) continue;
+    if (heart.average == null && heart.minimum == null && heart.maximum == null)
+      continue;
     const incomingTime = new Date(session.startedAt).getTime();
     const incomingActivity = activityKeyFor(session);
     const duplicateIndex = heartRateByWorkout.findIndex((existing) => {
-      if (existing.sessionId && session.sessionId && existing.sessionId === session.sessionId) return true;
+      if (
+        existing.sessionId &&
+        session.sessionId &&
+        existing.sessionId === session.sessionId
+      )
+        return true;
       if (activityKeyFor(existing) !== incomingActivity) return false;
       const existingTime = new Date(existing.startedAt).getTime();
-      return Number.isFinite(existingTime) && Number.isFinite(incomingTime) && Math.abs(existingTime - incomingTime) <= 120_000;
+      return (
+        Number.isFinite(existingTime) &&
+        Number.isFinite(incomingTime) &&
+        Math.abs(existingTime - incomingTime) <= 120_000
+      );
     });
     if (duplicateIndex < 0) {
       heartRateByWorkout.push(session);
@@ -631,7 +677,10 @@ export default function HealthAdminPanel({
       ...session,
       ...previous,
       sessionId: previous.sessionId || session.sessionId,
-      activityName: incomingActivity === "running" ? "Running" : (previous.activityName || session.activityName),
+      activityName:
+        incomingActivity === "running"
+          ? "Running"
+          : previous.activityName || session.activityName,
       avgHeartRate: mergedHeart.average,
       minHeartRate: mergedHeart.minimum,
       maxHeartRate: mergedHeart.maximum,
@@ -643,7 +692,10 @@ export default function HealthAdminPanel({
     };
   }
   const heartMetricSessions = heartRateByWorkout
-    .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())
+    .sort(
+      (a, b) =>
+        new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
+    )
     .slice(0, 1);
 
   const hasHeartData = Boolean(
@@ -960,35 +1012,85 @@ export default function HealthAdminPanel({
                     <span>{sleep.observedNights7d || 0} recorded night(s)</span>
                   </div>
                   <div className="health-sleep-summary-card">
-                    <div className="health-sleep-summary-detail"><span>Most recent night</span><strong>{formatSleep(sleep.lastNightMinutes)}</strong></div>
-                    <div className="health-sleep-summary-detail"><span>7-night average</span><strong>{formatSleep(sleep.average7dMinutes)}</strong></div>
-                    <div className="health-sleep-summary-detail"><span>Sleep efficiency</span><strong>{sleep.lastNightEfficiency == null ? "—" : String(Math.round(sleep.lastNightEfficiency * 10) / 10) + "%"}</strong></div>
-                    <div className="health-sleep-summary-detail"><span>Sleep score</span><strong>{sleep.lastNightScore == null ? "—" : String(Math.round(sleep.lastNightScore * 10) / 10) + "/100"}</strong></div>
+                    <div className="health-sleep-summary-detail">
+                      <span>Most recent night</span>
+                      <strong>{formatSleep(sleep.lastNightMinutes)}</strong>
+                    </div>
+                    <div className="health-sleep-summary-detail">
+                      <span>7-night average</span>
+                      <strong>{formatSleep(sleep.average7dMinutes)}</strong>
+                    </div>
+                    <div className="health-sleep-summary-detail">
+                      <span>Sleep efficiency</span>
+                      <strong>
+                        {sleep.lastNightEfficiency == null
+                          ? "—"
+                          : String(
+                              Math.round(sleep.lastNightEfficiency * 10) / 10,
+                            ) + "%"}
+                      </strong>
+                    </div>
+                    <div className="health-sleep-summary-detail">
+                      <span>Sleep score</span>
+                      <strong>
+                        {sleep.lastNightScore == null
+                          ? "—"
+                          : String(Math.round(sleep.lastNightScore * 10) / 10) +
+                            "/100"}
+                      </strong>
+                    </div>
                   </div>
                   {sleepDaysForChart.length ? (
                     <>
-                      <div className="health-chart-selected-value" aria-live="polite">
+                      <div
+                        className="health-chart-selected-value"
+                        aria-live="polite"
+                      >
                         {selectedSleepDay ? (
                           <>
-                            <strong>{new Date(`${selectedSleepDay.day}T12:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</strong>
+                            <strong>
+                              {new Date(
+                                `${selectedSleepDay.day}T12:00:00`,
+                              ).toLocaleDateString(undefined, {
+                                day: "numeric",
+                                month: "short",
+                              })}
+                            </strong>
                             <span>
                               {formatSleep(selectedSleepDay.minutes)}
-                              {selectedSleepDay.efficiency == null ? "" : ` · ${Math.round(selectedSleepDay.efficiency * 10) / 10}% efficiency`}
-                              {selectedSleepDay.score == null ? "" : ` · score ${Math.round(selectedSleepDay.score * 10) / 10}/100`}
+                              {selectedSleepDay.efficiency == null
+                                ? ""
+                                : ` · ${Math.round(selectedSleepDay.efficiency * 10) / 10}% efficiency`}
+                              {selectedSleepDay.score == null
+                                ? ""
+                                : ` · score ${Math.round(selectedSleepDay.score * 10) / 10}/100`}
                             </span>
                           </>
-                        ) : <span>Click a bar to inspect a recorded night.</span>}
+                        ) : (
+                          <span>Click a bar to inspect a recorded night.</span>
+                        )}
                       </div>
-                      <div className="health-selectable-bar-chart health-sleep-bar-chart" role="group" aria-label="Recent sleep duration by day">
+                      <div
+                        className="health-selectable-bar-chart health-sleep-bar-chart"
+                        role="group"
+                        aria-label="Recent sleep duration by day"
+                      >
                         {sleepDaysForChart.map((day) => {
-                          const dateLabel = new Date(`${day.day}T12:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+                          const dateLabel = new Date(
+                            `${day.day}T12:00:00`,
+                          ).toLocaleDateString(undefined, {
+                            day: "numeric",
+                            month: "short",
+                          });
                           const details = `${dateLabel} · ${formatSleep(day.minutes)}${day.efficiency == null ? "" : ` · ${Math.round(day.efficiency * 10) / 10}% efficiency`}${day.score == null ? "" : ` · score ${Math.round(day.score * 10) / 10}/100`}`;
                           return (
                             <button
                               type="button"
                               key={day.day}
                               className={`health-chart-bar ${selectedSleepDay?.day === day.day ? "is-selected" : ""}`}
-                              style={{ height: `${Math.max(4, (day.minutes / sleepBarsMaximum) * 100)}%` }}
+                              style={{
+                                height: `${Math.max(4, (day.minutes / sleepBarsMaximum) * 100)}%`,
+                              }}
                               title={details}
                               aria-label={details}
                               aria-pressed={selectedSleepDay?.day === day.day}
@@ -997,7 +1099,8 @@ export default function HealthAdminPanel({
                           );
                         })}
                       </div>
-                    </>                  ) : null}
+                    </>
+                  ) : null}
                 </div>
               )}
 
@@ -1064,15 +1167,21 @@ export default function HealthAdminPanel({
                 <>
                   <div className="health-admin-subsection health-admin-subsection-first">
                     <div className="health-admin-subheading">
-                      <h3>Recent BPM samples</h3>
                       <span>{recentBpm.length} samples</span>
                     </div>
                     {recentBpm.length ? (
                       <>
                         {selectedHeartRateSample && (
-                          <div className="health-chart-selected-value" aria-live="polite">
-                            <strong>{Math.round(selectedHeartRateSample.bpm)} bpm</strong>
-                            <span>{formatDate(selectedHeartRateSample.measuredAt)}</span>
+                          <div
+                            className="health-chart-selected-value"
+                            aria-live="polite"
+                          >
+                            <strong>
+                              {Math.round(selectedHeartRateSample.bpm)} bpm
+                            </strong>
+                            <span>
+                              {formatDate(selectedHeartRateSample.measuredAt)}
+                            </span>
                           </div>
                         )}
                         <div
@@ -1089,9 +1198,17 @@ export default function HealthAdminPanel({
                                 className={`health-heart-rate-bar ${selectedHeartRateSampleKey === key || (!selectedHeartRateSampleKey && index === recentBpm.length - 1) ? "is-selected" : ""}`}
                                 title={`${Math.round(sample.bpm)} bpm · ${formatDate(sample.measuredAt)}`}
                                 aria-label={`${Math.round(sample.bpm)} beats per minute at ${formatDate(sample.measuredAt)}`}
-                                aria-pressed={selectedHeartRateSampleKey === key || (!selectedHeartRateSampleKey && index === recentBpm.length - 1)}
-                                onClick={() => setSelectedHeartRateSampleKey(key)}
-                                style={{ height: `${15 + ((sample.bpm - bpmMinimum) / bpmRange) * 35}px` }}
+                                aria-pressed={
+                                  selectedHeartRateSampleKey === key ||
+                                  (!selectedHeartRateSampleKey &&
+                                    index === recentBpm.length - 1)
+                                }
+                                onClick={() =>
+                                  setSelectedHeartRateSampleKey(key)
+                                }
+                                style={{
+                                  height: `${15 + ((sample.bpm - bpmMinimum) / bpmRange) * 35}px`,
+                                }}
                               />
                             );
                           })}
@@ -1113,7 +1230,6 @@ export default function HealthAdminPanel({
                     <div className="health-admin-subsection">
                       <div className="health-admin-subheading">
                         <h3>Latest exercise-session heart rate</h3>
-                        <span>Latest recorded workout</span>
                       </div>
                       {heartMetricSessions.length ? (
                         <div className="health-run-list">
@@ -1195,17 +1311,42 @@ export default function HealthAdminPanel({
                 </p>
               ) : (
                 (() => {
-                  const rawSessions = (metricData.sessions?.length ? metricData.sessions : metricData.recentSessions || []).slice(0, 30);
-                  const sessionKey = (session: ExerciseSession) => session.sessionId || String(session.exerciseType || "") + "|" + session.startedAt + "|" + (session.activityName || "");
+                  const rawSessions = (
+                    metricData.sessions?.length
+                      ? metricData.sessions
+                      : metricData.recentSessions || []
+                  ).slice(0, 30);
+                  const sessionKey = (session: ExerciseSession) =>
+                    session.sessionId ||
+                    String(session.exerciseType || "") +
+                      "|" +
+                      session.startedAt +
+                      "|" +
+                      (session.activityName || "");
                   const uniqueSessions: ExerciseSession[] = [];
                   for (const session of rawSessions) {
-                    const duplicateIndex = uniqueSessions.findIndex((existing) => {
-                      if (session.sessionId && existing.sessionId && session.sessionId === existing.sessionId) return true;
-                      if (displayExerciseActivityName(session) !== displayExerciseActivityName(existing)) return false;
-                      const a = new Date(session.startedAt).getTime();
-                      const b = new Date(existing.startedAt).getTime();
-                      return Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) <= 30000;
-                    });
+                    const duplicateIndex = uniqueSessions.findIndex(
+                      (existing) => {
+                        if (
+                          session.sessionId &&
+                          existing.sessionId &&
+                          session.sessionId === existing.sessionId
+                        )
+                          return true;
+                        if (
+                          displayExerciseActivityName(session) !==
+                          displayExerciseActivityName(existing)
+                        )
+                          return false;
+                        const a = new Date(session.startedAt).getTime();
+                        const b = new Date(existing.startedAt).getTime();
+                        return (
+                          Number.isFinite(a) &&
+                          Number.isFinite(b) &&
+                          Math.abs(a - b) <= 30000
+                        );
+                      },
+                    );
                     if (duplicateIndex < 0) uniqueSessions.push(session);
                     else {
                       const previous = uniqueSessions[duplicateIndex];
@@ -1214,61 +1355,114 @@ export default function HealthAdminPanel({
                       uniqueSessions[duplicateIndex] = {
                         ...session,
                         ...previous,
-                        avgHeartRate: previousHeart.average ?? currentHeart.average,
-                        minHeartRate: previousHeart.minimum ?? currentHeart.minimum,
-                        maxHeartRate: previousHeart.maximum ?? currentHeart.maximum,
-                        values: { ...(session.values || {}), ...(previous.values || {}) },
+                        avgHeartRate:
+                          previousHeart.average ?? currentHeart.average,
+                        minHeartRate:
+                          previousHeart.minimum ?? currentHeart.minimum,
+                        maxHeartRate:
+                          previousHeart.maximum ?? currentHeart.maximum,
+                        values: {
+                          ...(session.values || {}),
+                          ...(previous.values || {}),
+                        },
                       };
                     }
                   }
                   const sessions = uniqueSessions;
                   const selectedMetrics = metricData.selectedMetrics || [];
-                  const activityMetricIds = selectedMetrics.filter((id) => ["repetitions", "sets", "duration", "heart_rate", "calories"].includes(id));
+                  const activityMetricIds = selectedMetrics.filter((id) =>
+                    [
+                      "repetitions",
+                      "sets",
+                      "duration",
+                      "heart_rate",
+                      "calories",
+                    ].includes(id),
+                  );
                   const trendMetric = activityMetricIds[0] || "repetitions";
-                  const valueFor = (session: ExerciseSession, metricId: string): string => {
+                  const valueFor = (
+                    session: ExerciseSession,
+                    metricId: string,
+                  ): string => {
                     const values = session.values || {};
-                    const numberValue = (value: unknown): number | null => typeof value === "number" && Number.isFinite(value) ? value : null;
+                    const numberValue = (value: unknown): number | null =>
+                      typeof value === "number" && Number.isFinite(value)
+                        ? value
+                        : null;
                     if (metricId === "repetitions") {
-                      const value = numberValue(session.repetitions) ?? numberValue(values.repetitions);
-                      return value == null ? "—" : String(Math.round(value).toLocaleString()) + " reps / count";
+                      const value =
+                        numberValue(session.repetitions) ??
+                        numberValue(values.repetitions);
+                      return value == null
+                        ? "—"
+                        : String(Math.round(value).toLocaleString()) +
+                            " reps / count";
                     }
                     if (metricId === "sets") {
-                      const ownSets = session.sets?.map((set) => set.reps) || [];
-                      const rawSets = Array.isArray(values.sets) ? values.sets.filter((item): item is number => typeof item === "number") : [];
+                      const ownSets =
+                        session.sets?.map((set) => set.reps) || [];
+                      const rawSets = Array.isArray(values.sets)
+                        ? values.sets.filter(
+                            (item): item is number => typeof item === "number",
+                          )
+                        : [];
                       const sets = ownSets.length ? ownSets : rawSets;
                       return sets.length ? sets.join(" + ") + " reps" : "—";
                     }
                     if (metricId === "duration") {
-                      const value = numberValue(session.durationSeconds) ?? numberValue(values.durationSeconds);
+                      const value =
+                        numberValue(session.durationSeconds) ??
+                        numberValue(values.durationSeconds);
                       return value == null ? "—" : formatDuration(value);
                     }
                     if (metricId === "calories") {
-                      const value = numberValue(session.calories) ?? numberValue(values.calories);
+                      const value =
+                        numberValue(session.calories) ??
+                        numberValue(values.calories);
                       return value == null ? "—" : value.toFixed(1) + " kcal";
                     }
                     if (metricId === "heart_rate") {
                       const heart = getSessionHeartRate(session);
-                      if (heart.average == null && heart.minimum == null && heart.maximum == null) return "—";
+                      if (
+                        heart.average == null &&
+                        heart.minimum == null &&
+                        heart.maximum == null
+                      )
+                        return "—";
                       const parts = [];
-                      if (heart.average != null) parts.push(String(Math.round(heart.average)) + " avg");
-                      if (heart.minimum != null) parts.push(String(Math.round(heart.minimum)) + " min");
-                      if (heart.maximum != null) parts.push(String(Math.round(heart.maximum)) + " max");
+                      if (heart.average != null)
+                        parts.push(String(Math.round(heart.average)) + " avg");
+                      if (heart.minimum != null)
+                        parts.push(String(Math.round(heart.minimum)) + " min");
+                      if (heart.maximum != null)
+                        parts.push(String(Math.round(heart.maximum)) + " max");
                       return parts.join(" · ") + " bpm";
                     }
                     return "—";
                   };
-                  const metricNumber = (session: ExerciseSession, metricId: string): number | null => {
-                    if (metricId === "heart_rate") return getSessionHeartRate(session).average;
+                  const metricNumber = (
+                    session: ExerciseSession,
+                    metricId: string,
+                  ): number | null => {
+                    if (metricId === "heart_rate")
+                      return getSessionHeartRate(session).average;
                     return metricTrendNumber(metricId, session);
                   };
                   const formatBarValue = (value: number | null): string => {
                     if (value == null) return "—";
-                    if (trendMetric === "duration") return formatDuration(value);
-                    if (trendMetric === "calories") return value.toFixed(1) + " kcal";
-                    if (trendMetric === "heart_rate") return String(Math.round(value)) + " bpm";
-                    if (trendMetric === "sets") return String(Math.round(value)) + " reps";
+                    if (trendMetric === "duration")
+                      return formatDuration(value);
+                    if (trendMetric === "calories")
+                      return value.toFixed(1) + " kcal";
+                    if (trendMetric === "heart_rate")
+                      return String(Math.round(value)) + " bpm";
+                    if (trendMetric === "sets")
+                      return String(Math.round(value)) + " reps";
                     if (trendMetric === "history") return "1 session";
-                    return String(Math.round(value).toLocaleString()) + " reps / count";
+                    return (
+                      String(Math.round(value).toLocaleString()) +
+                      " reps / count"
+                    );
                   };
                   const groupsByActivity = new Map<string, ExerciseSession[]>();
                   for (const session of sessions) {
@@ -1277,61 +1471,226 @@ export default function HealthAdminPanel({
                     existing.push(session);
                     groupsByActivity.set(label, existing);
                   }
-                  const activityGroups = Array.from(groupsByActivity.entries()).map(([name, groupSessions]) => ({
-                    name,
-                    sessions: groupSessions.sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()),
-                  })).sort((a, b) => new Date(b.sessions[0]?.startedAt || 0).getTime() - new Date(a.sessions[0]?.startedAt || 0).getTime());
-                  const chartMetric = activityMetricIds[0] || (sessions.some((session) => metricNumber(session, "repetitions") != null) ? "repetitions" : "duration");
-                  const showSleep = selectedMetrics.includes("sleep") && Boolean(sleep);
+                  const activityGroups = Array.from(groupsByActivity.entries())
+                    .map(([name, groupSessions]) => ({
+                      name,
+                      sessions: groupSessions.sort(
+                        (a, b) =>
+                          new Date(b.startedAt).getTime() -
+                          new Date(a.startedAt).getTime(),
+                      ),
+                    }))
+                    .sort(
+                      (a, b) =>
+                        new Date(b.sessions[0]?.startedAt || 0).getTime() -
+                        new Date(a.sessions[0]?.startedAt || 0).getTime(),
+                    );
+                  const chartMetric =
+                    activityMetricIds[0] ||
+                    (sessions.some(
+                      (session) => metricNumber(session, "repetitions") != null,
+                    )
+                      ? "repetitions"
+                      : "duration");
+                  const showSleep =
+                    selectedMetrics.includes("sleep") && Boolean(sleep);
                   return (
                     <>
                       {showSleep && sleep && (
                         <section className="health-activity-group health-sleep-metric-group">
-                          <div className="health-activity-group-header"><h3>Sleep</h3><span>{sleep.observedNights7d || 0} recorded night(s)</span></div>
+                          <div className="health-activity-group-header">
+                            <h3>Sleep</h3>
+                            <span>
+                              {sleep.observedNights7d || 0} recorded night(s)
+                            </span>
+                          </div>
                           <div className="health-sleep-summary-card">
-                            <div className="health-sleep-summary-detail"><span>Most recent night</span><strong>{formatSleep(sleep.lastNightMinutes)}</strong></div>
-                            <div className="health-sleep-summary-detail"><span>7-night average</span><strong>{formatSleep(sleep.average7dMinutes)}</strong></div>
-                            <div className="health-sleep-summary-detail"><span>Sleep efficiency</span><strong>{sleep.lastNightEfficiency == null ? "—" : String(Math.round(sleep.lastNightEfficiency * 10) / 10) + "%"}</strong></div>
-                            <div className="health-sleep-summary-detail"><span>Sleep score</span><strong>{sleep.lastNightScore == null ? "—" : String(Math.round(sleep.lastNightScore * 10) / 10) + "/100"}</strong></div>
+                            <div className="health-sleep-summary-detail">
+                              <span>Most recent night</span>
+                              <strong>
+                                {formatSleep(sleep.lastNightMinutes)}
+                              </strong>
+                            </div>
+                            <div className="health-sleep-summary-detail">
+                              <span>7-night average</span>
+                              <strong>
+                                {formatSleep(sleep.average7dMinutes)}
+                              </strong>
+                            </div>
+                            <div className="health-sleep-summary-detail">
+                              <span>Sleep efficiency</span>
+                              <strong>
+                                {sleep.lastNightEfficiency == null
+                                  ? "—"
+                                  : String(
+                                      Math.round(
+                                        sleep.lastNightEfficiency * 10,
+                                      ) / 10,
+                                    ) + "%"}
+                              </strong>
+                            </div>
+                            <div className="health-sleep-summary-detail">
+                              <span>Sleep score</span>
+                              <strong>
+                                {sleep.lastNightScore == null
+                                  ? "—"
+                                  : String(
+                                      Math.round(sleep.lastNightScore * 10) /
+                                        10,
+                                    ) + "/100"}
+                              </strong>
+                            </div>
                           </div>
                         </section>
                       )}
                       {activityGroups.length > 0 && (
                         <div className="health-activity-groups">
-                          <div className="health-admin-subheading health-activity-groups-heading"><h3>Exercise history by activity</h3><span>{sessions.length} sessions</span></div>
                           {activityGroups.map((group) => {
                             const groupSessions = group.sessions;
-                            const selectedExists = selectedExerciseSessionKey && groupSessions.some((session) => sessionKey(session) === selectedExerciseSessionKey);
-                            const currentSession = groupSessions.find((session) => sessionKey(session) === (selectedExists ? selectedExerciseSessionKey : sessionKey(groupSessions[0]))) || groupSessions[0];
-                            const selectedSessionKey = currentSession ? sessionKey(currentSession) : "";
-                            const chartValues = groupSessions.map((session) => metricNumber(session, chartMetric));
-                            const chartMaximum = Math.max(1, ...chartValues.filter((value): value is number => value != null));
-                            const selectedDate = currentSession ? formatDate(currentSession.startedAt) : "";
-                            const trendValue = currentSession ? metricNumber(currentSession, chartMetric) : null;
+                            const selectedExists =
+                              selectedExerciseSessionKey &&
+                              groupSessions.some(
+                                (session) =>
+                                  sessionKey(session) ===
+                                  selectedExerciseSessionKey,
+                              );
+                            const currentSession =
+                              groupSessions.find(
+                                (session) =>
+                                  sessionKey(session) ===
+                                  (selectedExists
+                                    ? selectedExerciseSessionKey
+                                    : sessionKey(groupSessions[0])),
+                              ) || groupSessions[0];
+                            const selectedSessionKey = currentSession
+                              ? sessionKey(currentSession)
+                              : "";
+                            const chartValues = groupSessions.map((session) =>
+                              metricNumber(session, chartMetric),
+                            );
+                            const chartMaximum = Math.max(
+                              1,
+                              ...chartValues.filter(
+                                (value): value is number => value != null,
+                              ),
+                            );
+                            const selectedDate = currentSession
+                              ? formatDate(currentSession.startedAt)
+                              : "";
+                            const trendValue = currentSession
+                              ? metricNumber(currentSession, chartMetric)
+                              : null;
                             return (
-                              <section className="health-activity-group" key={group.name}>
-                                <div className="health-activity-group-header"><h3>{group.name}</h3><span>{groupSessions.length} session(s)</span></div>
+                              <section
+                                className="health-activity-group"
+                                key={group.name}
+                              >
+                                <div className="health-activity-group-header">
+                                  <span>{groupSessions.length} session(s)</span>
+                                </div>
                                 {currentSession && (
                                   <>
-                                    <div className="health-chart-selected-value" aria-live="polite"><strong>{group.name}</strong><span>{selectedDate}</span></div>
+                                    <div
+                                      className="health-chart-selected-value"
+                                      aria-live="polite"
+                                    >
+                                      <strong>{group.name}</strong>
+                                      <span>{selectedDate}</span>
+                                    </div>
                                     {activityMetricIds.length > 0 && (
                                       <div className="health-activity-detail-grid">
                                         {activityMetricIds.map((id) => (
-                                          <div className="health-activity-detail" key={id}><span>{METRIC_LABELS[id] || id}</span><strong>{valueFor(currentSession, id)}</strong></div>
+                                          <div
+                                            className="health-activity-detail"
+                                            key={id}
+                                          >
+                                            <span>
+                                              {METRIC_LABELS[id] || id}
+                                            </span>
+                                            <strong>
+                                              {valueFor(currentSession, id)}
+                                            </strong>
+                                          </div>
                                         ))}
                                       </div>
                                     )}
-                                    <div className="health-chart-selected-value"><span>Selected bar: {formatBarValue(trendValue)}</span></div>
-                                    <div className="health-selectable-bar-chart health-exercise-bar-chart" role="group" aria-label={group.name + " exercise sessions"}>
-                                      {groupSessions.slice().reverse().map((session, index) => {
-                                        const key = sessionKey(session);
-                                        const value = metricNumber(session, chartMetric);
-                                        const height = value == null ? 4 : Math.max(4, Math.min(100, value / chartMaximum * 100));
-                                        const date = new Date(session.startedAt);
-                                        const dateLabel = Number.isFinite(date.getTime()) ? date.toLocaleDateString(undefined, { day: "numeric", month: "short" }) : "Unknown date";
-                                        const details = group.name + " · " + dateLabel + " · " + formatBarValue(value);
-                                        return <button type="button" key={key + ":" + index} className={"health-chart-bar " + (selectedSessionKey === key ? "is-selected" : "")} style={{ height: height + "%" }} title={details} aria-label={details} aria-pressed={selectedSessionKey === key} onClick={() => setSelectedExerciseSessionKey(key)} />;
-                                      })}
+                                    <div className="health-chart-selected-value">
+                                      <span>
+                                        Selected bar:{" "}
+                                        {formatBarValue(trendValue)}
+                                      </span>
+                                    </div>
+                                    <div
+                                      className="health-selectable-bar-chart health-exercise-bar-chart"
+                                      role="group"
+                                      aria-label={
+                                        group.name + " exercise sessions"
+                                      }
+                                    >
+                                      {groupSessions
+                                        .slice()
+                                        .reverse()
+                                        .map((session, index) => {
+                                          const key = sessionKey(session);
+                                          const value = metricNumber(
+                                            session,
+                                            chartMetric,
+                                          );
+                                          const height =
+                                            value == null
+                                              ? 4
+                                              : Math.max(
+                                                  4,
+                                                  Math.min(
+                                                    100,
+                                                    (value / chartMaximum) *
+                                                      100,
+                                                  ),
+                                                );
+                                          const date = new Date(
+                                            session.startedAt,
+                                          );
+                                          const dateLabel = Number.isFinite(
+                                            date.getTime(),
+                                          )
+                                            ? date.toLocaleDateString(
+                                                undefined,
+                                                {
+                                                  day: "numeric",
+                                                  month: "short",
+                                                },
+                                              )
+                                            : "Unknown date";
+                                          const details =
+                                            group.name +
+                                            " · " +
+                                            dateLabel +
+                                            " · " +
+                                            formatBarValue(value);
+                                          return (
+                                            <button
+                                              type="button"
+                                              key={key + ":" + index}
+                                              className={
+                                                "health-chart-bar " +
+                                                (selectedSessionKey === key
+                                                  ? "is-selected"
+                                                  : "")
+                                              }
+                                              style={{ height: height + "%" }}
+                                              title={details}
+                                              aria-label={details}
+                                              aria-pressed={
+                                                selectedSessionKey === key
+                                              }
+                                              onClick={() =>
+                                                setSelectedExerciseSessionKey(
+                                                  key,
+                                                )
+                                              }
+                                            />
+                                          );
+                                        })}
                                     </div>
                                   </>
                                 )}
@@ -1340,7 +1699,11 @@ export default function HealthAdminPanel({
                           })}
                         </div>
                       )}
-                      {!activityGroups.length && !showSleep && <p className="health-muted">No exercise history is available.</p>}
+                      {!activityGroups.length && !showSleep && (
+                        <p className="health-muted">
+                          No exercise history is available.
+                        </p>
+                      )}
                     </>
                   );
                 })()
