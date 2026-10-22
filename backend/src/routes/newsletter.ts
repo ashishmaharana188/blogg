@@ -856,26 +856,69 @@ async function buildBooksForYouSection(): Promise<string> {
       settings.findOne({ key: "other-reading-book" }),
     ]);
     const books = selected.flatMap((record) => {
-      const identifier = typeof record?.identifier === "string" ? record.identifier.trim() : "";
-      const title = typeof record?.title === "string" ? record.title.trim() : "";
-      if (!identifier || !title || !/^[A-Za-z0-9._-]{1,200}$/.test(identifier)) return [];
-      const author = typeof record?.author === "string" ? record.author.trim().slice(0, 240) : "Author unknown";
-      const year = typeof record?.year === "string" || typeof record?.year === "number" ? String(record.year).trim().slice(0, 20) : "";
-      return [{ identifier, title: title.slice(0, 240), author: author || "Author unknown", year }];
+      const identifier =
+        typeof record?.identifier === "string" ? record.identifier.trim() : "";
+      const title =
+        typeof record?.title === "string" ? record.title.trim() : "";
+      if (!identifier || !title || !/^[A-Za-z0-9._-]{1,200}$/.test(identifier))
+        return [];
+      const author =
+        typeof record?.author === "string"
+          ? record.author.trim().slice(0, 240)
+          : "Author unknown";
+      const year =
+        typeof record?.year === "string" || typeof record?.year === "number"
+          ? String(record.year).trim().slice(0, 20)
+          : "";
+      return [
+        {
+          identifier,
+          title: title.slice(0, 240),
+          author: author || "Author unknown",
+          year,
+        },
+      ];
     });
     if (!books.length) return "";
 
-    const rows = books.map((book, index) => {
-      const id = encodeURIComponent(book.identifier);
-      const bookUrl = "https://archive.org/details/" + id;
-      const coverUrl = "https://archive.org/services/img/" + id;
-      const metadata = [book.author, book.year].filter(Boolean).join(" · ");
-      const border = index === books.length - 1 ? "0" : "1px dashed #35383c";
-      return '<tr><td width="72" valign="middle" style="padding:9px 10px 9px 0;border-bottom:' + border + '"><a href="' + bookUrl + '" style="text-decoration:none"><img src="' + coverUrl + '" alt="" width="58" height="76" style="display:block;width:58px;height:76px;object-fit:cover;border:1px solid #34383d" /></a></td><td valign="middle" style="padding:9px 10px 9px 0;border-bottom:' + border + '"><p style="margin:0;color:#e9edf2;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.45">' + htmlEscape(book.title) + '</p><p style="margin:4px 0 0;color:#8795a4;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.4">' + htmlEscape(metadata) + '</p></td><td valign="middle" align="right" style="padding:9px 0;border-bottom:' + border + ';white-space:nowrap"><a href="' + bookUrl + '" style="color:#8ebeff;font-family:Consolas,Courier New,monospace;font-size:9px;text-decoration:none;letter-spacing:.5px">READ ↗</a></td></tr>';
-    }).join("");
-    return '<tr><td style="padding:20px 16px;border-bottom:1px dashed #35383c"><p style="margin:0 0 4px;color:#80b6f4;font-family:Consolas,Courier New,monospace;font-size:10px;letter-spacing:1.2px">[ BOOKS FOR YOU ]</p><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">' + rows + '</table></td></tr>';
+    const rows = books
+      .map((book, index) => {
+        const id = encodeURIComponent(book.identifier);
+        const bookUrl = "https://archive.org/details/" + id;
+        const coverUrl = "https://archive.org/services/img/" + id;
+        const metadata = [book.author, book.year].filter(Boolean).join(" · ");
+        const border = index === books.length - 1 ? "0" : "1px dashed #35383c";
+        return (
+          '<tr><td width="72" valign="middle" style="padding:9px 10px 9px 0;border-bottom:' +
+          border +
+          '"><a href="' +
+          bookUrl +
+          '" style="text-decoration:none"><img src="' +
+          coverUrl +
+          '" alt="" width="58" height="76" style="display:block;width:58px;height:76px;object-fit:cover;border:1px solid #34383d" /></a></td><td valign="middle" style="padding:9px 10px 9px 0;border-bottom:' +
+          border +
+          '"><p style="margin:0;color:#e9edf2;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.45">' +
+          htmlEscape(book.title) +
+          '</p><p style="margin:4px 0 0;color:#8795a4;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.4">' +
+          htmlEscape(metadata) +
+          '</p></td><td valign="middle" align="right" style="padding:9px 0;border-bottom:' +
+          border +
+          ';white-space:nowrap"><a href="' +
+          bookUrl +
+          '" style="color:#8ebeff;font-family:Consolas,Courier New,monospace;font-size:9px;text-decoration:none;letter-spacing:.5px">READ ↗</a></td></tr>'
+        );
+      })
+      .join("");
+    return (
+      '<tr><td style="padding:20px 16px;border-bottom:1px dashed #35383c"><p style="margin:0 0 4px;color:#80b6f4;font-family:Consolas,Courier New,monospace;font-size:10px;letter-spacing:1.2px">[ BOOKS FOR YOU ]</p><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">' +
+      rows +
+      "</table></td></tr>"
+    );
   } catch (error) {
-    console.warn("[newsletter:books] Books For You unavailable:", error instanceof Error ? error.message : "unknown error");
+    console.warn(
+      "[newsletter:books] Books For You unavailable:",
+      error instanceof Error ? error.message : "unknown error",
+    );
     return "";
   }
 }
@@ -1185,7 +1228,7 @@ async function buildNewsletter(filters: NewsletterFilters): Promise<{
     buildSongsSection(),
     buildBooksForYouSection(),
   ]);
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BLOGG Newsletter</title></head><body style="margin:0;padding:0;background:#262626;color:#e9edf1;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#262626" style="width:100%;background:#262626"><tr><td align="center" style="padding:28px 12px 36px"><table role="presentation" width="640" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:640px;background:#111213;border:1px solid #1b1d20"><tr><td style="padding:30px 30px 28px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px dashed #35383c"><tr><td align="center" style="padding:17px 12px 27px;color:#80b6f4;font-family:Consolas,'Courier New',monospace;font-size:10px;letter-spacing:1.25px">[ NEWSLETTER &nbsp;·&nbsp; ${htmlEscape(issueDate.toUpperCase())} ]</td></tr><tr><td style="padding:0 16px 20px;border-bottom:1px dashed #35383c"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td valign="top" style="color:#f4f5f6;font-family:Arial,Helvetica,sans-serif;font-size:17px;font-weight:600;letter-spacing:-.3px">◉ Blogg</td><td align="right" valign="top" style="color:#a8b0b9;font-family:Consolas,'Courier New',monospace;font-size:10px;line-height:1.8"><span style="color:#707b87">ISSUED</span> &nbsp; ${htmlEscape(issueDate)}<br><span style="color:#707b87">TOPIC</span> &nbsp; ${htmlEscape(topicLabel)}<br><span style="color:#707b87">NOTES</span> &nbsp; ${articles.length}${matching.length > articles.length ? ` / ${matching.length}` : ""}</td></tr></table></td></tr><tr><td style="padding:19px 16px 21px;border-bottom:1px dashed #35383c"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td valign="top" width="48%" style="padding-right:14px"><p style="margin:0 0 9px;color:#77828d;font-family:Consolas,'Courier New',monospace;font-size:10px;letter-spacing:1px">[ EDITION ]</p><p style="margin:0;color:#e5e9ed;font-family:Consolas,'Courier New',monospace;font-size:12px;line-height:1.7">${htmlEscape(topicLabel)}</p></td><td valign="top" width="52%" style="padding-left:14px;border-left:1px dashed #35383c"><p style="margin:0 0 9px;color:#77828d;font-family:Consolas,'Courier New',monospace;font-size:10px;letter-spacing:1px">[ WRITTEN DATE RANGE ]</p><p style="margin:0;color:#e5e9ed;font-family:Consolas,'Courier New',monospace;font-size:11px;line-height:1.8;overflow-wrap:anywhere">${htmlEscape(filters.fromLabel)}<br>to&nbsp; ${htmlEscape(filters.toLabel)}</p></td></tr></table></td></tr>${healthSection}${songsSection}${booksForYouSection}<tr><td style="padding:22px 16px 4px"><p style="margin:0;color:#77828d;font-family:Consolas,'Courier New',monospace;font-size:10px;letter-spacing:1.2px">[ NOTES IN THIS ISSUE ]</p></td></tr>${truncatedNotice}<tr><td style="padding:0 16px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${articleMarkup}</table></td></tr><tr><td style="padding:25px 16px 16px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="border-top:1px dashed #35383c;padding-top:16px;color:#717c87;font-family:Consolas,'Courier New',monospace;font-size:10px;line-height:1.8">[ DELIVERY ]<br>Selected by written date, not last-edited date.<br>Generated by BLOGG Newsletter</td><td align="right" valign="bottom" style="border-top:1px dashed #35383c;padding-top:16px;color:#80b6f4;font-family:Consolas,'Courier New',monospace;font-size:10px;white-space:nowrap">END OF ISSUE</td></tr></table></td></tr></table></td></tr></table></td></tr></table></body></html>`;
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BLOGG Newsletter</title></head><body style="margin:0;padding:0;background:#262626;color:#e9edf1;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#262626" style="width:100%;background:#262626"><tr><td align="center" style="padding:28px 12px 36px"><table role="presentation" width="640" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:640px;background:#111213;border:1px solid #1b1d20"><tr><td style="padding:30px 30px 28px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px dashed #35383c"><tr><td align="center" style="padding:17px 12px 27px;color:#80b6f4;font-family:Consolas,'Courier New',monospace;font-size:10px;letter-spacing:1.25px">[ NEWSLETTER &nbsp;·&nbsp; ${htmlEscape(issueDate.toUpperCase())} ]</td></tr><tr><td style="padding:0 16px 20px;border-bottom:1px dashed #35383c"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td valign="top" style="color:#f4f5f6;font-family:Arial,Helvetica,sans-serif;font-size:17px;font-weight:600;letter-spacing:-.3px">◉ Blogg</td><td align="right" valign="top" style="color:#a8b0b9;font-family:Consolas,'Courier New',monospace;font-size:10px;line-height:1.8"><span style="color:#707b87">ISSUED</span> &nbsp; ${htmlEscape(issueDate)}<br><span style="color:#707b87">TOPIC</span> &nbsp; ${htmlEscape(topicLabel)}<br><span style="color:#707b87">BLOGS</span> &nbsp; ${articles.length}${matching.length > articles.length ? ` / ${matching.length}` : ""}</td></tr></table></td></tr><tr><td style="padding:19px 16px 21px;border-bottom:1px dashed #35383c"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td valign="top" width="48%" style="padding-right:14px"><p style="margin:0 0 9px;color:#77828d;font-family:Consolas,'Courier New',monospace;font-size:10px;letter-spacing:1px">[ EDITION ]</p><p style="margin:0;color:#e5e9ed;font-family:Consolas,'Courier New',monospace;font-size:12px;line-height:1.7">${htmlEscape(topicLabel)}</p></td><td valign="top" width="52%" style="padding-left:14px;border-left:1px dashed #35383c"><p style="margin:0 0 9px;color:#77828d;font-family:Consolas,'Courier New',monospace;font-size:10px;letter-spacing:1px">[ WRITTEN DATE RANGE ]</p><p style="margin:0;color:#e5e9ed;font-family:Consolas,'Courier New',monospace;font-size:11px;line-height:1.8;overflow-wrap:anywhere">${htmlEscape(filters.fromLabel)}<br>to&nbsp; ${htmlEscape(filters.toLabel)}</p></td></tr></table></td></tr>${healthSection}${songsSection}${booksForYouSection}<tr><td style="padding:22px 16px 4px"><p style="margin:0;color:#77828d;font-family:Consolas,'Courier New',monospace;font-size:10px;letter-spacing:1.2px">[ NOTES IN THIS ISSUE ]</p></td></tr>${truncatedNotice}<tr><td style="padding:0 16px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${articleMarkup}</table></td></tr><tr><td style="padding:25px 16px 16px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="border-top:1px dashed #35383c;padding-top:16px;color:#717c87;font-family:Consolas,'Courier New',monospace;font-size:10px;line-height:1.8">[ DELIVERY ]<br>Selected by written date, not last-edited date.<br>Generated by BLOGG Newsletter</td><td align="right" valign="bottom" style="border-top:1px dashed #35383c;padding-top:16px;color:#80b6f4;font-family:Consolas,'Courier New',monospace;font-size:10px;white-space:nowrap">END OF ISSUE</td></tr></table></td></tr></table></td></tr></table></td></tr></table></body></html>`;
 
   const subject = `BLOGG Newsletter: ${topicLabel} (${filters.fromLabel} – ${filters.toLabel})`;
   return {

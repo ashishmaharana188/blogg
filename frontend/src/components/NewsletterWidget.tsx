@@ -2,7 +2,11 @@ import { useEffect, useState } from "react";
 import { API_BASE_URL } from "../services/apiBase";
 
 type TopicsResponse = { topics?: string[] };
-type ApiMessage = { message?: string; success?: boolean; articleCount?: number };
+type ApiMessage = {
+  message?: string;
+  success?: boolean;
+  articleCount?: number;
+};
 
 function localDateInput(date: Date): string {
   const year = date.getFullYear();
@@ -11,7 +15,10 @@ function localDateInput(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-async function postNewsletter(path: string, body: Record<string, unknown>): Promise<ApiMessage> {
+async function postNewsletter(
+  path: string,
+  body: Record<string, unknown>,
+): Promise<ApiMessage> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
     credentials: "include",
@@ -19,8 +26,9 @@ async function postNewsletter(path: string, body: Record<string, unknown>): Prom
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify(body),
   });
-  const data = await response.json().catch(() => ({})) as ApiMessage;
-  if (!response.ok) throw new Error(data.message || `Request failed (${response.status})`);
+  const data = (await response.json().catch(() => ({}))) as ApiMessage;
+  if (!response.ok)
+    throw new Error(data.message || `Request failed (${response.status})`);
   return data;
 }
 
@@ -45,15 +53,21 @@ export default function NewsletterWidget() {
       credentials: "omit",
       cache: "no-store",
       headers: { Accept: "application/json" },
-    }).then(async (response) => {
-      if (!response.ok) throw new Error("Could not load newsletter topics");
-      return await response.json() as TopicsResponse;
-    }).then((data) => {
-      if (!cancelled) setTopics(Array.isArray(data.topics) ? data.topics : []);
-    }).catch(() => {
-      if (!cancelled) setTopics([]);
-    });
-    return () => { cancelled = true; };
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Could not load newsletter topics");
+        return (await response.json()) as TopicsResponse;
+      })
+      .then((data) => {
+        if (!cancelled)
+          setTopics(Array.isArray(data.topics) ? data.topics : []);
+      })
+      .catch(() => {
+        if (!cancelled) setTopics([]);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const resetMessage = () => {
@@ -70,10 +84,15 @@ export default function NewsletterWidget() {
     }
     setBusy("subscribe");
     try {
-      const result = await postNewsletter("/api/newsletter/subscribe", { email, website: "" });
+      const result = await postNewsletter("/api/newsletter/subscribe", {
+        email,
+        website: "",
+      });
       setMessage(result.message || "Subscribed.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not subscribe.");
+      setMessage(
+        error instanceof Error ? error.message : "Could not subscribe.",
+      );
       setMessageError(true);
     } finally {
       setBusy("");
@@ -104,7 +123,9 @@ export default function NewsletterWidget() {
       });
       setMessage(result.message || "Newsletter sent.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not send newsletter.");
+      setMessage(
+        error instanceof Error ? error.message : "Could not send newsletter.",
+      );
       setMessageError(true);
     } finally {
       setBusy("");
@@ -112,15 +133,22 @@ export default function NewsletterWidget() {
   };
 
   return (
-    <section className="blog-feed-newsletter-card" aria-labelledby="blog-feed-newsletter-title">
+    <section
+      className="blog-feed-newsletter-card"
+      aria-labelledby="blog-feed-newsletter-title"
+    >
       <div className="blog-feed-newsletter-heading">
-        <span className="blog-feed-newsletter-kicker">BLOGG</span>
         <h2 id="blog-feed-newsletter-title">NEWSLETTER</h2>
       </div>
       <div className="blog-feed-newsletter-fields">
         <div className="blog-feed-newsletter-email-row">
           <div className="blog-feed-newsletter-email-field">
-            <label className="blog-feed-newsletter-label" htmlFor="newsletter-email">Email</label>
+            <label
+              className="blog-feed-newsletter-label"
+              htmlFor="newsletter-email"
+            >
+              Email
+            </label>
             <input
               id="newsletter-email"
               className="blog-feed-newsletter-input"
@@ -129,7 +157,10 @@ export default function NewsletterWidget() {
               autoComplete="email"
               maxLength={254}
               value={email}
-              onChange={(event) => { setEmail(event.target.value); resetMessage(); }}
+              onChange={(event) => {
+                setEmail(event.target.value);
+                resetMessage();
+              }}
               placeholder="you@example.com"
             />
           </div>
@@ -144,39 +175,67 @@ export default function NewsletterWidget() {
         </div>
 
         <div className="blog-feed-newsletter-topic-field">
-          <label className="blog-feed-newsletter-label" htmlFor="newsletter-topic">Topic</label>
+          <label
+            className="blog-feed-newsletter-label"
+            htmlFor="newsletter-topic"
+          >
+            Topic
+          </label>
           <select
             id="newsletter-topic"
             className="blog-feed-newsletter-input"
             value={topic}
-            onChange={(event) => { setTopic(event.target.value); resetMessage(); }}
+            onChange={(event) => {
+              setTopic(event.target.value);
+              resetMessage();
+            }}
           >
             <option value="all">All topics</option>
-            {topics.map((item) => <option key={item} value={item}>{item}</option>)}
+            {topics.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
           </select>
         </div>
 
         <div className="blog-feed-newsletter-dates">
           <div>
-            <label className="blog-feed-newsletter-label" htmlFor="newsletter-from-date">From</label>
+            <label
+              className="blog-feed-newsletter-label"
+              htmlFor="newsletter-from-date"
+            >
+              From
+            </label>
             <input
               id="newsletter-from-date"
               className="blog-feed-newsletter-input"
               type="date"
               value={fromDate}
               max={toDate || undefined}
-              onChange={(event) => { setFromDate(event.target.value); resetMessage(); }}
+              onChange={(event) => {
+                setFromDate(event.target.value);
+                resetMessage();
+              }}
             />
           </div>
           <div>
-            <label className="blog-feed-newsletter-label" htmlFor="newsletter-to-date">To</label>
+            <label
+              className="blog-feed-newsletter-label"
+              htmlFor="newsletter-to-date"
+            >
+              To
+            </label>
             <input
               id="newsletter-to-date"
               className="blog-feed-newsletter-input"
               type="date"
               value={toDate}
               min={fromDate || undefined}
-              onChange={(event) => { setToDate(event.target.value); resetMessage(); }}
+              onChange={(event) => {
+                setToDate(event.target.value);
+                resetMessage();
+              }}
             />
           </div>
         </div>
@@ -197,8 +256,23 @@ export default function NewsletterWidget() {
         >
           {busy === "send" ? "Sending…" : "Send newsletter"}
         </button>
-        {message && <p className={`blog-feed-newsletter-message ${messageError ? "is-error" : ""}`} role="status" aria-live="polite">{message}</p>}
-        <input className="blog-feed-newsletter-honeypot" type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" />
+        {message && (
+          <p
+            className={`blog-feed-newsletter-message ${messageError ? "is-error" : ""}`}
+            role="status"
+            aria-live="polite"
+          >
+            {message}
+          </p>
+        )}
+        <input
+          className="blog-feed-newsletter-honeypot"
+          type="text"
+          name="website"
+          tabIndex={-1}
+          autoComplete="off"
+          aria-hidden="true"
+        />
       </div>
     </section>
   );

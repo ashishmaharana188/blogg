@@ -204,7 +204,11 @@ export default function NewsletterAdminPanel() {
             aria-label={`Decrease ${label}`}
             disabled={value <= 0 || Boolean(busy)}
             onClick={() =>
-              updateHealthRange(metric, field, String(Math.max(0, value - step)))
+              updateHealthRange(
+                metric,
+                field,
+                String(Math.max(0, value - step)),
+              )
             }
           >
             −
@@ -226,7 +230,9 @@ export default function NewsletterAdminPanel() {
             className="newsletter-admin-health-step"
             aria-label={`Increase ${label}`}
             disabled={Boolean(busy)}
-            onClick={() => updateHealthRange(metric, field, String(value + step))}
+            onClick={() =>
+              updateHealthRange(metric, field, String(value + step))
+            }
           >
             +
           </button>
@@ -346,7 +352,6 @@ export default function NewsletterAdminPanel() {
     >
       <div className="newsletter-admin-heading">
         <div>
-          <p className="newsletter-admin-eyebrow">ADMIN</p>
           <h2 id="newsletter-admin-title">NEWSLETTER</h2>
         </div>
         <span className="newsletter-admin-count">
@@ -488,7 +493,10 @@ export default function NewsletterAdminPanel() {
               </div>
             </div>
           </div>
-          <div className="newsletter-admin-health-assets" aria-label="Wellness image counts">
+          <div
+            className="newsletter-admin-health-assets"
+            aria-label="Wellness image counts"
+          >
             <span>L {moodImageCounts.low}</span>
             <span>M {moodImageCounts.medium}</span>
             <span>H {moodImageCounts.high}</span>

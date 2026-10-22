@@ -1266,7 +1266,6 @@ export default function AccountPage() {
                 <section className="account-showcase-section account-showcase-featured-section account-dashboard-featured-header">
                   <div className="showcase-section-heading">
                     <div>
-                      <p className="account-eyebrow">HAND-PICKED</p>
                       <h2>Featured links</h2>
                     </div>
                   </div>
