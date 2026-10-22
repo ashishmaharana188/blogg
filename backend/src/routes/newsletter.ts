@@ -242,8 +242,158 @@ async function buildNewsletter(filters: NewsletterFilters): Promise<{
   return { html, subject, articleCount: matching.length, includedCount: articles.length };
 }
 
+type GmailOAuthCredentials = {
+  user: string;
+  clientId: string;
+  clientSecret: string;
+  refreshToken: string;
+};
+
+type GmailApiError = {
+  code?: unknown;
+  error?: unknown;
+  error_description?: unknown;
+  message?: unknown;
+  errorMessage?: unknown;
+};
+
+function getGmailCredentials(): GmailOAuthCredentials | null {
+  const user = process.env.GMAIL_USER?.trim();
+  const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
+  const refreshToken = process.env.GOOGLE_REFRESH_TOKEN?.trim();
+  if (!user || !emailIsValid(user) || !clientId || !clientSecret || !refreshToken) return null;
+  return { user, clientId, clientSecret, refreshToken };
+}
+
 function emailProviderConfigured(): boolean {
-  return Boolean(process.env.RESEND_API_KEY?.trim() && process.env.NEWSLETTER_FROM_EMAIL?.trim());
+  return getGmailCredentials() !== null;
+}
+
+function gmailSetupMessage(): string {
+  return "Newsletter delivery is not configured. Set GMAIL_USER, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REFRESH_TOKEN on the backend.";
+}
+
+function errorText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object") {
+    const item = value as GmailApiError;
+    const nestedError = item.error && typeof item.error === "object"
+      ? (item.error as { message?: unknown }).message
+      : item.error;
+    return [item.error_description, item.message, item.errorMessage, nestedError]
+      .filter((part): part is string => typeof part === "string" && Boolean(part.trim()))
+      .join(" ").slice(0, 1200);
+  }
+  return "";
+}
+
+function publicGmailError(status: number, message: string): string {
+  if (status === 401 || status === 403 || /invalid_grant|invalid_client|unauthorized|insufficient authentication/i.test(message)) {
+    return "Gmail OAuth authentication failed. Check GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REFRESH_TOKEN, and confirm the Google OAuth app still has Gmail send permission.";
+  }
+  if (status === 429 || /daily.*limit|sending.*limit|quota|rate.?limit|too many messages/i.test(message)) {
+    return "Gmail's sending limit or quota was reached. Wait before retrying and keep newsletter sends within Gmail's daily limits.";
+  }
+  return `Gmail could not send the newsletter${status ? ` (HTTP ${status})` : ""}: ${message || "Unknown Gmail API error"}`;
+}
+
+async function getGmailAccessToken(credentials: GmailOAuthCredentials): Promise<string> {
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: credentials.clientId,
+      client_secret: credentials.clientSecret,
+      refresh_token: credentials.refreshToken,
+      grant_type: "refresh_token",
+    }).toString(),
+  });
+  const payload = await response.json().catch(() => ({})) as { access_token?: string; error?: string; error_description?: string };
+  if (!response.ok || !payload.access_token) {
+    throw new Error(publicGmailError(response.status, payload.error_description || payload.error || "Could not refresh Gmail OAuth access token."));
+  }
+  return payload.access_token;
+}
+
+function base64Url(value: string): string {
+  return Buffer.from(value, "utf8").toString("base64")
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function encodeMimeBody(value: string): string {
+  const encoded = Buffer.from(value, "utf8").toString("base64");
+  return encoded.match(/.{1,76}/g)?.join("\r\n") || "";
+}
+
+function buildRawMessage(to: string, from: string, subject: string, html: string): string {
+  const boundary = `blogg_${Buffer.from(`${Date.now()}_${Math.random()}`).toString("hex")}`;
+  const encodedSubject = `=?UTF-8?B?${Buffer.from(subject, "utf8").toString("base64")}?=`;
+  const text = htmlToPlainText(html);
+  return [
+    `From: "BLOGG Newsletter" <${from}>`,
+    `To: ${to}`,
+    `Reply-To: ${from}`,
+    `Subject: ${encodedSubject}`,
+    "MIME-Version: 1.0",
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    "",
+    `--${boundary}`,
+    'Content-Type: text/plain; charset="UTF-8"',
+    "Content-Transfer-Encoding: base64",
+    "",
+    encodeMimeBody(text),
+    `--${boundary}`,
+    'Content-Type: text/html; charset="UTF-8"',
+    "Content-Transfer-Encoding: base64",
+    "",
+    encodeMimeBody(html),
+    `--${boundary}--`,
+    "",
+  ].join("\r\n");
+}
+
+async function sendOneWithGmailApi(
+  credentials: GmailOAuthCredentials,
+  accessToken: string,
+  recipient: string,
+  subject: string,
+  html: string,
+): Promise<void> {
+  const raw = base64Url(buildRawMessage(recipient, credentials.user, subject, html));
+  const response = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({ raw }),
+  });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    const detail = errorText(payload) || `Gmail API request failed (${response.status})`;
+    throw new Error(publicGmailError(response.status, detail));
+  }
+}
+
+function htmlToPlainText(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|article|h1|h2|header|main|li)>/gi, "\n\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/[ \t]+/g, " ")
+    .replace(/ *\n */g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 async function sendBatch(recipients: string[], subject: string, html: string): Promise<{
@@ -251,42 +401,31 @@ async function sendBatch(recipients: string[], subject: string, html: string): P
   failed: number;
   providerError?: string;
 }> {
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  const from = process.env.NEWSLETTER_FROM_EMAIL?.trim();
-  if (!apiKey || !from) throw new Error("Newsletter email is not configured. Set RESEND_API_KEY and NEWSLETTER_FROM_EMAIL on the backend.");
+  const credentials = getGmailCredentials();
+  if (!credentials) throw new Error(gmailSetupMessage());
 
   let sent = 0;
   let failed = 0;
   let providerError = "";
-  for (let index = 0; index < recipients.length; index += 100) {
-    const chunk = recipients.slice(index, index + 100);
-    const body = chunk.map((email) => ({ from, to: [email], subject, html }));
+  let accessToken: string;
+  try {
+    accessToken = await getGmailAccessToken(credentials);
+  } catch (error) {
+    return { sent: 0, failed: recipients.length, providerError: error instanceof Error ? error.message : "Could not authenticate with Gmail." };
+  }
+
+  // Keep requests sequential to avoid triggering Gmail rate limits from a small personal account.
+  for (let index = 0; index < recipients.length; index += 1) {
     try {
-      const response = await fetch("https://api.resend.com/emails/batch", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify(body),
-      });
-      const result = await response.json().catch(() => ({})) as {
-        data?: Array<{ id?: string }>;
-        message?: string;
-        name?: string;
-      };
-      if (!response.ok) {
-        failed += chunk.length;
-        providerError = result.message || result.name || `Email provider request failed (${response.status})`;
-      } else {
-        const accepted = Array.isArray(result.data) ? result.data.length : chunk.length;
-        sent += Math.min(accepted, chunk.length);
-        failed += Math.max(0, chunk.length - accepted);
-      }
+      await sendOneWithGmailApi(credentials, accessToken, recipients[index], subject, html);
+      sent += 1;
     } catch (error) {
-      failed += chunk.length;
-      providerError = error instanceof Error ? error.message : "Email provider request failed";
+      failed += 1;
+      providerError ||= error instanceof Error ? error.message : "Gmail could not send the newsletter.";
+      if (/authentication failed|quota was reached|sending limit/i.test(providerError)) {
+        failed += recipients.length - index - 1;
+        break;
+      }
     }
   }
   return { sent, failed, ...(providerError ? { providerError } : {}) };
@@ -366,7 +505,7 @@ router.post("/newsletter/send", async (req, res, next) => {
       return;
     }
     if (!emailProviderConfigured()) {
-      res.status(503).json({ message: "Newsletter delivery is not configured on the server yet." });
+      res.status(503).json({ message: "Newsletter delivery is not configured on the server yet. Set GMAIL_USER, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REFRESH_TOKEN on the backend." });
       return;
     }
     const email = normalizeEmail(req.body.email);
@@ -472,7 +611,7 @@ router.post(
         return;
       }
       if (!emailProviderConfigured()) {
-        res.status(503).json({ message: "Newsletter delivery is not configured on the server yet." });
+        res.status(503).json({ message: "Newsletter delivery is not configured on the server yet. Set GMAIL_USER, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REFRESH_TOKEN on the backend." });
         return;
       }
       await ensureIndexes();
