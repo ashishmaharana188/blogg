@@ -463,3 +463,110 @@
     font-size: 0.68rem;
   }
 }
+
+/* Compact mobile newsletter card; desktop placement and sizing remain unchanged. */
+@media (max-width: 640px) {
+  .blog-feed-page .blog-feed-newsletter-card {
+    padding: 9px 10px 10px !important;
+    border-radius: 11px;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 7px !important;
+    padding-bottom: 6px !important;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-kicker {
+    display: none;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-heading h2 {
+    font-size: 0.82rem;
+    line-height: 1.2;
+    letter-spacing: 0.045em;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-fields {
+    gap: 7px 10px !important;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-label {
+    margin: 0 0 3px !important;
+    font-size: 0.62rem;
+    line-height: 1.2;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-input {
+    min-height: 32px;
+    padding: 6px 8px;
+    border-radius: 7px;
+    font-size: 0.7rem;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-dates {
+    gap: 6px;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-dates .blog-feed-newsletter-input {
+    min-height: 32px;
+    padding-left: 4px;
+    padding-right: 2px;
+    font-size: 0.62rem;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-email-row {
+    grid-template-columns: minmax(0, 1fr) 92px;
+    gap: 7px;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-email-row .blog-feed-newsletter-secondary,
+  .blog-feed-page .blog-feed-newsletter-primary {
+    min-height: 32px;
+    padding: 6px 5px;
+    border-radius: 7px;
+    font-size: 0.66rem;
+    line-height: 1.15;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-optin {
+    gap: 5px;
+    margin-top: 0 !important;
+    font-size: 0.6rem;
+    line-height: 1.25;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-optin input {
+    width: 12px;
+    height: 12px;
+    margin-top: 0;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-message {
+    font-size: 0.64rem;
+    line-height: 1.35;
+  }
+}
+
+@media (max-width: 380px) {
+  .blog-feed-page .blog-feed-newsletter-card {
+    padding: 8px 8px 9px !important;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-fields {
+    column-gap: 7px !important;
+    row-gap: 6px !important;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-email-row {
+    grid-template-columns: minmax(0, 1fr) 82px;
+    gap: 6px;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-email-row .blog-feed-newsletter-secondary,
+  .blog-feed-page .blog-feed-newsletter-primary {
+    font-size: 0.62rem;
+  }
+}
