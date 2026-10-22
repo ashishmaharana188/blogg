@@ -1,6 +1,6 @@
 import express from "express";
-import { readdir } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { readFile, readdir } from "node:fs/promises";
+import { basename, dirname, extname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { getDB } from "../db/mongoDBConnect.ts";
 import { getPgClient } from "../db/postgres.ts";
@@ -205,57 +205,84 @@ function renderInline(value: unknown): string {
   }).join("");
 }
 
-function articlePreview(content: unknown): { text: string; html: string; image: string } {
+function articlePreview(content: unknown): { text: string; html: string; image: string; suggestedTitle: string } {
   const blocks = Array.isArray(content) ? content : [];
   const text = extractText(blocks);
   let image = "";
+  let suggestedTitle = "";
   const rendered: string[] = [];
   let chars = 0;
-  for (const raw of blocks) {
-    if (!raw || typeof raw !== "object") continue;
-    const block = raw as Record<string, unknown>;
-    const type = typeof block.type === "string" ? block.type.toLowerCase() : "paragraph";
-    const props = block.props && typeof block.props === "object" ? block.props as Record<string, unknown> : {};
-    if (type === "image") {
-      if (!image) image = safeHttpUrl(props.url ?? props.src, publicSiteUrl());
-      continue;
-    }
-    if (["video", "audio", "file", "linkpreview", "link-preview", "embed", "bookmark", "table", "tablecell"].includes(type)) continue;
-    const rawText = typeof block.content === "string" ? block.content : inlinePlainText(block.content);
-    const plain = rawText.replace(/\s+/g, " ").trim();
-    if (!plain) {
-      if (Array.isArray(block.children) && block.children.length) {
-        const nested = articlePreview(block.children);
-        if (nested.html && chars < 1500 && rendered.length < 5) {
-          const allowance = Math.max(0, 1500 - chars);
-          rendered.push(nested.html.slice(0, allowance * 6));
-          chars += nested.text.length;
-        }
+
+  const renderBlocks = (items: unknown[], depth = 0): void => {
+    if (depth > 5 || chars >= 1500 || rendered.length >= 7) return;
+    for (const raw of items) {
+      if (!raw || typeof raw !== "object" || chars >= 1500 || rendered.length >= 7) continue;
+      const block = raw as Record<string, unknown>;
+      const type = typeof block.type === "string" ? block.type.toLowerCase().replace(/[ _-]/g, "") : "paragraph";
+      const props = block.props && typeof block.props === "object" ? block.props as Record<string, unknown> : {};
+
+      if (type === "image") {
+        const candidate = safeHttpUrl(props.url || props.src || props.imageUrl, publicSiteUrl());
+        if (!image && candidate) image = candidate;
+        // The first image is shown as a full-width hero preview; never print its
+        // Cloudinary identifier, dimensions, or editor props as article text.
+        continue;
       }
-      continue;
+
+      if (type === "linkpreview" || type === "embed" || type === "bookmark") {
+        const href = safeHttpUrl(props.url || props.href);
+        const thumb = safeHttpUrl(props.image || props.thumbnail || props.imageUrl, publicSiteUrl());
+        const provider = typeof props.provider === "string" ? props.provider.trim().slice(0, 90) : "";
+        const title = typeof props.title === "string" ? props.title.trim().slice(0, 220) : "";
+        const description = typeof props.description === "string" ? props.description.trim().slice(0, 420) : "";
+        const linkTitle = title || provider || "Open linked article";
+        if (!suggestedTitle) suggestedTitle = title;
+        if (href && (title || description || thumb)) {
+          const thumbMarkup = thumb
+            ? `<td width="112" valign="top" style="padding:0 12px 0 0"><img src="${htmlEscape(thumb)}" alt="" width="100" style="display:block;width:100px;height:auto;max-height:82px;object-fit:cover;border:1px solid #34383d" /></td>`
+            : "";
+          const descriptionMarkup = description
+            ? `<p style="margin:5px 0 0;color:#9ca9b6;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.5">${htmlEscape(description)}</p>`
+            : "";
+          rendered.push(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:7px 0 12px;border:1px solid #30343a;background:#191c1f"><tr>${thumbMarkup}<td valign="middle" style="padding:10px 11px"><p style="margin:0 0 4px;color:#778898;font-family:Consolas,'Courier New',monospace;font-size:9px;letter-spacing:.5px">${htmlEscape(provider || "LINK PREVIEW")}</p><p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.45"><a href="${htmlEscape(href)}" style="color:#e5edf6;text-decoration:underline">${htmlEscape(linkTitle)}</a></p>${descriptionMarkup}</td></tr></table>`);
+          chars += (title + description).length;
+        }
+        continue;
+      }
+
+      if (["video", "audio", "file", "table", "tablecell"].includes(type)) continue;
+      const rawText = typeof block.content === "string" ? block.content : inlinePlainText(block.content);
+      const plain = rawText.replace(/\s+/g, " ").trim();
+      if (plain) {
+        if (!suggestedTitle && (type.startsWith("heading") || type === "paragraph" || type === "bulletlistitem" || type === "numberedlistitem")) {
+          suggestedTitle = plain.slice(0, 220);
+        }
+        const allowance = Math.min(plain.length, 1500 - chars);
+        const shownText = plain.slice(0, allowance);
+        const inline = allowance < plain.length ? `${htmlEscape(shownText)}…` : renderInline(block.content);
+        const style = "margin:0 0 9px;color:#bdc5ce;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.65;overflow-wrap:anywhere;word-break:break-word";
+        let markup = `<p style="${style}">${inline}</p>`;
+        if (type === "heading" || type === "heading2" || type === "heading3") {
+          const size = type === "heading" ? 17 : type === "heading2" ? 15 : 13;
+          markup = `<h3 style="margin:14px 0 8px;color:#f0f3f6;font-family:Arial,Helvetica,sans-serif;font-size:${size}px;line-height:1.45;font-weight:650">${inline}</h3>`;
+        } else if (type === "quote" || type === "blockquote") {
+          markup = `<blockquote style="margin:8px 0 12px;padding:4px 0 4px 12px;border-left:2px solid #5d86b4;color:#aebdcd;font-family:Georgia,serif;font-size:14px;line-height:1.65">${inline}</blockquote>`;
+        } else if (type === "bulletlistitem") {
+          markup = `<p style="${style};padding-left:14px">•&nbsp; ${inline}</p>`;
+        } else if (type === "numberedlistitem") {
+          markup = `<p style="${style};padding-left:14px">${rendered.length + 1}.&nbsp; ${inline}</p>`;
+        } else if (type === "codeblock") {
+          markup = `<pre style="margin:9px 0 12px;padding:10px;background:#181b1e;border:1px solid #30343a;color:#c8d9ed;font-family:Consolas,'Courier New',monospace;font-size:11px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere">${inline}</pre>`;
+        }
+        rendered.push(markup);
+        chars += allowance;
+      }
+      if (Array.isArray(block.children)) renderBlocks(block.children, depth + 1);
     }
-    if (chars >= 1500 || rendered.length >= 5) break;
-    const allowance = Math.min(plain.length, 1500 - chars);
-    const shownText = plain.slice(0, allowance);
-    const inline = allowance < plain.length ? htmlEscape(shownText) + "…" : renderInline(block.content);
-    let style = "margin:0 0 9px;color:#bdc5ce;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.65;overflow-wrap:anywhere;word-break:break-word";
-    let markup = `<p style="${style}">${inline}</p>`;
-    if (type === "heading" || type === "heading2" || type === "heading3") {
-      const size = type === "heading" ? 17 : type === "heading2" ? 15 : 13;
-      markup = `<h3 style="margin:14px 0 8px;color:#f0f3f6;font-family:Arial,Helvetica,sans-serif;font-size:${size}px;line-height:1.45;font-weight:650">${inline}</h3>`;
-    } else if (type === "quote" || type === "blockquote") {
-      markup = `<blockquote style="margin:8px 0 12px;padding:4px 0 4px 12px;border-left:2px solid #5d86b4;color:#aebdcd;font-family:Georgia,serif;font-size:14px;line-height:1.65">${inline}</blockquote>`;
-    } else if (type === "bulletlistitem" || type === "bullet-list-item") {
-      markup = `<p style="${style};padding-left:14px">•&nbsp; ${inline}</p>`;
-    } else if (type === "numberedlistitem" || type === "numbered-list-item") {
-      markup = `<p style="${style};padding-left:14px">${rendered.length + 1}.&nbsp; ${inline}</p>`;
-    } else if (type === "codeblock" || type === "code-block") {
-      markup = `<pre style="margin:9px 0 12px;padding:10px;background:#181b1e;border:1px solid #30343a;color:#c8d9ed;font-family:Consolas,'Courier New',monospace;font-size:11px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere">${inline}</pre>`;
-    }
-    rendered.push(markup);
-    chars += allowance;
-  }
-  return { text, html: rendered.join(""), image };
+  };
+
+  renderBlocks(blocks);
+  return { text, html: rendered.join(""), image, suggestedTitle };
 }
 
 function numberOrNull(value: unknown): number | null {
@@ -328,32 +355,67 @@ function rangeScore(value: number, range: NewsletterHealthConfig["sleep"]): numb
   return Math.round(((range.poorHigh - value) / (range.poorHigh - range.goodHigh)) * 100);
 }
 
-async function findTierImages(tier: "low" | "medium" | "high"): Promise<string[]> {
-  const directories = [
+function newsletterPublicDirectories(): string[] {
+  return [...new Set([
     resolve(NEWSLETTER_SOURCE_DIR, "../../../frontend/public"),
+    // Retain backward compatibility with the project's existing source-media folder.
+    resolve(NEWSLETTER_SOURCE_DIR, "../../../frontend/src/public"),
     resolve(process.cwd(), "../frontend/public"),
     resolve(process.cwd(), "frontend/public"),
-  ];
+    resolve(process.cwd(), "../frontend/src/public"),
+    resolve(process.cwd(), "frontend/src/public"),
+  ])];
+}
+
+function isMoodImageName(filename: string, tier?: "low" | "medium" | "high"): boolean {
+  if (basename(filename) !== filename || filename.includes("..")) return false;
+  const tierPrefix = tier ? `${tier}_` : /^(?:low|medium|high)_/i;
+  const startsCorrectly = typeof tierPrefix === "string"
+    ? filename.toLowerCase().startsWith(tierPrefix)
+    : tierPrefix.test(filename);
+  return startsCorrectly && NEWSLETTER_IMAGE_EXTENSIONS.has(extname(filename).toLowerCase());
+}
+
+async function findTierImages(tier: "low" | "medium" | "high"): Promise<string[]> {
   const found: string[] = [];
-  for (const directory of [...new Set(directories)]) {
+  for (const directory of newsletterPublicDirectories()) {
     try {
       const entries = await readdir(directory, { withFileTypes: true });
       for (const entry of entries) {
-        if (!entry.isFile() || !entry.name.toLowerCase().startsWith(`${tier}_`)) continue;
-        const extension = entry.name.slice(entry.name.lastIndexOf(".")).toLowerCase();
-        if (NEWSLETTER_IMAGE_EXTENSIONS.has(extension) && !found.includes(entry.name)) found.push(entry.name);
+        if (!entry.isFile() || !isMoodImageName(entry.name, tier) || found.includes(entry.name)) continue;
+        found.push(entry.name);
       }
       if (found.length) break;
-    } catch { /* Frontend assets may not be present in a backend-only working directory. */ }
+    } catch { /* Frontend assets may not be present in this backend checkout. */ }
   }
   return found;
+}
+
+async function findMoodImagePath(filename: string): Promise<string | null> {
+  if (!isMoodImageName(filename)) return null;
+  for (const directory of newsletterPublicDirectories()) {
+    try {
+      const entries = await readdir(directory, { withFileTypes: true });
+      if (entries.some((entry) => entry.isFile() && entry.name === filename)) return resolve(directory, filename);
+    } catch { /* Try the next known asset directory. */ }
+  }
+  return null;
+}
+
+function publicApiUrl(): string {
+  return (process.env.API_PUBLIC_URL || "").trim().replace(/\/+$/, "");
 }
 
 async function randomTierImage(tier: "low" | "medium" | "high"): Promise<string> {
   const images = await findTierImages(tier);
   if (!images.length) return "";
   const filename = images[Math.floor(Math.random() * images.length)];
-  return `${publicSiteUrl()}/${encodeURIComponent(filename)}`;
+  // Serve the repository asset from Render itself. This avoids Vercel root-dir and
+  // static-public-path mismatches and gives Gmail a stable, absolute HTTPS image URL.
+  const apiBase = publicApiUrl();
+  return apiBase
+    ? `${apiBase}/api/newsletter/media/${encodeURIComponent(filename)}`
+    : `${publicSiteUrl()}/${encodeURIComponent(filename)}`;
 }
 
 async function collectHealthMetrics(): Promise<HealthMetrics> {
@@ -462,7 +524,13 @@ async function getSongsForNewsletter(): Promise<Array<{ title: string; artists: 
       const title = (typeof track.title === "string" ? track.title : typeof track.name === "string" ? track.name : "").trim().slice(0, 240);
       const videoId = typeof track.videoId === "string" ? track.videoId : "";
       const url = safeHttpUrl(track.url) || (videoId && /^[A-Za-z0-9_-]{6,20}$/.test(videoId) ? `https://music.youtube.com/watch?v=${encodeURIComponent(videoId)}` : "");
-      const thumbnail = safeHttpUrl(track.thumbnail ?? track.image);
+      // Gmail's remote-image proxy can fail against expiring or transformed image
+      // URLs. YouTube Music records already contain the video ID, so build the
+      // canonical public i.ytimg.com thumbnail URL from that stable ID.
+      const stableVideoId = /^[A-Za-z0-9_-]{6,20}$/.test(videoId) ? videoId : "";
+      const thumbnail = stableVideoId
+        ? `https://i.ytimg.com/vi/${encodeURIComponent(stableVideoId)}/hqdefault.jpg`
+        : safeHttpUrl(track.thumbnail ?? track.image);
       const artistsRaw = Array.isArray(track.artists) ? track.artists : typeof track.artist === "string" ? [track.artist] : [];
       const artists = artistsRaw.filter((item): item is string => typeof item === "string").map((item) => item.trim()).filter(Boolean).slice(0, 4);
       const key = videoId || url || title.toLowerCase();
@@ -599,10 +667,15 @@ async function buildNewsletter(filters: NewsletterFilters): Promise<{
     if (topicKey !== "all" && !tags.some((tag) => tag.toLocaleLowerCase() === topicKey)) return [];
     const preview = articlePreview(row.content);
     const text = preview.text.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
+    const storedTitle = typeof row.title === "string" ? row.title.trim() : "";
+    const storedSubtitle = typeof row.subtitle === "string" ? row.subtitle.trim() : "";
+    // Do not send a blank editor draft as a newsletter article. When a real note
+    // has content but no explicit title, derive a human-readable title from it.
+    if (!storedTitle && !preview.suggestedTitle && !storedSubtitle && !text && !preview.html && !preview.image) return [];
     return [{
       id: typeof row.blogg_id === "string" ? row.blogg_id : (row._id ? String(row._id) : ""),
-      title: typeof row.title === "string" && row.title.trim() ? row.title.trim() : "Untitled note",
-      subtitle: typeof row.subtitle === "string" ? row.subtitle.trim() : "",
+      title: storedTitle || preview.suggestedTitle || "Untitled note",
+      subtitle: storedSubtitle,
       author: typeof row.author === "string" ? row.author.trim() : "",
       date,
       tags,
@@ -944,6 +1017,29 @@ function canPublicSend(key: string): boolean {
   }
   return true;
 }
+
+// Public, read-only endpoint for images bundled with the app. Only tier-prefixed
+// image assets are served; all other filenames and path traversal attempts are rejected.
+router.get("/newsletter/media/:filename", async (req, res, next) => {
+  try {
+    const filename = String(req.params.filename || "");
+    if (!isMoodImageName(filename)) return res.status(404).end();
+    const path = await findMoodImagePath(filename);
+    if (!path) return res.status(404).end();
+    const data = await readFile(path);
+    const mime: Record<string, string> = {
+      ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png",
+      ".webp": "image/webp", ".gif": "image/gif", ".avif": "image/avif",
+    };
+    res.setHeader("Content-Type", mime[extname(filename).toLowerCase()] || "application/octet-stream");
+    res.setHeader("Content-Length", String(data.length));
+    res.setHeader("Cache-Control", "public, max-age=86400, s-maxage=604800, immutable");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    return res.status(200).send(data);
+  } catch (error) {
+    return next(error);
+  }
+});
 
 router.get("/newsletter/topics", async (_req, res, next) => {
   try {

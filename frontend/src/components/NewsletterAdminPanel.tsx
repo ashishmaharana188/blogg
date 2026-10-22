@@ -11,6 +11,7 @@ type HealthConfig = {
   sleep: { poorLow: number; goodLow: number; goodHigh: number; poorHigh: number };
   bpm: { poorLow: number; goodLow: number; goodHigh: number; poorHigh: number };
 };
+type HealthRangeMetric = Exclude<keyof HealthConfig, "enabled">;
 type HealthConfigResponse = {
   config?: HealthConfig;
   moodImageCounts?: { low?: number; medium?: number; high?: number };
@@ -87,7 +88,7 @@ export default function NewsletterAdminPanel() {
     return () => { cancelled = true; };
   }, []);
 
-  const updateHealthRange = (metric: keyof HealthConfig, field: string, rawValue: string) => {
+  const updateHealthRange = (metric: HealthRangeMetric, field: string, rawValue: string) => {
     const value = Number(rawValue);
     setHealthConfig((current) => ({
       ...current,
@@ -119,7 +120,7 @@ export default function NewsletterAdminPanel() {
     }
   };
 
-  const rangeField = (metric: keyof HealthConfig, field: string, label: string, suffix = "") => {
+  const rangeField = (metric: HealthRangeMetric, field: string, label: string, suffix = "") => {
     const value = (healthConfig[metric] as unknown as Record<string, number>)[field];
     const id = `newsletter-health-${metric}-${field}`;
     return (
