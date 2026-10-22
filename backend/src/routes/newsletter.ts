@@ -403,19 +403,47 @@ async function findMoodImagePath(filename: string): Promise<string | null> {
 }
 
 function publicApiUrl(): string {
-  return (process.env.API_PUBLIC_URL || "").trim().replace(/\/+$/, "");
+  // API_PUBLIC_URL may have been entered as an API base including `/api`, while
+  // Render also supplies a canonical service URL automatically. Try configured
+  // values in order and normalize every valid candidate to its origin.
+  const candidates = [
+    process.env.API_PUBLIC_URL?.trim(),
+    process.env.RENDER_EXTERNAL_URL?.trim(),
+    process.env.RENDER_EXTERNAL_HOSTNAME?.trim()
+      ? `https://${process.env.RENDER_EXTERNAL_HOSTNAME.trim()}`
+      : "",
+  ].filter((value): value is string => Boolean(value));
+
+  for (const configured of candidates) {
+    try {
+      const candidate = /^[a-z][a-z\d+.-]*:\/\//i.test(configured)
+        ? configured
+        : `https://${configured}`;
+      const parsed = new URL(candidate);
+      const localHttp = parsed.protocol === "http:" && ["localhost", "127.0.0.1"].includes(parsed.hostname);
+      if ((!localHttp && parsed.protocol !== "https:") || parsed.username || parsed.password) continue;
+      // URL.origin drops `/api`, `/feed`, query strings, and fragments if someone
+      // pasted a full endpoint rather than the host. This avoids broken email links.
+      return parsed.origin.replace(/\/+$/, "");
+    } catch {
+      // Try Render's platform URL if the explicit API_PUBLIC_URL is malformed.
+    }
+  }
+  console.warn("[newsletter:media] No valid public backend URL found; using the configured frontend origin for mood images.");
+  return "";
 }
 
 async function randomTierImage(tier: "low" | "medium" | "high"): Promise<string> {
   const images = await findTierImages(tier);
   if (!images.length) return "";
   const filename = images[Math.floor(Math.random() * images.length)];
-  // Serve the repository asset from Render itself. This avoids Vercel root-dir and
-  // static-public-path mismatches and gives Gmail a stable, absolute HTTPS image URL.
+  // Gmail must receive an absolute publicly reachable image URL. Prefer the
+  // Render-hosted media endpoint; fall back to the frontend root only when the
+  // backend has no public URL configured. publicSiteUrl() strips route paths.
   const apiBase = publicApiUrl();
-  return apiBase
-    ? `${apiBase}/api/newsletter/media/${encodeURIComponent(filename)}`
-    : `${publicSiteUrl()}/${encodeURIComponent(filename)}`;
+  if (apiBase) return `${apiBase}/api/newsletter/media/${encodeURIComponent(filename)}`;
+  const siteBase = publicSiteUrl();
+  return siteBase ? `${siteBase}/${encodeURIComponent(filename)}` : "";
 }
 
 async function collectHealthMetrics(): Promise<HealthMetrics> {
@@ -613,7 +641,19 @@ function dateLabel(date: Date): string {
 }
 
 function publicSiteUrl(): string {
-  return (process.env.BLOGG_PUBLIC_URL || process.env.FRONTEND_URL || "http://localhost:5173").trim().replace(/\/+$/, "");
+  const configured = (process.env.BLOGG_PUBLIC_URL || process.env.FRONTEND_URL || "http://localhost:5173").trim();
+  try {
+    const candidate = /^[a-z][a-z\d+.-]*:\/\//i.test(configured) ? configured : `https://${configured}`;
+    const parsed = new URL(candidate);
+    if ((parsed.protocol !== "https:" && parsed.hostname !== "localhost" && parsed.hostname !== "127.0.0.1")
+      || parsed.username || parsed.password) return "";
+    // BLOGG_PUBLIC_URL identifies the site, not a page such as `/feed`.
+    // URLs generated below append `/read/...` and static asset filenames.
+    return parsed.origin.replace(/\/+$/, "");
+  } catch {
+    console.warn("[newsletter] Public site URL is not a valid absolute URL.");
+    return "";
+  }
 }
 
 async function getAvailableTopics(): Promise<string[]> {
@@ -693,6 +733,10 @@ async function buildNewsletter(filters: NewsletterFilters): Promise<{
 
   const articles = matching.slice(0, MAX_ARTICLES_PER_EMAIL);
   const topicLabel = filters.topic === "all" ? "All topics" : filters.topic;
+  // The longer-form written preview is reserved for a single-day issue. For
+  // ranges spanning multiple days, show the title/metadata/hero image/tags/link
+  // without dumping the body text from every matching note into one email.
+  const includeWrittenContent = filters.fromLabel === filters.toLabel;
   const issueDate = dateLabel(new Date());
   const articleMarkup = articles.map((article, index) => {
     const noteUrl = article.id
@@ -701,11 +745,13 @@ async function buildNewsletter(filters: NewsletterFilters): Promise<{
     const tagMarkup = article.tags.length
       ? `<p style="margin:12px 0 0;color:#7f8a96;font-family:Consolas,'Courier New',monospace;font-size:10px;line-height:1.8;letter-spacing:.25px">${article.tags.map((tag) => `<span style="display:inline-block;margin:0 6px 5px 0;padding:3px 7px;border:1px solid #34383d;color:#9da8b3">${htmlEscape(tag)}</span>`).join("")}</p>`
       : "";
-    const bodyPreview = article.previewHtml
-      ? `<div style="margin:14px 0 0;padding:13px 12px 5px;border:1px solid #25292e;background:#151719">${article.previewHtml}</div>`
-      : article.excerpt
-        ? `<p style="margin:13px 0 0;color:#bdc5ce;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.7">${htmlEscape(article.excerpt)}${article.excerpt.length >= 520 ? "…" : ""}</p>`
-        : "";
+    const bodyPreview = !includeWrittenContent
+      ? ""
+      : article.previewHtml
+        ? `<div style="margin:14px 0 0;padding:13px 12px 5px;border:1px solid #25292e;background:#151719">${article.previewHtml}</div>`
+        : article.excerpt
+          ? `<p style="margin:13px 0 0;color:#bdc5ce;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.7">${htmlEscape(article.excerpt)}${article.excerpt.length >= 520 ? "…" : ""}</p>`
+          : "";
     const imagePreview = article.previewImage
       ? `<img src="${htmlEscape(article.previewImage)}" alt="" width="520" style="display:block;width:100%;max-width:520px;height:auto;max-height:250px;object-fit:cover;margin:14px 0 0;border:1px solid #34383d" />`
       : "";

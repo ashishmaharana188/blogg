@@ -11,6 +11,9 @@ const DEFAULT_WIDGETS = {
   music: false,
   health: false,
   reading: false,
+  // The newsletter already exists on the public feed. Preserve it for users whose
+  // saved visibility document predates the newsletter toggle.
+  newsletter: true,
 } as const;
 
 type WidgetKey = keyof typeof DEFAULT_WIDGETS;
@@ -26,11 +29,13 @@ async function readWidgetVisibility(): Promise<WidgetVisibility> {
     ? setting.widgets as Record<string, unknown>
     : {};
 
-  // Opt-in by default: until an administrator enables a widget, public pages hide it.
+  // Existing widgets remain opt-in. The newsletter defaults to its current public
+  // behavior when loading legacy settings that do not yet contain this key.
   return {
-    music: saved.music === true,
-    health: saved.health === true,
-    reading: saved.reading === true,
+    music: typeof saved.music === "boolean" ? saved.music : DEFAULT_WIDGETS.music,
+    health: typeof saved.health === "boolean" ? saved.health : DEFAULT_WIDGETS.health,
+    reading: typeof saved.reading === "boolean" ? saved.reading : DEFAULT_WIDGETS.reading,
+    newsletter: typeof saved.newsletter === "boolean" ? saved.newsletter : DEFAULT_WIDGETS.newsletter,
   };
 }
 
@@ -50,7 +55,7 @@ router.patch("/admin/showcase/widget-visibility", ...ADMIN_GUARD, async (req, re
 
     if (!isWidgetKey(widget) || typeof enabled !== "boolean") {
       return res.status(400).json({
-        message: "widget must be music, health, or reading, and enabled must be a boolean.",
+        message: "widget must be music, health, reading, or newsletter, and enabled must be a boolean.",
       });
     }
 

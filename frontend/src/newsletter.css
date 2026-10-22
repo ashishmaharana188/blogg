@@ -684,3 +684,210 @@
   flex: 0 0 auto;
   margin-top: 3px;
 }
+
+
+/* Tablet: a flexible Health column plus a genuinely mini newsletter card.
+   Older rail rules capped Health at ~310px, leaving unused space to its right. */
+@media (min-width: 721px) and (max-width: 1248px) {
+  .blog-feed-page .blog-feed-content > .blog-feed-side-rails {
+    position: static !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(208px, 232px) !important;
+    align-items: start !important;
+    justify-content: stretch !important;
+    gap: 14px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 8px 0 22px !important;
+    box-sizing: border-box !important;
+  }
+
+  .blog-feed-page .blog-feed-content > .blog-feed-side-rails > .blog-feed-widget-rail {
+    grid-column: 1 !important;
+    position: static !important;
+    display: flex !important;
+    flex-flow: row wrap !important;
+    align-items: stretch !important;
+    align-content: flex-start !important;
+    justify-content: stretch !important;
+    gap: 12px !important;
+    flex: 0 1 auto !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .blog-feed-page .blog-feed-content > .blog-feed-side-rails > .blog-feed-widget-rail > .blog-feed-health-widget-root {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+  }
+
+  .blog-feed-page .blog-feed-content > .blog-feed-side-rails > .blog-feed-widget-rail > .blog-feed-health-widget-root > .blog-feed-health-widget {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .blog-feed-page .blog-feed-content > .blog-feed-side-rails > .blog-feed-newsletter-rail {
+    grid-column: 2 !important;
+    position: static !important;
+    display: block !important;
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-rail > .blog-feed-newsletter-root,
+  .blog-feed-page .blog-feed-newsletter-rail .blog-feed-newsletter-card {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-card {
+    padding: 10px 10px 11px !important;
+    border-radius: 10px !important;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-heading {
+    margin-bottom: 8px !important;
+    padding-bottom: 7px !important;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-kicker {
+    font-size: .54rem !important;
+    margin-bottom: 2px !important;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-heading h2 {
+    font-size: .8rem !important;
+    line-height: 1.25 !important;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-fields {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 7px !important;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-email-row {
+    display: grid !important;
+    grid-column: 1 !important;
+    grid-template-columns: minmax(0, 1fr) 72px !important;
+    gap: 6px !important;
+    min-width: 0 !important;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-label {
+    margin: 0 0 3px !important;
+    font-size: .59rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-input {
+    min-height: 31px !important;
+    padding: 5px 6px !important;
+    border-radius: 6px !important;
+    font-size: .64rem !important;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-dates {
+    grid-column: 1 !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-dates .blog-feed-newsletter-input {
+    min-height: 31px !important;
+    padding-left: 3px !important;
+    padding-right: 1px !important;
+    font-size: .56rem !important;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-email-row .blog-feed-newsletter-secondary,
+  .blog-feed-page .blog-feed-newsletter-primary {
+    min-width: 0 !important;
+    min-height: 31px !important;
+    margin-top: 0 !important;
+    padding: 5px 4px !important;
+    border-radius: 6px !important;
+    font-size: .59rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-optin {
+    grid-column: 1 !important;
+    gap: 5px !important;
+    margin: 0 !important;
+    font-size: .59rem !important;
+    line-height: 1.3 !important;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-primary {
+    grid-column: 1 !important;
+    width: 100% !important;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-message {
+    grid-column: 1 !important;
+    margin-top: 0 !important;
+    font-size: .62rem !important;
+  }
+
+  /* With Newsletter switched off, reclaim its entire column for Health. */
+  .blog-feed-page .blog-feed-content > .blog-feed-side-rails[data-newsletter-visible="false"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .blog-feed-page .blog-feed-content > .blog-feed-side-rails[data-newsletter-visible="false"] > .blog-feed-widget-rail {
+    grid-column: 1 / -1 !important;
+  }
+}
+
+/* Mobile: stack the rails, but keep the Newsletter form compressed. */
+@media (max-width: 720px) {
+  .blog-feed-page .blog-feed-content > .blog-feed-side-rails {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 12px !important;
+    width: 100% !important;
+  }
+
+  .blog-feed-page .blog-feed-content > .blog-feed-side-rails > .blog-feed-widget-rail,
+  .blog-feed-page .blog-feed-content > .blog-feed-side-rails > .blog-feed-newsletter-rail {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+
+  .blog-feed-page .blog-feed-content > .blog-feed-side-rails > .blog-feed-widget-rail > .blog-feed-health-widget-root,
+  .blog-feed-page .blog-feed-content > .blog-feed-side-rails > .blog-feed-widget-rail > .blog-feed-health-widget-root > .blog-feed-health-widget {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-card {
+    padding: 10px 11px !important;
+    border-radius: 10px !important;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-heading {
+    margin-bottom: 7px !important;
+    padding-bottom: 6px !important;
+  }
+
+  .blog-feed-page .blog-feed-newsletter-kicker { display: none !important; }
+  .blog-feed-page .blog-feed-newsletter-heading h2 { font-size: .82rem !important; }
+  .blog-feed-page .blog-feed-newsletter-fields { gap: 7px 9px !important; }
+}
