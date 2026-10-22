@@ -20,6 +20,7 @@ import showcaseWidgetVisibilityRouter from "../routes/showcaseWidgetVisibility.t
 import linkPreviewRouter from "../routes/linkPreview.ts";
 import healthRouter from "../routes/health.ts";
 import healthSleepRouter from "../routes/healthSleep.ts";
+import healthExerciseAggregateRouter from "../routes/healthExerciseAggregate.ts";
 import currentReadingSearchPaginationRouter from "../routes/currentReadingSearchPagination.ts";
 import currentReadingRouter from "../routes/currentReading.ts";
 import clientUiLogsRouter from "../routes/clientUiLogs.ts";
@@ -47,6 +48,7 @@ app.use("/api", youtubeMusicApiRouter);
 app.use("/api", showcaseWidgetVisibilityRouter);
 app.use("/api", healthRouter);
 app.use("/api", healthSleepRouter);
+app.use("/api", healthExerciseAggregateRouter);
 // Register the paginated search first; it handles the matching GET before the legacy search route.
 app.use("/api", currentReadingSearchPaginationRouter);
 app.use("/api", currentReadingRouter);

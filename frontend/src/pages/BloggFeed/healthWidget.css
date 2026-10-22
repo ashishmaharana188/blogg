@@ -235,3 +235,18 @@
     width: min(184px, calc(100vw - 40px));
   }
 }
+
+/* Separate sleep metrics from the exercise summary. */
+.blog-feed-health-sleep {
+  border-top-color: #dfe5eb;
+}
+
+/* These cards can grow with their content when the widget group wraps. */
+.blog-feed-health-widget-root {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+.blog-feed-health-sleep .blog-feed-health-exercise-metrics {
+  gap: 8px;
+}

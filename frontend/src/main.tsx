@@ -8,6 +8,7 @@ import { installUiConsoleDiagnostics } from "./utils/uiDiagnostics";
 
 import "./App.css";
 import "./mobile.css";
+import "./exerciseMetricVisibilityBootstrap.ts";
 import "./healthWidgetsBootstrap.tsx";
 import "./currentReadingBootstrap.tsx";
 import "./widgetVisibilityBootstrap.ts";
