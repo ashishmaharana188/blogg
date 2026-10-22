@@ -288,31 +288,94 @@ function errorText(value: unknown): string {
   return "";
 }
 
-function publicGmailError(status: number, message: string): string {
-  if (status === 401 || status === 403 || /invalid_grant|invalid_client|unauthorized|insufficient authentication/i.test(message)) {
-    return "Gmail OAuth authentication failed. Check GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REFRESH_TOKEN, and confirm the Google OAuth app still has Gmail send permission.";
+function logGmailFailure(event: {
+  phase: "oauth-token-refresh" | "gmail-send";
+  status?: number;
+  errorCode?: string;
+  message: string;
+  sender?: string;
+  recipient?: string;
+}): void {
+  // Never log OAuth secrets, access tokens, refresh tokens, or message content.
+  console.error("[newsletter:gmail]", JSON.stringify({
+    timestamp: new Date().toISOString(),
+    ...event,
+  }));
+}
+
+function googleErrorCode(payload: unknown): string {
+  if (!payload || typeof payload !== "object") return "unknown_error";
+  const item = payload as Record<string, unknown>;
+  if (typeof item.error === "string") return item.error;
+  if (item.error && typeof item.error === "object") {
+    const nested = item.error as Record<string, unknown>;
+    if (typeof nested.status === "string") return nested.status;
+    if (typeof nested.code === "number") return String(nested.code);
+    if (Array.isArray(nested.errors)) {
+      const first = nested.errors.find((entry) => entry && typeof entry === "object") as Record<string, unknown> | undefined;
+      if (first && typeof first.reason === "string") return first.reason;
+    }
   }
-  if (status === 429 || /daily.*limit|sending.*limit|quota|rate.?limit|too many messages/i.test(message)) {
+  return typeof item.error_description === "string" ? item.error_description : "unknown_error";
+}
+
+function publicGmailError(status: number, message: string, code = "unknown_error", phase: "oauth-token-refresh" | "gmail-send" = "gmail-send"): string {
+  const normalized = `${code} ${message}`.toLowerCase();
+  if (/invalid_client/.test(normalized)) {
+    return "Google rejected the OAuth client credentials (invalid_client). Check that GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET belong to the same active OAuth client.";
+  }
+  if (/invalid_grant/.test(normalized)) {
+    return "Google rejected the refresh token (invalid_grant). Regenerate GOOGLE_REFRESH_TOKEN using this exact OAuth client and the intended Gmail account, then update Render.";
+  }
+  if (/access_denied|unauthorized_client/.test(normalized)) {
+    return "Google denied OAuth access. Check the OAuth app's audience/test-user settings and authorize the intended Gmail account again.";
+  }
+  if (/insufficientpermissions|insufficient authentication scopes|insufficient_permission/.test(normalized)) {
+    return "The Gmail access token lacks permission to send mail. Reauthorize with https://www.googleapis.com/auth/gmail.send and replace GOOGLE_REFRESH_TOKEN.";
+  }
+  if (status === 403 && phase === "gmail-send") {
+    return `Gmail API denied the send request (HTTP 403, ${code}). Check that Gmail API is enabled in the same Google Cloud project, the token has gmail.send scope, and the sender account matches the authorized account. Google detail: ${message}`;
+  }
+  if (status === 401) {
+    return `Google rejected the ${phase === "oauth-token-refresh" ? "OAuth token refresh" : "Gmail API authorization"} (HTTP 401, ${code}). Google detail: ${message}`;
+  }
+  if (status === 429 || /daily.*limit|sending.*limit|quota|rate.?limit|too many messages/.test(normalized)) {
     return "Gmail's sending limit or quota was reached. Wait before retrying and keep newsletter sends within Gmail's daily limits.";
   }
-  return `Gmail could not send the newsletter${status ? ` (HTTP ${status})` : ""}: ${message || "Unknown Gmail API error"}`;
+  return `Gmail ${phase === "oauth-token-refresh" ? "OAuth token refresh" : "send"} failed${status ? ` (HTTP ${status})` : ""}${code ? ` [${code}]` : ""}: ${message || "Unknown Google API error"}`;
 }
 
 async function getGmailAccessToken(credentials: GmailOAuthCredentials): Promise<string> {
-  const response = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: credentials.clientId,
-      client_secret: credentials.clientSecret,
-      refresh_token: credentials.refreshToken,
-      grant_type: "refresh_token",
-    }).toString(),
-  });
+  let response: Response;
+  try {
+    response = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: credentials.clientId,
+        client_secret: credentials.clientSecret,
+        refresh_token: credentials.refreshToken,
+        grant_type: "refresh_token",
+      }).toString(),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Network request failed";
+    logGmailFailure({ phase: "oauth-token-refresh", message, sender: credentials.user });
+    throw new Error(`Could not reach Google's OAuth token endpoint: ${message}`);
+  }
   const payload = await response.json().catch(() => ({})) as { access_token?: string; error?: string; error_description?: string };
   if (!response.ok || !payload.access_token) {
-    throw new Error(publicGmailError(response.status, payload.error_description || payload.error || "Could not refresh Gmail OAuth access token."));
+    const code = payload.error || "unknown_error";
+    const detail = payload.error_description || code || "Could not refresh Gmail OAuth access token.";
+    logGmailFailure({ phase: "oauth-token-refresh", status: response.status, errorCode: code, message: detail, sender: credentials.user });
+    throw new Error(publicGmailError(response.status, detail, code, "oauth-token-refresh"));
   }
+  console.info("[newsletter:gmail]", JSON.stringify({
+    timestamp: new Date().toISOString(),
+    phase: "oauth-token-refresh",
+    outcome: "success",
+    sender: credentials.user,
+  }));
   return payload.access_token;
 }
 
@@ -373,8 +436,24 @@ async function sendOneWithGmailApi(
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
     const detail = errorText(payload) || `Gmail API request failed (${response.status})`;
-    throw new Error(publicGmailError(response.status, detail));
+    const code = googleErrorCode(payload);
+    logGmailFailure({
+      phase: "gmail-send",
+      status: response.status,
+      errorCode: code,
+      message: detail,
+      sender: credentials.user,
+      recipient,
+    });
+    throw new Error(publicGmailError(response.status, detail, code, "gmail-send"));
   }
+  console.info("[newsletter:gmail]", JSON.stringify({
+    timestamp: new Date().toISOString(),
+    phase: "gmail-send",
+    outcome: "accepted",
+    sender: credentials.user,
+    recipient,
+  }));
 }
 
 function htmlToPlainText(html: string): string {
