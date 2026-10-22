@@ -409,10 +409,10 @@ export default function HealthWidget() {
     );
   const hasRecords =
     hasHealthRecords || hasExerciseRecords || selectedMetrics.includes("sleep");
-  const totalSessionCount =
-    allExerciseAggregates?.history?.sessionCount ??
-    finiteNumber(exerciseData?.sessionCount) ??
-    recentSessions.length;
+  //const totalSessionCount =
+  //  allExerciseAggregates?.history?.sessionCount ??
+  //  finiteNumber(exerciseData?.sessionCount) ??
+  //  recentSessions.length;
 
   return (
     <aside
