@@ -570,3 +570,117 @@
     font-size: 0.62rem;
   }
 }
+
+/* Newsletter sender wellness configuration */
+.newsletter-admin-health-config {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid var(--newsletter-border, #dce3eb);
+  border-radius: 12px;
+  background: var(--newsletter-panel-soft, rgba(115, 132, 153, 0.055));
+}
+.newsletter-admin-health-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.newsletter-admin-health-heading h3 {
+  margin: 2px 0 0;
+  font-size: 0.95rem;
+  letter-spacing: 0.035em;
+}
+.newsletter-admin-health-badge {
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  border: 1px solid var(--newsletter-border, #dce3eb);
+  border-radius: 999px;
+  font-size: 0.68rem;
+  color: var(--newsletter-muted, #718096);
+}
+.newsletter-admin-health-note {
+  margin: 10px 0 14px;
+  color: var(--newsletter-muted, #718096);
+  font-size: 0.76rem;
+  line-height: 1.55;
+}
+.newsletter-admin-health-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.newsletter-admin-health-metric {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--newsletter-border, #dce3eb);
+  border-radius: 9px;
+  background: var(--newsletter-panel, #fff);
+}
+.newsletter-admin-health-metric h4 {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+.newsletter-admin-health-metric > p {
+  margin: 5px 0 11px;
+  color: var(--newsletter-muted, #718096);
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+.newsletter-admin-health-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.newsletter-admin-health-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  color: var(--newsletter-muted, #718096);
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+.newsletter-admin-health-field .newsletter-admin-input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  min-height: 34px;
+  padding: 6px 8px;
+  font-size: 0.78rem;
+}
+.newsletter-admin-health-assets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0;
+}
+.newsletter-admin-health-assets span {
+  padding: 5px 7px;
+  border: 1px dashed var(--newsletter-border, #dce3eb);
+  border-radius: 6px;
+  color: var(--newsletter-muted, #718096);
+  font-size: 0.67rem;
+}
+@media (max-width: 520px) {
+  .newsletter-admin-health-config { padding: 11px; }
+  .newsletter-admin-health-grid { grid-template-columns: minmax(0, 1fr); }
+  .newsletter-admin-health-metric { padding: 10px; }
+}
+
+.newsletter-admin-health-enable {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 13px;
+  padding: 10px 11px;
+  border: 1px solid var(--newsletter-border, #dce3eb);
+  border-radius: 8px;
+  background: var(--newsletter-panel, #fff);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+.newsletter-admin-health-enable input {
+  flex: 0 0 auto;
+  margin-top: 3px;
+}

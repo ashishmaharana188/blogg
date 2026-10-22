@@ -4,6 +4,24 @@ import { API_BASE_URL } from "../services/apiBase";
 type AdminSummary = { subscriberCount?: number };
 type TopicsResponse = { topics?: string[] };
 type SendResult = { sent?: number; failed?: number; message?: string; providerError?: string };
+type HealthConfig = {
+  enabled: boolean;
+  steps: { poor: number; target: number };
+  reps: { poor: number; target: number };
+  sleep: { poorLow: number; goodLow: number; goodHigh: number; poorHigh: number };
+  bpm: { poorLow: number; goodLow: number; goodHigh: number; poorHigh: number };
+};
+type HealthConfigResponse = {
+  config?: HealthConfig;
+  moodImageCounts?: { low?: number; medium?: number; high?: number };
+};
+const DEFAULT_HEALTH_CONFIG: HealthConfig = {
+  enabled: true,
+  steps: { poor: 0, target: 10000 },
+  reps: { poor: 0, target: 40 },
+  sleep: { poorLow: 180, goodLow: 420, goodHigh: 540, poorHigh: 720 },
+  bpm: { poorLow: 40, goodLow: 55, goodHigh: 85, poorHigh: 130 },
+};
 
 function localDateInput(date: Date): string {
   const year = date.getFullYear();
@@ -33,7 +51,9 @@ export default function NewsletterAdminPanel() {
     date.setDate(date.getDate() - 30);
     return localDateInput(date);
   });
-  const [busy, setBusy] = useState<"export" | "send" | "" >("");
+  const [busy, setBusy] = useState<"export" | "send" | "save-health" | "" >("");
+  const [healthConfig, setHealthConfig] = useState<HealthConfig>(DEFAULT_HEALTH_CONFIG);
+  const [moodImageCounts, setMoodImageCounts] = useState({ low: 0, medium: 0, high: 0 });
   const [message, setMessage] = useState("");
   const [messageError, setMessageError] = useState(false);
 
@@ -47,10 +67,17 @@ export default function NewsletterAdminPanel() {
     void Promise.all([
       readJson<AdminSummary>("/api/newsletter/admin/summary"),
       readJson<TopicsResponse>("/api/newsletter/topics"),
-    ]).then(([summary, topicsResult]) => {
+      readJson<HealthConfigResponse>("/api/newsletter/admin/health-config"),
+    ]).then(([summary, topicsResult, healthResult]) => {
       if (cancelled) return;
       setSubscriberCount(Number(summary.subscriberCount || 0));
       setTopics(Array.isArray(topicsResult.topics) ? topicsResult.topics : []);
+      setHealthConfig(healthResult.config || DEFAULT_HEALTH_CONFIG);
+      setMoodImageCounts({
+        low: Number(healthResult.moodImageCounts?.low || 0),
+        medium: Number(healthResult.moodImageCounts?.medium || 0),
+        high: Number(healthResult.moodImageCounts?.high || 0),
+      });
     }).catch((error) => {
       if (!cancelled) {
         setMessage(error instanceof Error ? error.message : "Could not load newsletter settings.");
@@ -59,6 +86,49 @@ export default function NewsletterAdminPanel() {
     });
     return () => { cancelled = true; };
   }, []);
+
+  const updateHealthRange = (metric: keyof HealthConfig, field: string, rawValue: string) => {
+    const value = Number(rawValue);
+    setHealthConfig((current) => ({
+      ...current,
+      [metric]: { ...current[metric], [field]: Number.isFinite(value) ? value : 0 },
+    } as HealthConfig));
+  };
+
+  const saveHealthRanges = async () => {
+    setBusy("save-health");
+    setMessage("");
+    setMessageError(false);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/newsletter/admin/health-config`, {
+        method: "PUT",
+        credentials: "include",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ config: healthConfig }),
+      });
+      const result = await response.json().catch(() => ({})) as HealthConfigResponse & { message?: string; success?: boolean };
+      if (!response.ok) throw new Error(result.message || `Could not save health ranges (${response.status})`);
+      if (result.config) setHealthConfig(result.config);
+      setMessage("Health score ranges saved. The next newsletter will use them.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not save health score ranges.");
+      setMessageError(true);
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const rangeField = (metric: keyof HealthConfig, field: string, label: string, suffix = "") => {
+    const value = (healthConfig[metric] as unknown as Record<string, number>)[field];
+    const id = `newsletter-health-${metric}-${field}`;
+    return (
+      <label className="newsletter-admin-health-field" htmlFor={id} key={id}>
+        <span>{label}{suffix ? ` (${suffix})` : ""}</span>
+        <input id={id} className="newsletter-admin-input" type="number" min="0" step="1" value={value} onChange={(event) => updateHealthRange(metric, field, event.target.value)} />
+      </label>
+    );
+  };
 
   const exportCsv = async () => {
     setBusy("export");
@@ -163,6 +233,71 @@ export default function NewsletterAdminPanel() {
       <button className="newsletter-admin-primary" type="button" onClick={() => void sendToAll()} disabled={Boolean(busy)}>
         {busy === "send" ? "Sending to subscribers…" : "Send to all subscribers"}
       </button>
+      <div className="newsletter-admin-divider" />
+      <section className="newsletter-admin-health-config" aria-labelledby="newsletter-health-config-title">
+        <div className="newsletter-admin-health-heading">
+          <div>
+            <p className="newsletter-admin-eyebrow">SENDER WIDGET</p>
+            <h3 id="newsletter-health-config-title">WELLNESS INDEX RANGES</h3>
+          </div>
+          <span className="newsletter-admin-health-badge">7-day average</span>
+        </div>
+        <p className="newsletter-admin-health-note">Adjust what earns points. Scores above 80 use a high image, 50–80 use medium, and below 50 use low. This is an editorial score, not medical advice.</p>
+        <label className="newsletter-admin-health-enable">
+          <input
+            type="checkbox"
+            checked={healthConfig.enabled}
+            onChange={(event) => setHealthConfig((current) => ({ ...current, enabled: event.target.checked }))}
+          />
+          <span>Include the sender’s health metrics and wellness image in every newsletter</span>
+        </label>
+        <div className="newsletter-admin-health-grid">
+          <div className="newsletter-admin-health-metric">
+            <h4>Average daily steps</h4>
+            <p>Score rises from the poor threshold to the full-score target.</p>
+            <div className="newsletter-admin-health-fields">
+              {rangeField("steps", "poor", "0-point threshold", "steps/day")}
+              {rangeField("steps", "target", "100-point target", "steps/day")}
+            </div>
+          </div>
+          <div className="newsletter-admin-health-metric">
+            <h4>Average daily repetitions</h4>
+            <p>Average daily exercise reps across recorded sessions.</p>
+            <div className="newsletter-admin-health-fields">
+              {rangeField("reps", "poor", "0-point threshold", "reps/day")}
+              {rangeField("reps", "target", "100-point target", "reps/day")}
+            </div>
+          </div>
+          <div className="newsletter-admin-health-metric">
+            <h4>Average sleep</h4>
+            <p>Points peak inside the good range and taper outside it.</p>
+            <div className="newsletter-admin-health-fields">
+              {rangeField("sleep", "poorLow", "Poor at/below", "minutes")}
+              {rangeField("sleep", "goodLow", "Good from", "minutes")}
+              {rangeField("sleep", "goodHigh", "Good through", "minutes")}
+              {rangeField("sleep", "poorHigh", "Poor at/above", "minutes")}
+            </div>
+          </div>
+          <div className="newsletter-admin-health-metric">
+            <h4>Average recorded BPM</h4>
+            <p>Uses recorded readings and workout averages, not resting-only BPM.</p>
+            <div className="newsletter-admin-health-fields">
+              {rangeField("bpm", "poorLow", "Poor at/below", "BPM")}
+              {rangeField("bpm", "goodLow", "Good from", "BPM")}
+              {rangeField("bpm", "goodHigh", "Good through", "BPM")}
+              {rangeField("bpm", "poorHigh", "Poor at/above", "BPM")}
+            </div>
+          </div>
+        </div>
+        <div className="newsletter-admin-health-assets">
+          <span>LOW images: {moodImageCounts.low}</span>
+          <span>MEDIUM images: {moodImageCounts.medium}</span>
+          <span>HIGH images: {moodImageCounts.high}</span>
+        </div>
+        <button className="newsletter-admin-secondary" type="button" onClick={() => void saveHealthRanges()} disabled={Boolean(busy)}>
+          {busy === "save-health" ? "Saving ranges…" : "Save health ranges"}
+        </button>
+      </section>
       {message && <p className={`newsletter-admin-message ${messageError ? "is-error" : ""}`} role="status" aria-live="polite">{message}</p>}
     </section>
   );
