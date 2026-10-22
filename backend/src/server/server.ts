@@ -24,6 +24,7 @@ import healthExerciseAggregateRouter from "../routes/healthExerciseAggregate.ts"
 import currentReadingSearchPaginationRouter from "../routes/currentReadingSearchPagination.ts";
 import currentReadingRouter from "../routes/currentReading.ts";
 import clientUiLogsRouter from "../routes/clientUiLogs.ts";
+import newsletterRouter from "../routes/newsletter.ts";
 
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
@@ -42,14 +43,14 @@ app.use("/api/admin", adminStatusRouter);
 app.use("/api", linkPreviewRouter);
 // The diagnostics route stores technical client failures in backend logs; details never enter the UI.
 app.use("/api", clientUiLogsRouter);
-// Mount OAuth-backed routes before the general showcase routes.
+// OAuth-backed routes are registered before the general showcase routes.
 app.use("/api", youtubeMusicApiRouter);
-// Individual public-profile widget visibility controls.
 app.use("/api", showcaseWidgetVisibilityRouter);
 app.use("/api", healthRouter);
 app.use("/api", healthSleepRouter);
 app.use("/api", healthExerciseAggregateRouter);
-// Register the paginated search first; it handles the matching GET before the legacy search route.
+app.use("/api", newsletterRouter);
+// Register paginated search before the legacy route.
 app.use("/api", currentReadingSearchPaginationRouter);
 app.use("/api", currentReadingRouter);
 app.use("/api", adminShowcaseRouter);

@@ -12,8 +12,10 @@ import "./exerciseMetricVisibilityBootstrap.ts";
 import "./healthWidgetsBootstrap.tsx";
 import "./currentReadingBootstrap.tsx";
 import "./widgetVisibilityBootstrap.ts";
+import "./newsletterBootstrap.tsx";
 import "./responsiveHealthDashboard.css";
 import "./responsiveFeedWidgetFlow.css";
+import "./newsletter.css";
 
 installUiConsoleDiagnostics();
 
