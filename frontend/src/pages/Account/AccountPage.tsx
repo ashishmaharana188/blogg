@@ -1191,12 +1191,7 @@ export default function AccountPage() {
                   aria-labelledby="account-status-heading"
                 >
                   <p className="account-eyebrow">ADMIN</p>
-                  <h1
-                    id="account-status-heading"
-                    className="account-status-title"
-                  >
-                    Administrator status
-                  </h1>
+
                   <div className="account-presence-row" aria-live="polite">
                     <span
                       className={`account-presence-pill ${presence.online ? "is-online" : "is-offline"}`}
