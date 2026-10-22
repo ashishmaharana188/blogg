@@ -46,6 +46,7 @@ export default function NewsletterWidget() {
   const [busy, setBusy] = useState<"send" | "subscribe" | "">("");
   const [message, setMessage] = useState("");
   const [messageError, setMessageError] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -134,13 +135,29 @@ export default function NewsletterWidget() {
 
   return (
     <section
-      className="blog-feed-newsletter-card"
+      className={`blog-feed-newsletter-card${isMinimized ? " is-minimized" : ""}`}
       aria-labelledby="blog-feed-newsletter-title"
     >
       <div className="blog-feed-newsletter-heading">
         <h2 id="blog-feed-newsletter-title">NEWSLETTER</h2>
+        <button
+          className="blog-feed-newsletter-toggle"
+          type="button"
+          aria-label={isMinimized ? "Expand newsletter widget" : "Minimize newsletter widget"}
+          aria-expanded={!isMinimized}
+          aria-controls="blog-feed-newsletter-fields"
+          title={isMinimized ? "Expand newsletter" : "Minimize newsletter"}
+          onClick={() => setIsMinimized((current) => !current)}
+        >
+          <span aria-hidden="true">{isMinimized ? "+" : "−"}</span>
+        </button>
       </div>
-      <div className="blog-feed-newsletter-fields">
+      <div
+        className="blog-feed-newsletter-fields"
+        id="blog-feed-newsletter-fields"
+        hidden={isMinimized}
+        aria-hidden={isMinimized}
+      >
         <div className="blog-feed-newsletter-email-row">
           <div className="blog-feed-newsletter-email-field">
             <label

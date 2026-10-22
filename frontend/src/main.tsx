@@ -17,6 +17,8 @@ import "./newsletterVisibilityBootstrap.ts";
 import "./responsiveHealthDashboard.css";
 import "./responsiveFeedWidgetFlow.css";
 import "./newsletter.css";
+import "./responsiveFeedTabletBridge.css";
+import "./newsletterMinimizable.css";
 
 installUiConsoleDiagnostics();
 
