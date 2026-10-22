@@ -118,16 +118,29 @@ function getTags(value: unknown): string[] {
 }
 
 function extractText(value: unknown): string {
+  // Blogg posts use BlockNote-style blocks. Only read authored text fields;
+  // walking every property also leaks UUIDs, layout props and image metadata.
   if (typeof value === "string") return value;
-  if (Array.isArray(value)) return value.map(extractText).filter(Boolean).join(" ");
+  if (Array.isArray(value)) {
+    return value.map(extractText).filter(Boolean).join(" ");
+  }
   if (!value || typeof value !== "object") return "";
+
   const item = value as Record<string, unknown>;
-  const ownText = typeof item.text === "string" ? item.text : "";
-  const nested = Object.entries(item)
-    .filter(([key]) => key !== "text" && key !== "url" && key !== "href")
-    .map(([, child]) => extractText(child))
-    .filter(Boolean);
-  return [ownText, ...nested].filter(Boolean).join(" ");
+  const type = typeof item.type === "string" ? item.type.toLocaleLowerCase() : "";
+  if (["image", "video", "audio", "file", "linkpreview", "link-preview", "embed", "bookmark"].includes(type)) {
+    return "";
+  }
+
+  const parts: string[] = [];
+  if (typeof item.text === "string") parts.push(item.text);
+  if (typeof item.content === "string") parts.push(item.content);
+  else if (Array.isArray(item.content)) parts.push(extractText(item.content));
+  else if (item.content && typeof item.content === "object") parts.push(extractText(item.content));
+  if (Array.isArray(item.children)) parts.push(extractText(item.children));
+  else if (item.children && typeof item.children === "object") parts.push(extractText(item.children));
+
+  return parts.filter(Boolean).join(" ");
 }
 
 function htmlEscape(value: string): string {
@@ -201,7 +214,7 @@ async function buildNewsletter(filters: NewsletterFilters): Promise<{
     if (!date || date < filters.fromDate || date >= filters.toDate) return [];
     const tags = getTags(row.tags);
     if (topicKey !== "all" && !tags.some((tag) => tag.toLocaleLowerCase() === topicKey)) return [];
-    const text = extractText(row.content).replace(/\s+/g, " ").trim();
+    const text = extractText(row.content).replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
     return [{
       id: typeof row.blogg_id === "string" ? row.blogg_id : "",
       title: typeof row.title === "string" && row.title.trim() ? row.title.trim() : "Untitled note",
@@ -209,7 +222,7 @@ async function buildNewsletter(filters: NewsletterFilters): Promise<{
       author: typeof row.author === "string" ? row.author.trim() : "",
       date,
       tags,
-      excerpt: text.slice(0, 900),
+      excerpt: text.slice(0, 520),
     }];
   }).sort((a, b) => b.date.getTime() - a.date.getTime());
 
@@ -221,23 +234,32 @@ async function buildNewsletter(filters: NewsletterFilters): Promise<{
 
   const articles = matching.slice(0, MAX_ARTICLES_PER_EMAIL);
   const topicLabel = filters.topic === "all" ? "All topics" : filters.topic;
-  const articleMarkup = articles.map((article) => {
-    const link = article.id
-      ? `<p style="margin:14px 0 0"><a href="${htmlEscape(`${publicSiteUrl()}/read/${encodeURIComponent(article.id)}`)}" style="color:#24364b;font-weight:600;text-decoration:underline">Read note</a></p>`
+  const issueDate = dateLabel(new Date());
+  const articleMarkup = articles.map((article, index) => {
+    const noteUrl = article.id
+      ? `${publicSiteUrl()}/read/${encodeURIComponent(article.id)}`
       : "";
-    const tags = article.tags.length
-      ? `<p style="margin:10px 0 0;color:#687586;font-size:12px">${article.tags.map(htmlEscape).join(" · ")}</p>`
+    const tagMarkup = article.tags.length
+      ? `<p style="margin:12px 0 0;color:#7f8a96;font-family:Consolas,'Courier New',monospace;font-size:10px;line-height:1.8;letter-spacing:.25px">${article.tags.map((tag) => `<span style="display:inline-block;margin:0 6px 5px 0;padding:3px 7px;border:1px solid #34383d;color:#9da8b3">${htmlEscape(tag)}</span>`).join("")}</p>`
       : "";
     const excerpt = article.excerpt
-      ? `<p style="margin:12px 0 0;color:#475569;line-height:1.7;white-space:pre-wrap">${htmlEscape(article.excerpt)}${article.excerpt.length >= 900 ? "…" : ""}</p>`
+      ? `<p style="margin:13px 0 0;color:#b6bdc5;font-family:Consolas,'Courier New',monospace;font-size:12px;line-height:1.75;overflow-wrap:anywhere;word-break:break-word">${htmlEscape(article.excerpt)}${article.excerpt.length >= 520 ? "…" : ""}</p>`
       : "";
-    return `<article style="padding:22px 0;border-bottom:1px solid #e6eaf0"><p style="margin:0 0 7px;color:#7b8797;font-size:12px">${htmlEscape(dateLabel(article.date))}${article.author ? ` · ${htmlEscape(article.author)}` : ""}</p><h2 style="margin:0;color:#182536;font-size:20px;line-height:1.4">${htmlEscape(article.title)}</h2>${article.subtitle ? `<p style="margin:8px 0 0;color:#344054;line-height:1.6">${htmlEscape(article.subtitle)}</p>` : ""}${excerpt}${tags}${link}</article>`;
+    const subtitle = article.subtitle
+      ? `<p style="margin:8px 0 0;color:#d5dbe1;font-family:Consolas,'Courier New',monospace;font-size:12px;line-height:1.7">${htmlEscape(article.subtitle)}</p>`
+      : "";
+    const readLink = noteUrl
+      ? `<p style="margin:16px 0 0;font-family:Consolas,'Courier New',monospace;font-size:10px;letter-spacing:.5px"><a href="${htmlEscape(noteUrl)}" style="color:#8ebeff;text-decoration:none;border-bottom:1px solid #5278a5;padding-bottom:3px">OPEN NOTE&nbsp; ↗</a></p>`
+      : "";
+    const articleMeta = `${dateLabel(article.date)}${article.author ? ` &nbsp;·&nbsp; ${htmlEscape(article.author)}` : ""}`;
+    return `<tr><td style="padding:22px 0 24px;border-bottom:1px dashed #35383c"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="font-family:Consolas,'Courier New',monospace;color:#8c98a4;font-size:10px;line-height:1.6;letter-spacing:.4px;text-transform:uppercase">${String(index + 1).padStart(2, "0")} &nbsp; / &nbsp; ${articleMeta}</td><td align="right" style="font-family:Arial,Helvetica,sans-serif;color:#5e91ce;font-size:10px;white-space:nowrap">BLOGG NOTE</td></tr></table><h2 style="margin:12px 0 0;color:#f0f2f4;font-family:Consolas,'Courier New',monospace;font-size:14px;font-weight:600;line-height:1.65;letter-spacing:.1px;overflow-wrap:anywhere;word-break:break-word">${htmlEscape(article.title)}</h2>${subtitle}${excerpt}${tagMarkup}${readLink}</td></tr>`;
   }).join("");
 
   const truncatedNotice = matching.length > articles.length
-    ? `<p style="padding:12px 14px;border-radius:8px;background:#f4f6f8;color:#536174;font-size:13px">Showing the latest ${articles.length} of ${matching.length} matching notes.</p>`
+    ? `<tr><td style="padding:14px 0;border-bottom:1px dashed #35383c;color:#aeb8c2;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6">Showing the latest ${articles.length} of ${matching.length} matching notes.</td></tr>`
     : "";
-  const html = `<!doctype html><html><body style="margin:0;background:#f5f7fa;font-family:Arial,Helvetica,sans-serif;color:#182536"><div style="max-width:680px;margin:0 auto;padding:28px 18px"><header style="padding:22px 24px;background:#182536;color:#fff;border-radius:12px 12px 0 0"><p style="margin:0 0 7px;font-size:11px;letter-spacing:2px">BLOGG</p><h1 style="margin:0;font-size:25px;line-height:1.3">Newsletter</h1><p style="margin:12px 0 0;color:#e0e7ef;font-size:13px;line-height:1.6">${htmlEscape(topicLabel)} · ${htmlEscape(filters.fromLabel)} to ${htmlEscape(filters.toLabel)}</p></header><main style="padding:0 24px 22px;background:#fff;border:1px solid #e1e6ed;border-top:0;border-radius:0 0 12px 12px">${truncatedNotice}${articleMarkup}<p style="margin:20px 0 0;color:#7b8797;font-size:11px">Selected by written date, not last-edited date.</p></main></div></body></html>`;
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BLOGG Newsletter</title></head><body style="margin:0;padding:0;background:#262626;color:#e9edf1;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#262626" style="width:100%;background:#262626"><tr><td align="center" style="padding:28px 12px 36px"><table role="presentation" width="640" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:640px;background:#111213;border:1px solid #1b1d20"><tr><td style="padding:30px 30px 28px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px dashed #35383c"><tr><td align="center" style="padding:17px 12px 27px;color:#80b6f4;font-family:Consolas,'Courier New',monospace;font-size:10px;letter-spacing:1.25px">[ NEWSLETTER &nbsp;·&nbsp; ${htmlEscape(issueDate.toUpperCase())} ]</td></tr><tr><td style="padding:0 16px 20px;border-bottom:1px dashed #35383c"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td valign="top" style="color:#f4f5f6;font-family:Arial,Helvetica,sans-serif;font-size:17px;font-weight:600;letter-spacing:-.3px">◉ Blogg</td><td align="right" valign="top" style="color:#a8b0b9;font-family:Consolas,'Courier New',monospace;font-size:10px;line-height:1.8"><span style="color:#707b87">ISSUED</span> &nbsp; ${htmlEscape(issueDate)}<br><span style="color:#707b87">TOPIC</span> &nbsp; ${htmlEscape(topicLabel)}<br><span style="color:#707b87">NOTES</span> &nbsp; ${articles.length}${matching.length > articles.length ? ` / ${matching.length}` : ""}</td></tr></table></td></tr><tr><td style="padding:19px 16px 21px;border-bottom:1px dashed #35383c"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td valign="top" width="48%" style="padding-right:14px"><p style="margin:0 0 9px;color:#77828d;font-family:Consolas,'Courier New',monospace;font-size:10px;letter-spacing:1px">[ EDITION ]</p><p style="margin:0;color:#e5e9ed;font-family:Consolas,'Courier New',monospace;font-size:12px;line-height:1.7">${htmlEscape(topicLabel)}</p></td><td valign="top" width="52%" style="padding-left:14px;border-left:1px dashed #35383c"><p style="margin:0 0 9px;color:#77828d;font-family:Consolas,'Courier New',monospace;font-size:10px;letter-spacing:1px">[ WRITTEN DATE RANGE ]</p><p style="margin:0;color:#e5e9ed;font-family:Consolas,'Courier New',monospace;font-size:11px;line-height:1.8;overflow-wrap:anywhere">${htmlEscape(filters.fromLabel)}<br>to&nbsp; ${htmlEscape(filters.toLabel)}</p></td></tr></table></td></tr><tr><td style="padding:22px 16px 4px"><p style="margin:0;color:#77828d;font-family:Consolas,'Courier New',monospace;font-size:10px;letter-spacing:1.2px">[ NOTES IN THIS ISSUE ]</p></td></tr>${truncatedNotice}<tr><td style="padding:0 16px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${articleMarkup}</table></td></tr><tr><td style="padding:25px 16px 16px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="border-top:1px dashed #35383c;padding-top:16px;color:#717c87;font-family:Consolas,'Courier New',monospace;font-size:10px;line-height:1.8">[ DELIVERY ]<br>Selected by written date, not last-edited date.<br>Generated by BLOGG Newsletter</td><td align="right" valign="bottom" style="border-top:1px dashed #35383c;padding-top:16px;color:#80b6f4;font-family:Consolas,'Courier New',monospace;font-size:10px;white-space:nowrap">END OF ISSUE</td></tr></table></td></tr></table></td></tr></table></td></tr></table></body></html>`;
+
   const subject = `BLOGG Newsletter: ${topicLabel} (${filters.fromLabel} – ${filters.toLabel})`;
   return { html, subject, articleCount: matching.length, includedCount: articles.length };
 }
