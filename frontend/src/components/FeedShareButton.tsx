@@ -12,7 +12,11 @@ const SNAPSHOT_PROGRESS_MESSAGES = [
   "Saving the new feed preview and replacing the previous snapshot…",
 ];
 
-export default function FeedShareButton() {
+export default function FeedShareButton({
+  canUpdateSnapshot = false,
+}: {
+  canUpdateSnapshot?: boolean;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [snapshotVersion, setSnapshotVersion] = useState("initial");
@@ -160,16 +164,18 @@ export default function FeedShareButton() {
               <button type="button" className="account-share-primary" onClick={() => void shareLink()}>Share link…</button>
               <button type="button" className="account-share-secondary" onClick={() => void copyLink()}>Copy link</button>
             </div>
-            <div className="account-share-snapshot-actions">
-              <button
-                type="button"
-                className="account-share-snapshot-button"
-                onClick={updateSnapshot}
-                disabled={Boolean(snapshotCaptureUrl)}
-              >
-                {snapshotCaptureUrl ? "Capturing feed…" : "Update rich-preview snapshot"}
-              </button>
-            </div>
+            {canUpdateSnapshot && (
+              <div className="account-share-snapshot-actions">
+                <button
+                  type="button"
+                  className="account-share-snapshot-button"
+                  onClick={updateSnapshot}
+                  disabled={Boolean(snapshotCaptureUrl)}
+                >
+                  {snapshotCaptureUrl ? "Capturing feed…" : "Update rich-preview snapshot"}
+                </button>
+              </div>
+            )}
             {feedback && <p className="account-share-feedback typewriter-font" role="status">{feedback}</p>}
           </section>
         </div>

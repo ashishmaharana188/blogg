@@ -58,7 +58,7 @@ export default function BloggHeader({
         </div>
         <hr className="blogg-shared-header-rule flex-1 min-w-4 border-black border-2 mx-3 mt-2" />
         <div className="blogg-shared-header-actions flex gap-4 shrink-0 pl-4 self-end mt-2 items-center">
-          {page === "feed" && isAdmin && !isFeedSnapshotCapture && <FeedShareButton />}
+          {page === "feed" && !isFeedSnapshotCapture && <FeedShareButton canUpdateSnapshot={isAdmin} />}
           {isAdmin && !isFeedSnapshotCapture && (
             <button
               className="text-black block hover:font-bold truncate"
