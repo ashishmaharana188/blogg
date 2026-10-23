@@ -1,5 +1,7 @@
-/* Feed-specific refinements. The dialog reuses accountShareButton.css so both
-   share windows have the same spacing, controls, typography and responsive rules. */
+/* Feed Share intentionally inherits the exact dialog styles from
+   accountShareButton.css, which is imported immediately before this file in
+   FeedShareButton.tsx. Keep this stylesheet limited to feed-trigger styling.
+   Do not add dialog, preview, input, action-button, or modal overrides here. */
 .feed-share-trigger {
   white-space: nowrap;
   flex: 0 0 auto;
@@ -9,124 +11,8 @@
   margin-top: 0;
 }
 
-/* Match the account share dialog's balanced header and spacing. */
-.feed-share-dialog-title {
-  margin: 0 auto 0 0;
-  color: #172033;
-  font-size: 1.15rem;
-  font-weight: 700;
-  line-height: 1.35;
-  letter-spacing: 0;
-}
-
-.account-share-dialog[aria-labelledby="feed-share-dialog-title"] {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  width: min(100%, 520px);
-  max-height: min(92vh, 780px);
-  padding: 23px;
-  overflow-x: hidden;
-}
-
-.account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-dialog-header {
-  align-items: center;
-  margin: 0 0 18px;
-  min-height: 30px;
-}
-
-.account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-preview-card {
-  flex: 0 0 auto;
-  margin: 0;
-  width: 100%;
-}
-
-.account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-preview-card > img {
-  display: block;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 1200 / 630;
-  object-fit: cover;
-}
-
-.account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-preview-copy {
-  padding: 13px 15px 14px;
-}
-
-.account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-preview-kicker {
-  margin: 0;
-  line-height: 1.5;
-}
-
-.account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-url-row {
-  align-items: stretch;
-  margin-top: 17px;
-  gap: 8px;
-}
-
-.account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-url-row input {
-  min-height: 40px;
-  padding: 10px 11px;
-  line-height: 1.4;
-}
-
-.account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-url-row button,
-.account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-actions button {
-  min-height: 40px;
-  padding: 10px 14px;
-  line-height: 1.3;
-}
-
-.account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-actions {
-  gap: 9px;
-  margin-top: 10px;
-}
-
-.account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-snapshot-actions {
-  margin-top: 16px;
-  padding-top: 14px;
-  gap: 8px;
-}
-
-.account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-snapshot-button {
-  min-height: 40px;
-  padding: 10px 14px;
-  line-height: 1.35;
-}
-
-.account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-feedback {
-  margin: 13px 0 0;
-  overflow-wrap: anywhere;
-}
-
-.feed-share-no-snapshot {
-  box-sizing: border-box;
-  display: flex;
-  min-height: 210px;
-  width: 100%;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-  padding: 24px;
-  background: #f8fafc;
-  color: #475569;
-  text-align: center;
-}
-
-.feed-share-no-snapshot strong {
-  color: #1f2937;
-  font-size: .88rem;
-}
-
-.feed-share-no-snapshot span {
-  max-width: 310px;
-  font-family: Arial, sans-serif;
-  font-size: .78rem;
-  line-height: 1.55;
-}
-
-/* Mobile header: lightweight link-like action, as requested. */
+/* On mobile, the trigger is a simple inline header action. This does not
+   affect the modal opened for administrators. */
 @media (max-width: 680px) {
   .blogg-shared-header-inner {
     gap: 10px;
@@ -175,45 +61,5 @@
   .blogg-shared-header-actions {
     padding-left: 0;
     gap: 10px !important;
-  }
-
-  .account-share-backdrop:has(.account-share-dialog[aria-labelledby="feed-share-dialog-title"]) {
-    padding: 14px;
-  }
-
-  .account-share-dialog[aria-labelledby="feed-share-dialog-title"] {
-    width: 100%;
-    max-height: calc(100dvh - 28px);
-    padding: 18px;
-    border-radius: 15px;
-  }
-
-  .account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-dialog-header {
-    margin-bottom: 14px;
-  }
-
-  .account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-url-row {
-    flex-direction: column;
-    margin-top: 14px;
-  }
-
-  .account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-url-row input {
-    width: 100%;
-    min-height: 42px;
-    font-size: .72rem;
-  }
-
-  .account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-url-row button {
-    align-self: flex-end;
-  }
-
-  .account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-actions {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
-
-  .account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-actions button {
-    min-width: 0;
-    white-space: normal;
   }
 }
