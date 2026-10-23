@@ -13,7 +13,7 @@
   "dependencies": {
     "@blocknote/core": "0.48.1",
     "@blocknote/mantine": "0.48.1",
-    "@blocknote/react": "0.47.1",
+    "@blocknote/react": "0.48.1",
     "@ionic/react": "^8.8.9",
     "@mantine/core": "^8.3.11",
     "@mantine/hooks": "^8.3.11",
