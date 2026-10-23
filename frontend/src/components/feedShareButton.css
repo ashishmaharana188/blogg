@@ -1,28 +1,199 @@
-/* Feed Share intentionally inherits the exact dialog styles from
-   accountShareButton.css, which is imported immediately before this file in
-   FeedShareButton.tsx. Keep this stylesheet limited to feed-trigger styling.
-   Do not add dialog, preview, input, action-button, or modal overrides here. */
+/* Feed header trigger only; the modal uses the same shared design tokens as Account Share. */
 .feed-share-trigger {
   white-space: nowrap;
   flex: 0 0 auto;
 }
 
-.blogg-shared-header-nav .feed-share-trigger {
-  margin-top: 0;
+.blogg-shared-header-nav .feed-share-trigger { margin-top: 0; }
+
+/* Explicitly restore modal layout against broad/global button rules. The prior
+   version relied on inherited flex behavior, which allowed controls to bunch up. */
+.account-share-backdrop:has(.account-share-dialog[aria-labelledby="feed-share-dialog-title"]) {
+  box-sizing: border-box;
+  padding: 18px;
 }
 
-/* On mobile, the trigger is a simple inline header action. This does not
-   affect the modal opened for administrators. */
+.account-share-dialog[aria-labelledby="feed-share-dialog-title"] {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  width: min(100%, 520px);
+  max-height: min(92vh, 780px);
+  margin: auto;
+  padding: 23px;
+  overflow: auto;
+}
+
+.account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-dialog-header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  min-height: 30px;
+  margin: 0 0 18px;
+}
+
+.account-share-dialog[aria-labelledby="feed-share-dialog-title"] .feed-share-dialog-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  color: #172033;
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-close {
+  display: inline-flex;
+  flex: 0 0 30px;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
+  margin: 0 0 0 auto;
+  padding: 0;
+  line-height: 1;
+}
+
+.account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-preview-card {
+  flex: 0 0 auto;
+  width: 100%;
+  margin: 0;
+}
+
+.account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-preview-card > img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1200 / 630;
+  object-fit: cover;
+}
+
+.account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-preview-copy {
+  padding: 13px 15px 14px;
+}
+
+.account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-preview-kicker {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-url-row {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  margin: 17px 0 0;
+}
+
+.account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-url-row input {
+  display: block;
+  flex: 1 1 auto;
+  width: 0;
+  min-width: 0;
+  min-height: 40px;
+  margin: 0;
+  padding: 10px 11px;
+  line-height: 1.4;
+}
+
+.account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-url-row button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-width: 88px;
+  min-height: 40px;
+  margin: 0;
+  padding: 10px 14px;
+  line-height: 1.3;
+}
+
+.account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  margin: 10px 0 0;
+}
+
+.account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-actions button {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-width: 112px;
+  min-height: 40px;
+  margin: 0;
+  padding: 10px 14px;
+  line-height: 1.3;
+}
+
+.account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-snapshot-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  margin: 16px 0 0;
+  padding: 14px 0 0;
+}
+
+.account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-snapshot-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  max-width: 100%;
+  min-height: 40px;
+  margin: 0;
+  padding: 10px 14px;
+  line-height: 1.35;
+}
+
+.account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-feedback {
+  margin: 13px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.feed-share-no-snapshot {
+  box-sizing: border-box;
+  display: flex;
+  min-height: 210px;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 24px;
+  background: #f8fafc;
+  color: #475569;
+  text-align: center;
+}
+.feed-share-no-snapshot strong { color: #1f2937; font-size: .88rem; }
+.feed-share-no-snapshot span {
+  max-width: 310px;
+  font-family: Arial, sans-serif;
+  font-size: .78rem;
+  line-height: 1.55;
+}
+
 @media (max-width: 680px) {
-  .blogg-shared-header-inner {
-    gap: 10px;
-  }
-
-  .blogg-shared-header-nav {
-    flex-wrap: nowrap;
-    gap: 12px !important;
-  }
-
+  .blogg-shared-header-inner { gap: 10px; }
+  .blogg-shared-header-nav { flex-wrap: nowrap; gap: 12px !important; }
   .blogg-shared-header-nav .feed-share-trigger {
     display: inline-flex;
     align-items: center;
@@ -41,25 +212,49 @@
     font-weight: 400;
     line-height: 1.5;
   }
-
   .blogg-shared-header-nav .feed-share-trigger:hover {
     border-color: transparent;
     background: transparent;
     box-shadow: none;
   }
+  .blogg-shared-header-nav .feed-share-trigger svg { width: 14px; height: 14px; flex: 0 0 auto; }
+  .blogg-shared-header-rule { display: none; }
+  .blogg-shared-header-actions { padding-left: 0; gap: 10px !important; }
 
-  .blogg-shared-header-nav .feed-share-trigger svg {
-    width: 14px;
-    height: 14px;
-    flex: 0 0 auto;
+  .account-share-backdrop:has(.account-share-dialog[aria-labelledby="feed-share-dialog-title"]) {
+    padding: 14px;
   }
-
-  .blogg-shared-header-rule {
-    display: none;
+  .account-share-dialog[aria-labelledby="feed-share-dialog-title"] {
+    width: 100%;
+    max-height: calc(100dvh - 28px);
+    padding: 18px;
+    border-radius: 15px;
   }
-
-  .blogg-shared-header-actions {
-    padding-left: 0;
-    gap: 10px !important;
+  .account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-dialog-header { margin-bottom: 14px; }
+  .account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-url-row {
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-url-row input {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 42px;
+    font-size: .72rem;
+  }
+  .account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-url-row button { align-self: flex-end; }
+  .account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-actions {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+  }
+  .account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-actions button {
+    flex: 1 1 0;
+    min-width: 0;
+    white-space: normal;
+  }
+  .account-share-dialog[aria-labelledby="feed-share-dialog-title"] .account-share-snapshot-button {
+    width: 100%;
+    text-align: center;
   }
 }
