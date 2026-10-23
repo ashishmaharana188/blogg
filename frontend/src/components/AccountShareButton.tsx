@@ -242,15 +242,7 @@ export default function AccountShareButton({
                 Share link
               </button>
             </div>
-            <div className="account-share-actions">
-              <button
-                type="button"
-                className="account-share-primary"
-                onClick={() => void shareLink()}
-              >
-                Share link
-              </button>
-            </div>
+            <div className="account-share-actions"></div>
             {canManageSnapshot && (
               <div className="account-share-snapshot-actions">
                 <button
