@@ -313,8 +313,13 @@ function parseExerciseSessions(files: Express.Multer.File[]): ExerciseSession[] 
         .filter((point): point is HeartRatePoint & { bpm: number } => typeof point.bpm === "number")
         .map((point) => ({ time: point.time, bpm: Math.round(point.bpm) }));
       const sets = parseExerciseSets(field(row, "subset_data", "com.samsung.health.exercise.subset_data"));
-      let repetitions = numeric(field(row, "com.samsung.health.exercise.count", "count"));
-      if (repetitions === null && sets.length) repetitions = sets.reduce((sum, set) => sum + set.reps, 0);
+      // Walking activity count is steps, not repetitions. Running is tracked separately.
+      let repetitions = exerciseType === 1001 || exerciseType === 1002
+        ? null
+        : numeric(field(row, "com.samsung.health.exercise.count", "count"));
+      if (exerciseType !== 1001 && exerciseType !== 1002 && repetitions === null && sets.length) {
+        repetitions = sets.reduce((sum, set) => sum + set.reps, 0);
+      }
       const durationSeconds = secondsFromSamsung(field(row, "com.samsung.health.exercise.duration", "duration")) ??
         (endedAt ? Math.max(0, Math.round((Date.parse(endedAt) - Date.parse(startedAt)) / 1000)) : null);
       const avgSamples = samples.length ? samples.reduce((sum, item) => sum + item.bpm, 0) / samples.length : null;
@@ -363,7 +368,7 @@ function exerciseSessionFromRow(row: Record<string, unknown>): ExerciseSession {
 }
 async function loadExerciseData(client: Awaited<ReturnType<typeof getPgClient>>) {
   const sessionsResult = await client.query("SELECT * FROM health_pushup_sessions ORDER BY started_at DESC LIMIT 30");
-  const countResult = await client.query("SELECT COUNT(*)::int AS session_count, COALESCE(SUM(repetitions), 0)::int AS total_repetitions FROM health_pushup_sessions");
+  const countResult = await client.query("SELECT COUNT(*)::int AS session_count, COALESCE(SUM(repetitions) FILTER (WHERE exercise_type NOT IN (1001, 1002)), 0)::int AS total_repetitions FROM health_pushup_sessions");
   return { sessions: (sessionsResult.rows as Array<Record<string, unknown>>).map(exerciseSessionFromRow), sessionCount: Number(countResult.rows[0]?.session_count || 0), totalRepetitions: Number(countResult.rows[0]?.total_repetitions || 0) };
 }
 function exerciseValuesForSession(session: ExerciseSession, selected: ExerciseMetricId[], sessionCount: number, totalRepetitions: number): Record<string, unknown> {

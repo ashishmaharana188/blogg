@@ -72,9 +72,9 @@ router.get("/health/exercises/public-aggregate", async (_req, res, next) => {
     const aggregateResult = await client.query(`
       SELECT
         COUNT(*)::int AS session_count,
-        COALESCE(SUM(repetitions), 0)::double precision AS total_repetitions,
-        AVG(repetitions)::double precision AS average_repetitions,
-        COUNT(repetitions)::int AS repetition_session_count,
+        COALESCE(SUM(repetitions) FILTER (WHERE exercise_type NOT IN (1001, 1002)), 0)::double precision AS total_repetitions,
+        AVG(repetitions) FILTER (WHERE exercise_type NOT IN (1001, 1002))::double precision AS average_repetitions,
+        COUNT(repetitions) FILTER (WHERE exercise_type NOT IN (1001, 1002))::int AS repetition_session_count,
         COALESCE(SUM(duration_seconds), 0)::double precision AS total_duration_seconds,
         AVG(duration_seconds)::double precision AS average_duration_seconds,
         COUNT(duration_seconds)::int AS duration_session_count,
@@ -116,6 +116,7 @@ router.get("/health/exercises/public-aggregate", async (_req, res, next) => {
             THEN session.sets_json ELSE '[]'::jsonb END
         ) WITH ORDINALITY AS item(value, ordinality)
         WHERE jsonb_typeof(item.value) = 'object'
+          AND session.exercise_type NOT IN (1001, 1002)
         GROUP BY item.ordinality
         ORDER BY item.ordinality
       `);

@@ -120,6 +120,7 @@ function metricValues(
 ): string {
   const all = aggregate?.aggregates;
   if (id === "repetitions" && all?.repetitions) {
+    if (all.repetitions.sessionCount <= 0) return "—";
     const total = Math.round(all.repetitions.total).toLocaleString();
     const average =
       all.repetitions.average == null
@@ -153,6 +154,7 @@ function metricValues(
 
   if (id === "repetitions") {
     const values = sessions
+      .filter((session) => session.exerciseType !== 1001 && session.exerciseType !== 1002)
       .map((session) => finiteNumber(session.values?.repetitions))
       .filter((value): value is number => value !== null && value >= 0);
     if (!values.length) return "—";
@@ -227,6 +229,7 @@ function metricValues(
   }
 
   const latestHistory = sessions
+    .filter((session) => session.exerciseType !== 1001 && session.exerciseType !== 1002)
     .map((session) => session.values?.history)
     .find((value) => Boolean(value) && typeof value === "object") as
     | {
@@ -240,6 +243,7 @@ function metricValues(
     finiteNumber(latestHistory?.totalCount) ??
     finiteNumber(latestHistory?.totalRepetitions);
   const fallbackReps = sessions
+    .filter((session) => session.exerciseType !== 1001 && session.exerciseType !== 1002)
     .map((session) => finiteNumber(session.values?.repetitions))
     .filter((value): value is number => value !== null)
     .reduce((sum, value) => sum + value, 0);

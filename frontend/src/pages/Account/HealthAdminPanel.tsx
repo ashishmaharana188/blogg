@@ -183,8 +183,10 @@ function metricTrendNumber(
   const values = session.values ?? {};
   const numeric = (value: unknown) =>
     typeof value === "number" && Number.isFinite(value) ? value : null;
-  if (metricId === "repetitions")
+  if (metricId === "repetitions") {
+    if (session.exerciseType === 1001 || session.exerciseType === 1002) return null;
     return numeric(session.repetitions) ?? numeric(values.repetitions);
+  }
   if (metricId === "duration")
     return numeric(session.durationSeconds) ?? numeric(values.durationSeconds);
   if (metricId === "calories")
@@ -1389,6 +1391,7 @@ export default function HealthAdminPanel({
                         ? value
                         : null;
                     if (metricId === "repetitions") {
+                      if (session.exerciseType === 1001 || session.exerciseType === 1002) return "—";
                       const value =
                         numberValue(session.repetitions) ??
                         numberValue(values.repetitions);
