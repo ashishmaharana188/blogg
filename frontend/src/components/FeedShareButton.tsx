@@ -4,8 +4,7 @@ import "./accountShareButton.css";
 import "./feedShareButton.css";
 
 const SHARE_TITLE = "Blogg Feed";
-const SHARE_DESCRIPTION =
-  "Recent notes and public updates from Blogg.";
+const SHARE_DESCRIPTION = "Recent notes and public updates from Blogg.";
 const SNAPSHOT_PROGRESS_MESSAGES = [
   "Preparing the feed snapshot…",
   "Capturing the rendered feed as a 1200 × 630 image…",
@@ -22,7 +21,9 @@ export default function FeedShareButton({
   const [copyStatus, setCopyStatus] = useState("");
   const copyStatusTimeoutRef = useRef<number | null>(null);
   const [snapshotVersion, setSnapshotVersion] = useState("initial");
-  const [snapshotCaptureUrl, setSnapshotCaptureUrl] = useState<string | null>(null);
+  const [snapshotCaptureUrl, setSnapshotCaptureUrl] = useState<string | null>(
+    null,
+  );
   const [previewAvailable, setPreviewAvailable] = useState(true);
   const snapshotCaptureFrameRef = useRef<HTMLIFrameElement | null>(null);
   const shareUrl = `${window.location.origin}/feed`;
@@ -32,11 +33,14 @@ export default function FeedShareButton({
     setPreviewAvailable(true);
   }, [snapshotVersion]);
 
-  useEffect(() => () => {
-    if (copyStatusTimeoutRef.current !== null) {
-      window.clearTimeout(copyStatusTimeoutRef.current);
-    }
-  }, []);
+  useEffect(
+    () => () => {
+      if (copyStatusTimeoutRef.current !== null) {
+        window.clearTimeout(copyStatusTimeoutRef.current);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!snapshotCaptureUrl) return;
@@ -58,12 +62,16 @@ export default function FeedShareButton({
       if (message.startsWith("Snapshot saved.")) {
         setSnapshotVersion(String(Date.now()));
         setPreviewAvailable(true);
-        setFeedback("Snapshot saved. The preview now uses the real rendered feed.");
+        setFeedback(
+          "Snapshot saved. The preview now uses the real rendered feed.",
+        );
         setSnapshotCaptureUrl(null);
         return;
       }
 
-      const isProgress = SNAPSHOT_PROGRESS_MESSAGES.some((progress) => progress === message);
+      const isProgress = SNAPSHOT_PROGRESS_MESSAGES.some(
+        (progress) => progress === message,
+      );
       if (message && !isProgress) {
         setFeedback(message);
         setSnapshotCaptureUrl(null);
@@ -71,7 +79,9 @@ export default function FeedShareButton({
       }
 
       if (attempts >= 120) {
-        setFeedback("Feed snapshot capture timed out. No new preview was confirmed.");
+        setFeedback(
+          "Feed snapshot capture timed out. No new preview was confirmed.",
+        );
         setSnapshotCaptureUrl(null);
       }
     }, 500);
@@ -90,7 +100,8 @@ export default function FeedShareButton({
   const copyLink = async () => {
     let copied = false;
     try {
-      if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
+      if (!navigator.clipboard?.writeText)
+        throw new Error("Clipboard unavailable");
       await navigator.clipboard.writeText(shareUrl);
       copied = true;
     } catch {
@@ -146,7 +157,11 @@ export default function FeedShareButton({
       return;
     }
     try {
-      await navigator.share({ title: SHARE_TITLE, text: SHARE_DESCRIPTION, url: shareUrl });
+      await navigator.share({
+        title: SHARE_TITLE,
+        text: SHARE_DESCRIPTION,
+        url: shareUrl,
+      });
     } catch (error) {
       if (error instanceof Error && error.name !== "AbortError") {
         setFeedback("Sharing was unavailable. Copy the link below instead.");
@@ -167,10 +182,32 @@ export default function FeedShareButton({
           setFeedback("");
           setIsOpen(true);
         }}
-        aria-label={copyStatus ? `Feed link ${copyStatus.toLowerCase()}` : canUpdateSnapshot ? "Share the Blogg feed" : "Copy the Blogg feed rich-preview link"}
-        title={copyStatus ? `Feed link ${copyStatus.toLowerCase()}` : canUpdateSnapshot ? "Share the Blogg feed" : "Copy the Blogg feed rich-preview link"}
+        aria-label={
+          copyStatus
+            ? `Feed link ${copyStatus.toLowerCase()}`
+            : canUpdateSnapshot
+              ? "Share the Blogg feed"
+              : "Copy the Blogg feed rich-preview link"
+        }
+        title={
+          copyStatus
+            ? `Feed link ${copyStatus.toLowerCase()}`
+            : canUpdateSnapshot
+              ? "Share the Blogg feed"
+              : "Copy the Blogg feed rich-preview link"
+        }
       >
-        <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          width="16"
+          height="16"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <circle cx="18" cy="5" r="3" />
           <circle cx="6" cy="12" r="3" />
           <circle cx="18" cy="19" r="3" />
@@ -187,10 +224,21 @@ export default function FeedShareButton({
             if (event.target === event.currentTarget) setIsOpen(false);
           }}
         >
-          <section className="account-share-dialog typewriter-font" role="dialog" aria-modal="true" aria-labelledby="feed-share-dialog-title">
+          <section
+            className="account-share-dialog typewriter-font"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="feed-share-dialog-title"
+          >
             <header className="account-share-dialog-header">
-              <h2 id="feed-share-dialog-title" className="feed-share-dialog-title">Share Blogg Feed</h2>
-              <button type="button" className="account-share-close" onClick={() => setIsOpen(false)} aria-label="Close share dialog">×</button>
+              <button
+                type="button"
+                className="account-share-close"
+                onClick={() => setIsOpen(false)}
+                aria-label="Close share dialog"
+              >
+                ×
+              </button>
             </header>
 
             <article className="account-share-preview-card">
@@ -203,21 +251,45 @@ export default function FeedShareButton({
               ) : (
                 <div className="feed-share-no-snapshot">
                   <strong>No feed snapshot saved yet</strong>
-                  <span>Capture the rendered feed to create its rich preview.</span>
+                  <span>
+                    Capture the rendered feed to create its rich preview.
+                  </span>
                 </div>
               )}
               <div className="account-share-preview-copy">
-                <p className="account-share-preview-kicker">BLOGG <span>·</span> FEED</p>
+                <p className="account-share-preview-kicker">
+                  BLOGG <span>·</span> FEED
+                </p>
               </div>
             </article>
 
             <div className="account-share-url-row">
-              <input id="feed-share-url" aria-label="Feed share link" readOnly value={shareUrl} onFocus={(event) => event.currentTarget.select()} />
-              <button type="button" onClick={() => void copyLink()}>Copy link</button>
+              <input
+                id="feed-share-url"
+                aria-label="Feed share link"
+                readOnly
+                value={shareUrl}
+                onFocus={(event) => event.currentTarget.select()}
+              />
+              <button type="button" onClick={() => void copyLink()}>
+                Copy
+              </button>
             </div>
             <div className="account-share-actions">
-              <button type="button" className="account-share-primary" onClick={() => void shareLink()}>Share link…</button>
-              <button type="button" className="account-share-secondary" onClick={() => void copyLink()}>Copy link</button>
+              <button
+                type="button"
+                className="account-share-primary"
+                onClick={() => void shareLink()}
+              >
+                Share
+              </button>
+              <button
+                type="button"
+                className="account-share-secondary"
+                onClick={() => void copyLink()}
+              >
+                Copy link
+              </button>
             </div>
             {canUpdateSnapshot && (
               <div className="account-share-snapshot-actions">
@@ -227,11 +299,20 @@ export default function FeedShareButton({
                   onClick={updateSnapshot}
                   disabled={Boolean(snapshotCaptureUrl)}
                 >
-                  {snapshotCaptureUrl ? "Capturing feed…" : "Update rich-preview snapshot"}
+                  {snapshotCaptureUrl
+                    ? "Capturing feed…"
+                    : "Update rich-preview snapshot"}
                 </button>
               </div>
             )}
-            {feedback && <p className="account-share-feedback typewriter-font" role="status">{feedback}</p>}
+            {feedback && (
+              <p
+                className="account-share-feedback typewriter-font"
+                role="status"
+              >
+                {feedback}
+              </p>
+            )}
           </section>
         </div>
       )}
@@ -245,7 +326,17 @@ export default function FeedShareButton({
           aria-hidden="true"
           tabIndex={-1}
           loading="eager"
-          style={{ position: "fixed", left: "-1300px", top: 0, width: "1200px", height: "630px", border: 0, opacity: 0, pointerEvents: "none", zIndex: -1 }}
+          style={{
+            position: "fixed",
+            left: "-1300px",
+            top: 0,
+            width: "1200px",
+            height: "630px",
+            border: 0,
+            opacity: 0,
+            pointerEvents: "none",
+            zIndex: -1,
+          }}
         />
       )}
     </>
