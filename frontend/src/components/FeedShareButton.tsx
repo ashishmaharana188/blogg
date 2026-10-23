@@ -271,9 +271,6 @@ export default function FeedShareButton({
                 value={shareUrl}
                 onFocus={(event) => event.currentTarget.select()}
               />
-              <button type="button" onClick={() => void copyLink()}>
-                Copy
-              </button>
             </div>
             <div className="account-share-actions">
               <button
@@ -281,7 +278,7 @@ export default function FeedShareButton({
                 className="account-share-primary"
                 onClick={() => void shareLink()}
               >
-                Share
+                Share Link
               </button>
             </div>
             {canUpdateSnapshot && (
