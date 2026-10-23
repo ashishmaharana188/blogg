@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../../../context/authContext";
 import { useEffect } from "react";
 import { sendAdminHeartbeat } from "../../../../services/adminStatusService";
+import FeedShareButton from "../../../../components/FeedShareButton";
 
 type BloggHeaderProps = {
   page: "feed" | "profile";
@@ -21,6 +22,12 @@ export default function BloggHeader({
 }: BloggHeaderProps) {
   const isProfile = page === "profile";
   const { isAdmin, refreshUser } = useAuth();
+  // The hidden capture iframe must match the public view, not the administrator's
+  // editing controls. This flag affects presentation only; the upload endpoint
+  // independently verifies the administrator's authenticated session.
+  const isFeedSnapshotCapture =
+    !isProfile &&
+    new URLSearchParams(window.location.search).get("captureFeedSnapshot") === "1";
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -36,10 +43,7 @@ export default function BloggHeader({
     <div className="blogg-shared-header shrink-0 px-4 pt-4 sm:pt-7 sm:px-6 lg:pt-10 lg:px-10 flex justify-between items-end pb-3 border-b border-slate-100 z-50 bg-white">
       <div className="blogg-shared-header-inner flex flex-row justify-between items-center w-full mb-2">
         <div className="blogg-shared-header-nav flex flex-row flex-wrap gap-4 min-w-0 self-start items-center">
-          <Link
-            className="text-black hover:font-bold"
-            to={isProfile ? "/feed" : "/blog"}
-          >
+          <Link className="text-black hover:font-bold" to={isProfile ? "/feed" : "/blog"}>
             {isProfile ? "BLOG FEED" : "BLOG PROFILE"}
           </Link>
           {isProfile && !isFormOpen && (
@@ -54,7 +58,8 @@ export default function BloggHeader({
         </div>
         <hr className="blogg-shared-header-rule flex-1 min-w-4 border-black border-2 mx-3 mt-2" />
         <div className="blogg-shared-header-actions flex gap-4 shrink-0 pl-4 self-end mt-2 items-center">
-          {isAdmin && (
+          {page === "feed" && isAdmin && !isFeedSnapshotCapture && <FeedShareButton />}
+          {isAdmin && !isFeedSnapshotCapture && (
             <button
               className="text-black block hover:font-bold truncate"
               onClick={onNewNote}
@@ -66,13 +71,9 @@ export default function BloggHeader({
           <Link
             className="text-xm text-bold hover:text-black whitespace-nowrap"
             to="/account"
-            title={
-              isAdmin
-                ? "Administrator account and status"
-                : "Administrator sign in and public status"
-            }
+            title={isAdmin && !isFeedSnapshotCapture ? "Administrator account and status" : "Administrator sign in and public status"}
           >
-            {isAdmin ? "Admin" : "Account"}
+            {isAdmin && !isFeedSnapshotCapture ? "Admin" : "Account"}
           </Link>
         </div>
       </div>

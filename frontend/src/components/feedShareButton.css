@@ -1,0 +1,35 @@
+.feed-share-trigger {
+  white-space: nowrap;
+}
+
+.feed-share-dialog-title {
+  margin: 0 auto 12px 0;
+  color: #111827;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.feed-share-no-snapshot {
+  box-sizing: border-box;
+  display: flex;
+  min-height: 220px;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  background: #f8fafc;
+  color: #475569;
+  text-align: center;
+}
+
+.feed-share-no-snapshot strong {
+  color: #1f2937;
+}
+
+.feed-share-no-snapshot span {
+  max-width: 310px;
+  font-size: 13px;
+  line-height: 1.5;
+}

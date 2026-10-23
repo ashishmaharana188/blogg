@@ -10,6 +10,7 @@ import "./App.css";
 import "./mobile.css";
 import "./exerciseMetricVisibilityBootstrap.ts";
 import "./healthWidgetsBootstrap.tsx";
+import "./feedShareSnapshotBootstrap.ts";
 import "./currentReadingBootstrap.tsx";
 import "./widgetVisibilityBootstrap.ts";
 import "./newsletterBootstrap.tsx";
