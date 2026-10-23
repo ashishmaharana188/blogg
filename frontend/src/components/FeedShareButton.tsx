@@ -19,6 +19,8 @@ export default function FeedShareButton({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [feedback, setFeedback] = useState("");
+  const [copyStatus, setCopyStatus] = useState("");
+  const copyStatusTimeoutRef = useRef<number | null>(null);
   const [snapshotVersion, setSnapshotVersion] = useState("initial");
   const [snapshotCaptureUrl, setSnapshotCaptureUrl] = useState<string | null>(null);
   const [previewAvailable, setPreviewAvailable] = useState(true);
@@ -29,6 +31,12 @@ export default function FeedShareButton({
   useEffect(() => {
     setPreviewAvailable(true);
   }, [snapshotVersion]);
+
+  useEffect(() => () => {
+    if (copyStatusTimeoutRef.current !== null) {
+      window.clearTimeout(copyStatusTimeoutRef.current);
+    }
+  }, []);
 
   useEffect(() => {
     if (!snapshotCaptureUrl) return;
@@ -80,13 +88,56 @@ export default function FeedShareButton({
   };
 
   const copyLink = async () => {
+    let copied = false;
     try {
       if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
       await navigator.clipboard.writeText(shareUrl);
-      setFeedback("Feed link copied.");
+      copied = true;
     } catch {
-      setFeedback("Copy was blocked. Select the link field and copy it manually.");
+      // Clipboard permissions can be unavailable in some in-app browsers. Try a
+      // temporary selected input before asking the visitor to copy it manually.
+      const textarea = document.createElement("textarea");
+      textarea.value = shareUrl;
+      textarea.readOnly = true;
+      textarea.setAttribute("aria-hidden", "true");
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      textarea.style.pointerEvents = "none";
+      textarea.style.left = "-9999px";
+      try {
+        document.body.appendChild(textarea);
+        textarea.select();
+        copied = document.execCommand("copy");
+      } catch {
+        copied = false;
+      } finally {
+        textarea.remove();
+      }
     }
+
+    if (copied) {
+      setFeedback("Feed rich-preview link copied.");
+      setCopyStatus("Copied");
+      if (copyStatusTimeoutRef.current !== null) {
+        window.clearTimeout(copyStatusTimeoutRef.current);
+      }
+      copyStatusTimeoutRef.current = window.setTimeout(() => {
+        setCopyStatus("");
+        copyStatusTimeoutRef.current = null;
+      }, 1800);
+      return;
+    }
+
+    setFeedback("Copy was blocked. Copy the feed link from the prompt.");
+    setCopyStatus("Copy link");
+    window.prompt("Copy the Blogg feed rich-preview link:", shareUrl);
+    if (copyStatusTimeoutRef.current !== null) {
+      window.clearTimeout(copyStatusTimeoutRef.current);
+    }
+    copyStatusTimeoutRef.current = window.setTimeout(() => {
+      setCopyStatus("");
+      copyStatusTimeoutRef.current = null;
+    }, 2500);
   };
 
   const shareLink = async () => {
@@ -109,11 +160,15 @@ export default function FeedShareButton({
         type="button"
         className="account-share-trigger feed-share-trigger"
         onClick={() => {
+          if (!canUpdateSnapshot) {
+            void copyLink();
+            return;
+          }
           setFeedback("");
           setIsOpen(true);
         }}
-        aria-label="Share the Blogg feed"
-        title="Share the Blogg feed"
+        aria-label={copyStatus ? `Feed link ${copyStatus.toLowerCase()}` : canUpdateSnapshot ? "Share the Blogg feed" : "Copy the Blogg feed rich-preview link"}
+        title={copyStatus ? `Feed link ${copyStatus.toLowerCase()}` : canUpdateSnapshot ? "Share the Blogg feed" : "Copy the Blogg feed rich-preview link"}
       >
         <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="18" cy="5" r="3" />
@@ -121,7 +176,7 @@ export default function FeedShareButton({
           <circle cx="18" cy="19" r="3" />
           <path d="m8.7 10.6 6.6-4.2M8.7 13.4l6.6 4.2" />
         </svg>
-        <span>Share Feed</span>
+        <span aria-live="polite">{copyStatus || "Share Feed"}</span>
       </button>
 
       {isOpen && (

@@ -1,5 +1,11 @@
 .feed-share-trigger {
   white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+/* Keep Share Feed alongside BLOG PROFILE in the compact feed header. */
+.blogg-shared-header-nav .feed-share-trigger {
+  margin-top: 0;
 }
 
 .feed-share-dialog-title {
@@ -32,4 +38,57 @@
   max-width: 310px;
   font-size: 13px;
   line-height: 1.5;
+}
+
+
+/* Mobile navigation uses lightweight text/icon actions rather than pill buttons. */
+@media (max-width: 680px) {
+  .blogg-shared-header-inner {
+    gap: 10px;
+  }
+
+  .blogg-shared-header-nav {
+    flex-wrap: nowrap;
+    gap: 12px !important;
+  }
+
+  .blogg-shared-header-nav .feed-share-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 5px;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #111827;
+    box-shadow: none;
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+
+  .blogg-shared-header-nav .feed-share-trigger:hover {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .blogg-shared-header-nav .feed-share-trigger svg {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+  }
+
+  .blogg-shared-header-rule {
+    display: none;
+  }
+
+  .blogg-shared-header-actions {
+    padding-left: 0;
+    gap: 10px !important;
+  }
 }

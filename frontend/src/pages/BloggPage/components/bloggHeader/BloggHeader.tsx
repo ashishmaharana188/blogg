@@ -46,6 +46,9 @@ export default function BloggHeader({
           <Link className="text-black hover:font-bold" to={isProfile ? "/feed" : "/blog"}>
             {isProfile ? "BLOG FEED" : "BLOG PROFILE"}
           </Link>
+          {page === "feed" && !isFeedSnapshotCapture && (
+            <FeedShareButton canUpdateSnapshot={isAdmin} />
+          )}
           {isProfile && !isFormOpen && (
             <button
               className="text-sm text-gray-600 hover:text-black hover:font-bold ml-0 sm:ml-2 md:ml-6"
@@ -58,7 +61,6 @@ export default function BloggHeader({
         </div>
         <hr className="blogg-shared-header-rule flex-1 min-w-4 border-black border-2 mx-3 mt-2" />
         <div className="blogg-shared-header-actions flex gap-4 shrink-0 pl-4 self-end mt-2 items-center">
-          {page === "feed" && !isFeedSnapshotCapture && <FeedShareButton canUpdateSnapshot={isAdmin} />}
           {isAdmin && !isFeedSnapshotCapture && (
             <button
               className="text-black block hover:font-bold truncate"
