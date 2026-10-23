@@ -923,6 +923,80 @@ async function buildBooksForYouSection(): Promise<string> {
   }
 }
 
+async function buildFeaturedLinksSection(): Promise<string> {
+  try {
+    // Use the same public/published links shown by the Featured Links widget.
+    // Hidden drafts must not be sent to newsletter subscribers.
+    const records = await getDB()
+      .collection("adminShowcaseLinks")
+      .find(
+        { visible: true },
+        {
+          projection: {
+            _id: 0,
+            url: 1,
+            title: 1,
+            description: 1,
+            image: 1,
+            provider: 1,
+            order: 1,
+            createdAt: 1,
+          },
+        },
+      )
+      .sort({ order: 1, createdAt: -1 })
+      .limit(80)
+      .toArray();
+
+    const links = records
+      .flatMap((raw: unknown) => {
+        if (!raw || typeof raw !== "object") return [];
+        const record = raw as Record<string, unknown>;
+        const url = safeHttpUrl(record.url);
+        const title =
+          typeof record.title === "string" ? record.title.trim().slice(0, 180) : "";
+        if (!url || !title) return [];
+        const description =
+          typeof record.description === "string"
+            ? record.description.trim().slice(0, 320)
+            : "";
+        const image = safeHttpUrl(record.image);
+        const provider =
+          typeof record.provider === "string"
+            ? record.provider.trim().slice(0, 80)
+            : "";
+        return [{ url, title, description, image, provider }];
+      })
+      .slice(0, 6);
+
+    if (!links.length) return "";
+
+    const rows = links
+      .map((link, index) => {
+        const border = index === links.length - 1 ? "0" : "1px dashed #35383c";
+        const imageMarkup = link.image
+          ? `<img src="${htmlEscape(link.image)}" alt="" width="68" height="58" style="display:block;width:68px;height:58px;object-fit:cover;border:1px solid #34383d" />`
+          : `<div style="width:68px;height:58px;border:1px dashed #454a50;color:#8ebeff;text-align:center;line-height:58px;font-family:Consolas,'Courier New',monospace;font-size:18px">↗</div>`;
+        const providerMarkup = link.provider
+          ? `<p style="margin:0 0 4px;color:#778898;font-family:Consolas,'Courier New',monospace;font-size:9px;letter-spacing:.5px">${htmlEscape(link.provider.toUpperCase())}</p>`
+          : "";
+        const descriptionMarkup = link.description
+          ? `<p style="margin:4px 0 0;color:#9da8b3;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.5">${htmlEscape(link.description)}</p>`
+          : "";
+        return `<tr><td width="80" valign="middle" style="padding:9px 10px 9px 0;border-bottom:${border}">${imageMarkup}</td><td valign="middle" style="padding:9px 10px 9px 0;border-bottom:${border}">${providerMarkup}<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.45"><a href="${htmlEscape(link.url)}" style="color:#e5edf6;text-decoration:underline">${htmlEscape(link.title)}</a></p>${descriptionMarkup}</td><td valign="middle" align="right" style="padding:9px 0;border-bottom:${border};white-space:nowrap"><a href="${htmlEscape(link.url)}" style="color:#8ebeff;font-family:Consolas,'Courier New',monospace;font-size:9px;text-decoration:none;letter-spacing:.5px">OPEN ↗</a></td></tr>`;
+      })
+      .join("");
+
+    return `<tr><td style="padding:20px 16px;border-bottom:1px dashed #35383c"><p style="margin:0 0 4px;color:#80b6f4;font-family:Consolas,'Courier New',monospace;font-size:10px;letter-spacing:1.2px">[ FEATURED LINKS ]</p><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${rows}</table></td></tr>`;
+  } catch (error) {
+    console.warn(
+      "[newsletter:featured-links] Featured links unavailable:",
+      error instanceof Error ? error.message : "unknown error",
+    );
+    return "";
+  }
+}
+
 async function buildHealthSection(): Promise<string> {
   const config = await readHealthConfig();
   if (!config.enabled) return "";
@@ -1223,12 +1297,13 @@ async function buildNewsletter(filters: NewsletterFilters): Promise<{
     matching.length > articles.length
       ? `<tr><td style="padding:14px 16px;border-bottom:1px dashed #35383c;color:#aeb8c2;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6">Showing the latest ${articles.length} of ${matching.length} matching notes.</td></tr>`
       : "";
-  const [healthSection, songsSection, booksForYouSection] = await Promise.all([
+  const [healthSection, songsSection, booksForYouSection, featuredLinksSection] = await Promise.all([
     buildHealthSection(),
     buildSongsSection(),
     buildBooksForYouSection(),
+    buildFeaturedLinksSection(),
   ]);
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BLOGG Newsletter</title></head><body style="margin:0;padding:0;background:#262626;color:#e9edf1;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#262626" style="width:100%;background:#262626"><tr><td align="center" style="padding:28px 12px 36px"><table role="presentation" width="640" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:640px;background:#111213;border:1px solid #1b1d20"><tr><td style="padding:30px 30px 28px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px dashed #35383c"><tr><td align="center" style="padding:17px 12px 27px;color:#80b6f4;font-family:Consolas,'Courier New',monospace;font-size:10px;letter-spacing:1.25px">[ NEWSLETTER &nbsp;·&nbsp; ${htmlEscape(issueDate.toUpperCase())} ]</td></tr><tr><td style="padding:0 16px 20px;border-bottom:1px dashed #35383c"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td valign="top" style="color:#f4f5f6;font-family:Arial,Helvetica,sans-serif;font-size:17px;font-weight:600;letter-spacing:-.3px">◉ Blogg</td><td align="right" valign="top" style="color:#a8b0b9;font-family:Consolas,'Courier New',monospace;font-size:10px;line-height:1.8"><span style="color:#707b87">ISSUED</span> &nbsp; ${htmlEscape(issueDate)}<br><span style="color:#707b87">TOPIC</span> &nbsp; ${htmlEscape(topicLabel)}<br><span style="color:#707b87">BLOGS</span> &nbsp; ${articles.length}${matching.length > articles.length ? ` / ${matching.length}` : ""}</td></tr></table></td></tr><tr><td style="padding:19px 16px 21px;border-bottom:1px dashed #35383c"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td valign="top" width="48%" style="padding-right:14px"><p style="margin:0 0 9px;color:#77828d;font-family:Consolas,'Courier New',monospace;font-size:10px;letter-spacing:1px">[ EDITION ]</p><p style="margin:0;color:#e5e9ed;font-family:Consolas,'Courier New',monospace;font-size:12px;line-height:1.7">${htmlEscape(topicLabel)}</p></td><td valign="top" width="52%" style="padding-left:14px;border-left:1px dashed #35383c"><p style="margin:0 0 9px;color:#77828d;font-family:Consolas,'Courier New',monospace;font-size:10px;letter-spacing:1px">[ WRITTEN DATE RANGE ]</p><p style="margin:0;color:#e5e9ed;font-family:Consolas,'Courier New',monospace;font-size:11px;line-height:1.8;overflow-wrap:anywhere">${htmlEscape(filters.fromLabel)}<br>to&nbsp; ${htmlEscape(filters.toLabel)}</p></td></tr></table></td></tr>${healthSection}${songsSection}${booksForYouSection}<tr><td style="padding:22px 16px 4px"><p style="margin:0;color:#77828d;font-family:Consolas,'Courier New',monospace;font-size:10px;letter-spacing:1.2px">[ NOTES IN THIS ISSUE ]</p></td></tr>${truncatedNotice}<tr><td style="padding:0 16px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${articleMarkup}</table></td></tr><tr><td style="padding:25px 16px 16px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="border-top:1px dashed #35383c;padding-top:16px;color:#717c87;font-family:Consolas,'Courier New',monospace;font-size:10px;line-height:1.8">[ DELIVERY ]<br>Selected by written date, not last-edited date.<br>Generated by BLOGG Newsletter</td><td align="right" valign="bottom" style="border-top:1px dashed #35383c;padding-top:16px;color:#80b6f4;font-family:Consolas,'Courier New',monospace;font-size:10px;white-space:nowrap">END OF ISSUE</td></tr></table></td></tr></table></td></tr></table></td></tr></table></body></html>`;
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BLOGG Newsletter</title></head><body style="margin:0;padding:0;background:#262626;color:#e9edf1;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#262626" style="width:100%;background:#262626"><tr><td align="center" style="padding:28px 12px 36px"><table role="presentation" width="640" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:640px;background:#111213;border:1px solid #1b1d20"><tr><td style="padding:30px 30px 28px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px dashed #35383c"><tr><td align="center" style="padding:17px 12px 27px;color:#80b6f4;font-family:Consolas,'Courier New',monospace;font-size:10px;letter-spacing:1.25px">[ NEWSLETTER &nbsp;·&nbsp; ${htmlEscape(issueDate.toUpperCase())} ]</td></tr><tr><td style="padding:0 16px 20px;border-bottom:1px dashed #35383c"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td valign="top" style="color:#f4f5f6;font-family:Arial,Helvetica,sans-serif;font-size:17px;font-weight:600;letter-spacing:-.3px">◉ Blogg</td><td align="right" valign="top" style="color:#a8b0b9;font-family:Consolas,'Courier New',monospace;font-size:10px;line-height:1.8"><span style="color:#707b87">ISSUED</span> &nbsp; ${htmlEscape(issueDate)}<br><span style="color:#707b87">TOPIC</span> &nbsp; ${htmlEscape(topicLabel)}<br><span style="color:#707b87">BLOGS</span> &nbsp; ${articles.length}${matching.length > articles.length ? ` / ${matching.length}` : ""}</td></tr></table></td></tr><tr><td style="padding:19px 16px 21px;border-bottom:1px dashed #35383c"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td valign="top" width="48%" style="padding-right:14px"><p style="margin:0 0 9px;color:#77828d;font-family:Consolas,'Courier New',monospace;font-size:10px;letter-spacing:1px">[ EDITION ]</p><p style="margin:0;color:#e5e9ed;font-family:Consolas,'Courier New',monospace;font-size:12px;line-height:1.7">${htmlEscape(topicLabel)}</p></td><td valign="top" width="52%" style="padding-left:14px;border-left:1px dashed #35383c"><p style="margin:0 0 9px;color:#77828d;font-family:Consolas,'Courier New',monospace;font-size:10px;letter-spacing:1px">[ WRITTEN DATE RANGE ]</p><p style="margin:0;color:#e5e9ed;font-family:Consolas,'Courier New',monospace;font-size:11px;line-height:1.8;overflow-wrap:anywhere">${htmlEscape(filters.fromLabel)}<br>to&nbsp; ${htmlEscape(filters.toLabel)}</p></td></tr></table></td></tr>${healthSection}${songsSection}${booksForYouSection}${featuredLinksSection}<tr><td style="padding:22px 16px 4px"><p style="margin:0;color:#77828d;font-family:Consolas,'Courier New',monospace;font-size:10px;letter-spacing:1.2px">[ NOTES IN THIS ISSUE ]</p></td></tr>${truncatedNotice}<tr><td style="padding:0 16px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${articleMarkup}</table></td></tr><tr><td style="padding:25px 16px 16px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="border-top:1px dashed #35383c;padding-top:16px;color:#717c87;font-family:Consolas,'Courier New',monospace;font-size:10px;line-height:1.8">[ DELIVERY ]<br>Selected by written date, not last-edited date.<br>Generated by BLOGG Newsletter</td><td align="right" valign="bottom" style="border-top:1px dashed #35383c;padding-top:16px;color:#80b6f4;font-family:Consolas,'Courier New',monospace;font-size:10px;white-space:nowrap">END OF ISSUE</td></tr></table></td></tr></table></td></tr></table></td></tr></table></body></html>`;
 
   const subject = `BLOGG Newsletter: ${topicLabel} (${filters.fromLabel} – ${filters.toLabel})`;
   return {
