@@ -234,8 +234,12 @@ export default function AccountShareButton({
                 value={shareUrl}
                 onFocus={(event) => event.currentTarget.select()}
               />
-              <button type="button" onClick={() => void copyLink()}>
-                Copy link
+              <button
+                type="button"
+                className="account-share-primary"
+                onClick={() => void shareLink()}
+              >
+                Share link
               </button>
             </div>
             <div className="account-share-actions">
@@ -244,14 +248,7 @@ export default function AccountShareButton({
                 className="account-share-primary"
                 onClick={() => void shareLink()}
               >
-                Share link…
-              </button>
-              <button
-                type="button"
-                className="account-share-secondary"
-                onClick={() => void copyLink()}
-              >
-                Copy link
+                Share link
               </button>
             </div>
             {canManageSnapshot && (
