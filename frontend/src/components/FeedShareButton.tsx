@@ -283,13 +283,6 @@ export default function FeedShareButton({
               >
                 Share
               </button>
-              <button
-                type="button"
-                className="account-share-secondary"
-                onClick={() => void copyLink()}
-              >
-                Copy link
-              </button>
             </div>
             {canUpdateSnapshot && (
               <div className="account-share-snapshot-actions">
