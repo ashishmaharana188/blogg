@@ -54,9 +54,15 @@ async function waitForRenderedBlogg(): Promise<HTMLElement> {
       await wait(250);
       card = document.querySelector<HTMLElement>(".blogg-reader-card");
       if (card && card.querySelector(".blogg-reader-title")) {
+        // The article shell and title can render before BlockNote has mounted its
+        // read-only editor. Never capture during that gap: it produces a white
+        // card because the cloned article has no rendered body content yet.
+        const bodyReady = Boolean(card.querySelector(
+          ".blogg-reader-body .bn-editor, .blogg-reader-body .blogg-reader-empty",
+        ));
         const minimumTimePassed = Date.now() - startedAt >= 1_800;
         const quietEnough = Date.now() - lastMutationAt >= 900;
-        if (minimumTimePassed && quietEnough) break;
+        if (bodyReady && minimumTimePassed && quietEnough) break;
       }
       const missingState = document.querySelector<HTMLElement>(".blogg-reader-state");
       if (missingState && Date.now() - startedAt > 1_500) {
@@ -89,11 +95,17 @@ async function waitForRenderedBlogg(): Promise<HTMLElement> {
 function createRichPreviewCard(readerCard: HTMLElement): HTMLElement {
   const stage = document.createElement("div");
   stage.setAttribute("aria-hidden", "true");
+  // IMPORTANT: keep the capture root at the origin. html-to-image serializes
+  // computed positioning into an SVG foreignObject; leaving the live stage at
+  // left:-1500px puts all of its contents outside the 1200px SVG viewport and
+  // silently generates an all-white PNG. The parent iframe is already hidden
+  // offscreen, so the stage itself does not need offscreen positioning.
   stage.style.cssText = [
-    "position:fixed", "left:-1500px", "top:0", "z-index:-1", "box-sizing:border-box",
-    `width:${WIDTH}px`, `height:${HEIGHT}px`, "overflow:hidden", "display:flex",
+    "position:relative", "left:0", "top:0", "z-index:0", "margin:0",
+    "box-sizing:border-box", `width:${WIDTH}px`, `min-width:${WIDTH}px`,
+    `height:${HEIGHT}px`, `min-height:${HEIGHT}px`, "overflow:hidden", "display:flex",
     "align-items:flex-start", "justify-content:center", "padding:24px 0 0",
-    "background:#f8fafc", "color:#111827",
+    "background:#f8fafc", "color:#111827", "transform:none", "opacity:1",
   ].join(";");
 
   const snapshot = readerCard.cloneNode(true) as HTMLElement;
@@ -116,6 +128,34 @@ function createRichPreviewCard(readerCard: HTMLElement): HTMLElement {
 function dataUrlToBase64(dataUrl: string): string {
   if (!dataUrl.startsWith(PNG_PREFIX)) throw new Error("The note preview could not be encoded as a PNG.");
   return dataUrl.slice(PNG_PREFIX.length);
+}
+
+/** Reject an empty/white capture before it can overwrite a previously good preview. */
+async function assertPngContainsRenderedContent(dataUrl: string): Promise<void> {
+  const image = new Image();
+  image.src = dataUrl;
+  await new Promise<void>((resolve, reject) => {
+    image.onload = () => resolve();
+    image.onerror = () => reject(new Error("The generated blog snapshot could not be decoded."));
+  });
+
+  const canvas = document.createElement("canvas");
+  canvas.width = WIDTH;
+  canvas.height = HEIGHT;
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) throw new Error("Could not validate the generated blog snapshot.");
+  context.drawImage(image, 0, 0, WIDTH, HEIGHT);
+  const pixels = context.getImageData(0, 0, WIDTH, HEIGHT).data;
+  let foregroundPixels = 0;
+  // Sample every fourth pixel. Ignore the near-white background; article text,
+  // borders, and normal images should provide meaningful contrast.
+  for (let pixel = 0; pixel < pixels.length; pixel += 16) {
+    if (pixels[pixel] < 220 || pixels[pixel + 1] < 220 || pixels[pixel + 2] < 220) {
+      foregroundPixels += 1;
+      if (foregroundPixels >= 300) return;
+    }
+  }
+  throw new Error("The blog snapshot came out blank. The previous preview was kept; retry Share after the note finishes loading.");
 }
 
 async function captureAndSaveBloggSnapshot(noteId: string) {
@@ -160,6 +200,9 @@ async function captureAndSaveBloggSnapshot(noteId: string) {
       },
     });
 
+    // Never replace a good saved preview with an apparently successful but
+    // visually blank PNG. This also gives a clear diagnostic if rendering fails.
+    await assertPngContainsRenderedContent(dataUrl);
     const pngBase64 = dataUrlToBase64(dataUrl);
     showCaptureStatus("Saving the new blog preview and replacing the previous snapshot…");
     const response = await fetch(
