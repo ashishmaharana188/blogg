@@ -6,11 +6,14 @@ import BloggCanvasUI from "./components/bloggProfile/canvasView/bloggCanvasUI";
 import BloggHeader from "./components/bloggHeader/BloggHeader";
 import type { BloggSummary } from "./components/bloggProfile/canvasView/bloggCanvasType";
 import type { BloggItem } from "../../types/pageTypes";
-import { fetchBloggByIdRequest } from "./services/canvasViewService";
+import { fetchBloggByIdRequest, fetchStackAndGroup } from "./services/canvasViewService";
 import { useAuth } from "../../context/authContext";
 import "./components/bloggProfile/canvasView/canvasReadOnly.css";
+import "./components/bloggProfile/flipBook/flipBookFilters.css";
 
 type ViewMode = "canvas" | "flipbook";
+type FlipBookStack = { stack_id: string; stack_name: string };
+type FlipBookGroup = { group_id: string; group_name: string; stack_id: string };
 
 const BloggPage = () => {
   const navigate = useNavigate();
@@ -31,14 +34,25 @@ const BloggPage = () => {
     initialEditMode: false,
   });
   const [viewMode, setViewMode] = useState<ViewMode>(
-    bloggId || searchParams.get("view") === "flipbook" ? "flipbook" : "canvas",
+    searchParams.get("view") === "flipbook" ? "flipbook" : "canvas",
   );
   const [canvasRefreshKey, setCanvasRefreshKey] = useState(0);
+  const [flipBookStacks, setFlipBookStacks] = useState<FlipBookStack[]>([]);
+  const [flipBookGroups, setFlipBookGroups] = useState<FlipBookGroup[]>([]);
+  const [filtersLoading, setFiltersLoading] = useState(true);
+  const [filtersError, setFiltersError] = useState(false);
 
-  // Keep an opened Flipbook note in the /blog route using a query parameter.
-  // This preserves the current React tree and book instance instead of
-  // switching between the sibling /blog and /blog/:bloggId routes.
-  const openedNoteId = bloggId || searchParams.get("noteId") || undefined;
+  // Flipbook filters are URL-backed so refreshing or sharing the filtered view
+  // never silently falls back to every note in every stack.
+  const selectedStackId = searchParams.get("stackId") || "";
+  const selectedGroupId = searchParams.get("groupId") || "";
+  const availableGroups = flipBookGroups.filter(
+    (group) => group.stack_id === selectedStackId,
+  );
+  const selectedGroup = availableGroups.find(
+    (group) => group.group_id === selectedGroupId,
+  );
+  const hasValidFlipBookSelection = Boolean(selectedStackId && selectedGroup);
 
   const closeFormAfterSave = useCallback(() => {
     setActiveForm({
@@ -72,21 +86,69 @@ const BloggPage = () => {
   }, [activeForm.isOpen, isAdmin]);
 
   const toggleViewMode = useCallback(() => {
-    setViewMode((prev) => (prev === "canvas" ? "flipbook" : "canvas"));
-  }, []);
+    const nextMode: ViewMode = viewMode === "canvas" ? "flipbook" : "canvas";
+    setViewMode(nextMode);
+    const next = new URLSearchParams(searchParams);
+    if (nextMode === "flipbook") next.set("view", "flipbook");
+    else next.delete("view");
+    next.delete("noteId");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams, viewMode]);
+
+  // Legacy flipbook note URLs should use the exact same Open note screen
+  // as Blog Feed. Keep the selected stack/group so Back returns to this book.
+  useEffect(() => {
+    const legacyNoteId = bloggId || searchParams.get("noteId");
+    if (!legacyNoteId) return;
+
+    const next = new URLSearchParams();
+    next.set("returnTo", "flipbook");
+    const stackId = searchParams.get("stackId");
+    const groupId = searchParams.get("groupId");
+    if (stackId) next.set("stackId", stackId);
+    if (groupId) next.set("groupId", groupId);
+    navigate(`/read/${encodeURIComponent(legacyNoteId)}?${next.toString()}`, {
+      replace: true,
+    });
+  }, [bloggId, navigate, searchParams]);
 
   useEffect(() => {
-    if (bloggId) {
-      setViewMode("flipbook");
-      setActiveForm((prev) => prev.isOpen ? {
-        isOpen: false,
-        stackId: null,
-        groupId: null,
-        selectedBlogg: null,
-        initialEditMode: false,
-      } : prev);
-    }
-  }, [bloggId]);
+    let cancelled = false;
+    setFiltersLoading(true);
+    setFiltersError(false);
+    fetchStackAndGroup({ publicReadOnly: true })
+      .then((data) => {
+        if (cancelled) return;
+        setFlipBookStacks(Array.isArray(data?.stacks) ? data.stacks : []);
+        setFlipBookGroups(Array.isArray(data?.groups) ? data.groups : []);
+      })
+      .catch((error) => {
+        console.error("Could not load flipbook stack/group filters:", error);
+        if (!cancelled) setFiltersError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setFiltersLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleFlipBookStackChange = useCallback((stackId: string) => {
+    const next = new URLSearchParams();
+    next.set("view", "flipbook");
+    if (stackId) next.set("stackId", stackId);
+    // A group belongs to one stack. Clear it every time the stack changes.
+    setSearchParams(next, { replace: true });
+    setViewMode("flipbook");
+  }, [setSearchParams]);
+
+  const handleFlipBookGroupChange = useCallback((groupId: string) => {
+    const next = new URLSearchParams();
+    next.set("view", "flipbook");
+    if (selectedStackId) next.set("stackId", selectedStackId);
+    if (groupId) next.set("groupId", groupId);
+    setSearchParams(next, { replace: true });
+    setViewMode("flipbook");
+  }, [selectedStackId, setSearchParams]);
 
   // The shared header's New Note button carries this flag from Blog Feed.
   useEffect(() => {
@@ -211,7 +273,7 @@ const BloggPage = () => {
         }`}
       >
         {activeForm.isOpen ? (
-          <div className={isAdmin ? "h-full" : "h-full public-readonly-note-form"}>
+          <div className={`${isAdmin ? "" : "public-readonly-note-form"} h-full min-h-0`}>
             <BloggPageContainer
               key={activeForm.selectedBlogg?.blogg_id || activeForm.selectedBlogg?._id || "new-note"}
               groupId={activeForm.groupId}
@@ -223,7 +285,7 @@ const BloggPage = () => {
               onAutoSaved={refreshCanvasAfterAutoSave}
             />
           </div>
-        ) : viewMode === "canvas" && !bloggId ? (
+        ) : viewMode === "canvas" ? (
           <div className={isAdmin ? "absolute inset-0" : "absolute inset-0 canvas-readonly-scope"}>
             <BloggCanvasUI
               key={canvasRefreshKey}
@@ -231,16 +293,78 @@ const BloggPage = () => {
             />
           </div>
         ) : (
-          <BlogFlipBookUI
-            initialBloggId={openedNoteId}
-            onOpenBlogg={(blogg) => {
-              const noteId = blogg.blogg_id || blogg._id;
-              navigate(`/blog?view=flipbook&noteId=${encodeURIComponent(noteId)}`);
-            }}
-            onBackFromBlogg={() => navigate("/blog?view=flipbook")}
-            onOpenInReader={(blogg) => navigate(`/blog?readNote=${encodeURIComponent(blogg.blogg_id || blogg._id)}`)}
-            onEditBlogg={isAdmin ? handleEditFromFlipBook : undefined}
-          />
+          <div className="flipbook-page-shell">
+            <div className="flipbook-filter-bar" aria-label="Choose flipbook content">
+              <div className="flipbook-filter-field">
+                <label htmlFor="flipbook-stack-select">Stack</label>
+                <select
+                  id="flipbook-stack-select"
+                  value={selectedStackId}
+                  onChange={(event) => handleFlipBookStackChange(event.target.value)}
+                  disabled={filtersLoading || flipBookStacks.length === 0}
+                >
+                  <option value="">{filtersLoading ? "Loading stacks…" : "Select a stack"}</option>
+                  {flipBookStacks.map((stack) => (
+                    <option key={stack.stack_id} value={stack.stack_id}>{stack.stack_name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flipbook-filter-field">
+                <label htmlFor="flipbook-group-select">Group</label>
+                <select
+                  id="flipbook-group-select"
+                  value={selectedGroup?.group_id || ""}
+                  onChange={(event) => handleFlipBookGroupChange(event.target.value)}
+                  disabled={filtersLoading || !selectedStackId || availableGroups.length === 0}
+                >
+                  <option value="">{!selectedStackId ? "Select a stack first" : "Select a group"}</option>
+                  {availableGroups.map((group) => (
+                    <option key={group.group_id} value={group.group_id}>{group.group_name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            {filtersError ? (
+              <div className="flipbook-filter-empty" role="status">
+                <p>Stack and group filters could not be loaded.</p>
+                <button type="button" onClick={() => window.location.reload()}>Retry</button>
+              </div>
+            ) : filtersLoading ? (
+              <div className="flipbook-filter-empty" role="status">Loading stacks and groups…</div>
+            ) : hasValidFlipBookSelection ? (
+              <div className="flipbook-content-area">
+                <BlogFlipBookUI
+                  key={`${selectedStackId}:${selectedGroupId}`}
+                  onOpenBlogg={(blogg) => {
+                    const noteId = blogg.blogg_id || blogg._id;
+                    const next = new URLSearchParams();
+                    next.set("returnTo", "flipbook");
+                    next.set("stackId", selectedStackId);
+                    next.set("groupId", selectedGroupId);
+                    navigate(`/read/${encodeURIComponent(noteId)}?${next.toString()}`);
+                  }}
+                  onBackFromBlogg={() => navigate(`/blog?view=flipbook&stackId=${encodeURIComponent(selectedStackId)}&groupId=${encodeURIComponent(selectedGroupId)}`)}
+                  onOpenInReader={(blogg) => {
+                    const noteId = blogg.blogg_id || blogg._id;
+                    const next = new URLSearchParams();
+                    next.set("returnTo", "flipbook");
+                    next.set("stackId", selectedStackId);
+                    next.set("groupId", selectedGroupId);
+                    navigate(`/read/${encodeURIComponent(noteId)}?${next.toString()}`);
+                  }}
+                  onEditBlogg={isAdmin ? handleEditFromFlipBook : undefined}
+                />
+              </div>
+            ) : (
+              <div className="flipbook-filter-empty" role="status">
+                {flipBookStacks.length === 0
+                  ? "No stacks are available yet. Create a stack and group first."
+                  : selectedStackId && availableGroups.length === 0
+                    ? "This stack has no groups yet. Create a group first."
+                    : "Select a stack and a group to display its blogs."}
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>

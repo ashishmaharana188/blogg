@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { BlockNoteView } from "@blocknote/mantine";
 import { useCreateBlockNote } from "@blocknote/react";
 import type { BloggItem } from "../types/pageTypes";
@@ -36,19 +36,42 @@ function NoteBody({ content }: { content?: unknown[] }) {
 export default function BloggReadPage() {
   const { bloggId = "" } = useParams<{ bloggId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { isAdmin } = useAuth();
   const [blogg, setBlogg] = useState<BloggItem | null>(null);
   const [stacks, setStacks] = useState<CanvasStack[]>([]);
   const [groups, setGroups] = useState<CanvasGroup[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "missing" | "error">("loading");
 
+  const returnToFlipbook = searchParams.get("returnTo") === "flipbook";
+  const returnHref = useMemo(() => {
+    if (!returnToFlipbook) return "/feed";
+    const params = new URLSearchParams({ view: "flipbook" });
+    const stackId = searchParams.get("stackId");
+    const groupId = searchParams.get("groupId");
+    if (stackId) params.set("stackId", stackId);
+    if (groupId) params.set("groupId", groupId);
+    return `/blog?${params.toString()}`;
+  }, [returnToFlipbook, searchParams]);
+
+  const buildBlockNoteUrl = (action: "readNote" | "editNote") => {
+    const params = new URLSearchParams({ [action]: bloggId });
+    if (returnToFlipbook) {
+      params.set("returnTo", "flipbook");
+      const stackId = searchParams.get("stackId");
+      const groupId = searchParams.get("groupId");
+      if (stackId) params.set("stackId", stackId);
+      if (groupId) params.set("groupId", groupId);
+    }
+    return `/blog?${params.toString()}`;
+  };
+
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       setStatus("loading");
       try {
-        // The frontend page is available immediately. These read-only requests
-        // wake the backend and retry brief startup failures while the loading art stays visible.
+        // These public read-only requests retry brief startup failures while the loading state stays visible.
         const [note, canvas] = await Promise.all([
           fetchBloggByIdRequest({ blogg_id: bloggId }, { retryTransientErrors: true }),
           fetchStackAndGroup({ publicReadOnly: true, retryTransientErrors: true }),
@@ -99,9 +122,9 @@ export default function BloggReadPage() {
             {!!blogg.tags?.length && <div className="blogg-reader-tags" aria-label="Tags">{blogg.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>}
             <div className="blogg-reader-content"><NoteBody key={blogg.blogg_id || blogg._id} content={blogg.content} /></div>
             <footer className="blogg-reader-actions">
-              <Link to="/feed">Back to feed</Link>
-              <Link to={`/blog?readNote=${encodeURIComponent(blogg.blogg_id || blogg._id)}`}>Open in Note View</Link>
-              {isAdmin && <Link to={`/blog?editNote=${encodeURIComponent(blogg.blogg_id || blogg._id)}`}>Edit in BlockNote</Link>}
+              <Link to={returnHref}>{returnToFlipbook ? "Back to Flipbook" : "Back to feed"}</Link>
+              <Link to={buildBlockNoteUrl("readNote")}>Open in Note View</Link>
+              {isAdmin && <Link to={buildBlockNoteUrl("editNote")}>Edit in BlockNote</Link>}
               <ShareBloggButton blogg={blogg} stackName={stack?.stack_name || "Unsorted stack"} groupName={group?.group_name || "Others"} />
             </footer>
           </article>

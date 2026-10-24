@@ -1,0 +1,222 @@
+/* Stack/group selection for the flipbook. Keep the controls outside the
+   animated book so tablets and phones do not squeeze the actual page spread. */
+.flipbook-page-shell {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #fff;
+  color: #111827;
+  font-family: "Courier Prime", "Courier New", Courier, monospace;
+}
+
+.flipbook-filter-bar {
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 320px));
+  justify-content: center;
+  align-items: end;
+  gap: 12px 20px;
+  flex: 0 0 auto;
+  width: 100%;
+  padding: 10px 16px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fff;
+}
+
+.flipbook-filter-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 5px;
+}
+
+.flipbook-filter-field label {
+  color: #6b7280;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.flipbook-filter-field select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 8px 34px 8px 11px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background-color: #fff;
+  color: #111827;
+  font: inherit;
+  font-size: 0.84rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+}
+
+.flipbook-filter-field select:focus-visible {
+  outline: 2px solid #64748b;
+  outline-offset: 2px;
+}
+
+.flipbook-filter-field select:disabled {
+  cursor: not-allowed;
+  color: #9ca3af;
+  background-color: #f9fafb;
+}
+
+.flipbook-content-area {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.flipbook-content-area > .flipbook-profile {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.flipbook-filter-empty {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+  padding: 24px;
+  color: #6b7280;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.flipbook-filter-empty p {
+  margin: 0;
+}
+
+.flipbook-filter-empty button {
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid #111827;
+  border-radius: 999px;
+  background: #fff;
+  color: #111827;
+  font: inherit;
+  cursor: pointer;
+}
+
+@media (max-width: 980px) {
+  .flipbook-filter-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 14px;
+    padding: 10px 14px;
+  }
+}
+
+@media (max-width: 600px) {
+  .flipbook-filter-bar {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .flipbook-filter-field label {
+    font-size: 0.64rem;
+  }
+
+  .flipbook-filter-field select {
+    min-height: 42px;
+    padding: 7px 22px 7px 8px;
+    font-size: 0.76rem;
+  }
+
+  .flipbook-filter-empty {
+    padding: 18px 14px;
+    font-size: 0.82rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .flipbook-filter-bar {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 7px;
+  }
+}
+
+/* Mobile flipbook proportions: widen the spread slightly, give each page a
+   little more height, and keep metadata readable without oversized headings. */
+@media (max-width: 760px) {
+  .flipbook-profile .flipbook-stage {
+    --page-w: min(46vw, calc((100svh - 195px) * 0.72), 205px) !important;
+    --page-h: calc(var(--page-w) * 1.42) !important;
+  }
+
+  .flipbook-profile .flipbook-page-content {
+    padding: 13px !important;
+  }
+
+  .flipbook-profile .flipbook-blogg-title {
+    font-size: clamp(0.98rem, 4vw, 1.2rem) !important;
+    line-height: 1.22 !important;
+    overflow-wrap: anywhere;
+  }
+
+  .flipbook-profile .flipbook-blogg-subtitle {
+    margin-top: 0.55rem;
+    font-size: clamp(0.68rem, 2.6vw, 0.76rem) !important;
+    line-height: 1.4 !important;
+    overflow-wrap: anywhere;
+  }
+
+  .flipbook-profile .flipbook-blogg-author {
+    font-size: 0.62rem !important;
+    line-height: 1.35;
+  }
+
+  .flipbook-profile .flipbook-blogg-tags {
+    gap: 0.25rem;
+    margin-top: 0.6rem;
+  }
+
+  .flipbook-profile .flipbook-blogg-tag {
+    padding: 0.15rem 0.4rem;
+    font-size: 0.6rem !important;
+  }
+}
+
+/* Four fewer visible binding arcs on phone-width layouts. The spine stylesheet
+   already hides two at each end, so these hide the next pair at both ends. */
+@media (max-width: 480px) {
+  .flipbook-profile .flipbook-spiral-spine span:nth-child(3),
+  .flipbook-profile .flipbook-spiral-spine span:nth-child(4),
+  .flipbook-profile .flipbook-spiral-spine span:nth-last-child(3),
+  .flipbook-profile .flipbook-spiral-spine span:nth-last-child(4) {
+    display: none !important;
+  }
+}
+
+@media (max-width: 400px) {
+  .flipbook-profile .flipbook-stage {
+    --page-w: min(45vw, calc((100svh - 185px) * 0.72), 180px) !important;
+    --page-h: calc(var(--page-w) * 1.42) !important;
+  }
+}
+
+/* Landscape phones use less vertical space; preserve the existing compact
+   landscape width instead of letting the portrait widening rule distort it. */
+@media (max-width: 760px) and (orientation: landscape) {
+  .flipbook-profile .flipbook-stage {
+    --page-w: min(25vw, 112px) !important;
+    --page-h: calc(var(--page-w) * 1.3) !important;
+  }
+}

@@ -101,13 +101,21 @@
 }
 
 @keyframes flipbook-next-smooth {
-  from { transform: rotateY(0deg) translateZ(1px); }
-  to { transform: rotateY(-180deg) translateZ(-1px); }
+  from {
+    transform: rotateY(0deg) translateZ(1px);
+  }
+  to {
+    transform: rotateY(-180deg) translateZ(-1px);
+  }
 }
 
 @keyframes flipbook-previous-smooth {
-  from { transform: rotateY(0deg) translateZ(1px); }
-  to { transform: rotateY(180deg) translateZ(-1px); }
+  from {
+    transform: rotateY(0deg) translateZ(1px);
+  }
+  to {
+    transform: rotateY(180deg) translateZ(-1px);
+  }
 }
 
 /* Page-turn animations remain enabled for explicit user navigation, even when
@@ -151,7 +159,7 @@
 .flipbook-spiral-spine span {
   display: block;
   flex: 0 0 12px;
-  width: 27px;
+  width: 18px;
   height: 12px;
   box-sizing: border-box;
   border: 0;
@@ -179,6 +187,13 @@
   }
 }
 
+@media (max-width: 760px), (pointer: coarse) {
+  .flipbook-spiral-spine span:nth-child(-n + 4),
+  .flipbook-spiral-spine span:nth-last-child(-n + 4) {
+    display: none !important;
+  }
+}
+
 @media (max-width: 400px) {
   .flipbook-spiral-spine {
     top: 3px;
@@ -189,7 +204,7 @@
   .flipbook-spiral-spine span {
     flex-basis: 10px;
     width: clamp(19px, 7vw, 26px);
-    height: 10px;
+    height: 8px;
     border-top-width: 2px;
     border-left-width: 2px;
     border-right-width: 2px;

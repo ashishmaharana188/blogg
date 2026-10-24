@@ -19,5 +19,23 @@ export async function fetchAllBloggsRequest() {
     throw new Error(`GET /bloggs failed with HTTP ${response.status}${detail ? `: ${detail}` : ""}`);
   }
   const result = await response.json();
-  return result.bloggs ?? [];
+  const bloggs = Array.isArray(result?.bloggs) ? result.bloggs : [];
+
+  // Blog Profile's flipbook must never default to the full site-wide note list.
+  // Its parent mounts this request only after a stack and group have both been
+  // selected. Filtering here keeps the fetched book scoped to that selection.
+  const pathname = window.location.pathname.replace(/\/$/, "");
+  if (pathname === "/blog") {
+    const params = new URLSearchParams(window.location.search);
+    const stackId = params.get("stackId");
+    const groupId = params.get("groupId");
+    if (!stackId || !groupId) return [];
+
+    return bloggs.filter((blogg: any) =>
+      blogg?.group_id === groupId &&
+      (blogg?.stack_id === stackId || !blogg?.stack_id),
+    );
+  }
+
+  return bloggs;
 }
