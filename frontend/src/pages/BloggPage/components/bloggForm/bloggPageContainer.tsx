@@ -7,15 +7,21 @@ const BloggPageContainer = ({
   groupId,
   selectedBlogg,
   initialEditMode,
+  canEdit = false,
   onSaved,
 }: {
   stackId?: string | null;
   groupId?: string | null;
   selectedBlogg?: BloggItem | null;
   initialEditMode?: boolean;
+  /** True only for the authenticated administrator. */
+  canEdit?: boolean;
   onSaved?: () => void;
 }) => {
   const handleSave = async (blog: BlogSavetypes) => {
+    if (!canEdit) {
+      throw new Error("Administrator access is required to edit notes.");
+    }
     try {
       await saveBlog(blog, stackId, groupId, selectedBlogg?.blogg_id);
       onSaved?.();
@@ -30,6 +36,7 @@ const BloggPageContainer = ({
       onContentChange={handleSave}
       selectedBlogg={selectedBlogg}
       initialEditMode={initialEditMode}
+      canEdit={canEdit}
     />
   );
 };

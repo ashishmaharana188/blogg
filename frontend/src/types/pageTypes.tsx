@@ -1,10 +1,12 @@
 export interface BlogSavetypes {
-  //**type for parent handleSave(blog) receive structure since blog is an object */
+  // Structure passed from the editor to the save handler.
   author: string;
   title: string;
   subtitle: string;
   tags?: string[];
   content: unknown;
+  /** Missing visibility values on old records are treated as public by the API. */
+  isPublic?: boolean;
 }
 
 export interface LoginRequest {
@@ -30,6 +32,8 @@ export interface userFormtypes {
   onContentChange: (blog: BlogSavetypes) => void;
   selectedBlogg?: BloggItem | null;
   initialEditMode?: boolean;
+  /** True only when the authenticated user is the configured administrator. */
+  canEdit?: boolean;
 }
 
 export interface StackPosition {
@@ -55,6 +59,9 @@ export interface BloggItem {
   title: string;
   subtitle: string;
   tags: string[];
+
+  /** False means administrator-only. Missing values remain public for legacy records. */
+  isPublic?: boolean;
 
   content?: unknown[]; // note only
 

@@ -32,8 +32,6 @@ export const saveBlogMedia = async (file: Express.Multer.File) => {
   const bufferBytes = hasBuffer ? file.buffer.length : 0;
   const fileSizeBytes = Number(file?.size ?? 0);
 
-  // This lets Render logs distinguish an empty incoming multipart upload from
-  // a failure while handing an otherwise valid buffer to Cloudinary.
   logger.info({
     event: "MEDIA_UPLOAD_RECEIVED",
     fileSizeBytes,
@@ -88,18 +86,13 @@ export const saveBlogMedia = async (file: Express.Multer.File) => {
       },
     );
 
-    // End the Cloudinary writable with the actual Multer Buffer. Do not pass
-    // the buffer through an intermediate Readable; no content bytes are lost
-    // or interpreted as iterable elements along the way.
     uploadStream.end(file.buffer);
   });
 };
 
 /**
- * Header-created notes have no canvas destination. Put those notes in a
- * stable "Others" folder so the canvas and flipbook use the same document.
- * The folder is reused on subsequent saves; when the canvas is empty, a
- * matching stack is created as well.
+ * Header-created notes have no canvas destination. Put those notes in a stable
+ * "Others" folder so the canvas and flipbook use the same document.
  */
 async function resolveDefaultFolder(): Promise<{ stack_id: string; group_id: string }> {
   const canvas = getDB().collection("stackGroupCanvas");
@@ -110,8 +103,6 @@ async function resolveDefaultFolder(): Promise<{ stack_id: string; group_id: str
   });
 
   if (group?.group_id && group.stack_id) {
-    // A group can exist after its stack was deleted. Recreate that stack so
-    // the folder remains visible in Folder view.
     const stack = await canvas.findOne({
       stack_id: group.stack_id,
       group_id: { $exists: false },
@@ -143,10 +134,7 @@ async function resolveDefaultFolder(): Promise<{ stack_id: string; group_id: str
   return { stack_id: stack.stack_id, group_id };
 }
 
-/**
- * Repair older notes saved without a stack/folder destination. This operation
- * is idempotent: once every note has IDs, later calls do no database writes.
- */
+/** Repair older notes saved without a stack/folder destination. */
 export async function assignUngroupedBlogsToDefaultFolder() {
   const db = getDB();
   const ungroupedFilter = {
@@ -174,6 +162,8 @@ export async function assignUngroupedBlogsToDefaultFolder() {
 
 export const saveBlog = async (blog: BlogInput): Promise<BlogDocument> => {
   const db = getDB();
+  const isPublic = blog.isPublic !== false;
+
   if (blog.blogg_id) {
     const result = await db
       .collection<BlogDocument>("bloggs")
@@ -186,6 +176,7 @@ export const saveBlog = async (blog: BlogInput): Promise<BlogDocument> => {
             subtitle: blog.subtitle,
             tags: blog.tags,
             content: blog.content,
+            isPublic,
             updatedAt: new Date(),
           },
         },
@@ -203,6 +194,7 @@ export const saveBlog = async (blog: BlogInput): Promise<BlogDocument> => {
   const blogDocument = {
     ...blog,
     ...destination,
+    isPublic,
     blogg_id: randomUUID(),
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -210,18 +202,30 @@ export const saveBlog = async (blog: BlogInput): Promise<BlogDocument> => {
 
   const result = await db.collection("bloggs").insertOne(blogDocument);
   const savedBlog = await db
-    .collection<BlogDocument>("bloggs")
+    .collection("bloggs")
     .findOne({ _id: result.insertedId });
 
   if (!savedBlog) throw new Error("Failed to retrieve saved blog");
-  return savedBlog;
+  return savedBlog as BlogDocument;
 };
 
-export async function getBlogsByGroup(payload: { group_id: string }) {
+/**
+ * Only the configured administrator may include private notes. `$ne: false`
+ * intentionally treats records created before this feature (missing isPublic)
+ * as public, preventing an accidental hide-all upgrade.
+ */
+export async function getBlogsByGroup(
+  payload: { group_id: string },
+  includePrivate = false,
+) {
+  const filter = includePrivate
+    ? { group_id: payload.group_id }
+    : { group_id: payload.group_id, isPublic: { $ne: false } };
+
   const bloggs = await getDB()
     .collection("bloggs")
     .find(
-      { group_id: payload.group_id },
+      filter,
       {
         projection: {
           _id: 1,
@@ -233,6 +237,7 @@ export async function getBlogsByGroup(payload: { group_id: string }) {
           title: 1,
           subtitle: 1,
           tags: 1,
+          isPublic: 1,
           createdAt: 1,
           updatedAt: 1,
         },
@@ -245,6 +250,14 @@ export async function getBlogsByGroup(payload: { group_id: string }) {
   return bloggs;
 }
 
-export async function getBloggContent(payload: { blogg_id: string }) {
-  return getDB().collection("bloggs").findOne({ blogg_id: payload.blogg_id });
+export async function getBloggContent(
+  payload: { blogg_id: string },
+  includePrivate = false,
+) {
+  const bloggId = typeof payload?.blogg_id === "string" ? payload.blogg_id.trim() : "";
+  if (!bloggId) return null;
+  const filter = includePrivate
+    ? { blogg_id: bloggId }
+    : { blogg_id: bloggId, isPublic: { $ne: false } };
+  return getDB().collection("bloggs").findOne(filter);
 }

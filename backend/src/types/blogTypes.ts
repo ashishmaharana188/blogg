@@ -12,6 +12,8 @@ export type BlogInput = {
   title?: string;
   subtitle?: string;
   tags?: string[];
+  /** False restricts this document to the configured administrator. */
+  isPublic?: boolean;
 
   content?: unknown[];
 

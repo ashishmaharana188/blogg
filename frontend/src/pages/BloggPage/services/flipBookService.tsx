@@ -1,7 +1,13 @@
 import { API_BASE_URL } from "../../../services/apiBase";
 
 export async function fetchAllBloggsRequest() {
-  const response = await fetch(`${API_BASE_URL}/bloggs`);
+  // The server uses the administrator's session cookie to decide whether the
+  // response may include private notes. Without credentials, admins would see
+  // only the public subset in Feed and Flipbook.
+  const response = await fetch(`${API_BASE_URL}/bloggs`, {
+    credentials: "include",
+    cache: "no-store",
+  });
   if (!response.ok) {
     let detail = "";
     try {

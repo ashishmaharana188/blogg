@@ -110,9 +110,9 @@ const BloggPage = () => {
   useEffect(() => {
     const editNoteId = searchParams.get("editNote");
     const readNoteId = searchParams.get("readNote");
-    // Wait until the persisted session has been resolved before deciding
-    // whether a direct edit link should open in editable mode.
-    if (editNoteId && authLoading) return;
+    // Resolve the persisted session before fetching direct read/edit links;
+    // private notes are filtered by the backend for non-admin visitors.
+    if ((editNoteId || readNoteId) && authLoading) return;
     const requestedNoteId = editNoteId || readNoteId;
     if (!requestedNoteId) return;
 
@@ -123,7 +123,7 @@ const BloggPage = () => {
         const note = await fetchBloggByIdRequest({ blogg_id: requestedNoteId });
         if (cancelled) return;
         if (!note) {
-          window.alert("This note could not be found.");
+          window.alert("This note could not be found or is private.");
           return;
         }
 
@@ -168,6 +168,7 @@ const BloggPage = () => {
     }
 
     const fullBlogg = await fetchBloggByIdRequest({ blogg_id: blogg.blogg_id });
+    if (!fullBlogg) return;
     setActiveForm({
       isOpen: true,
       stackId: fullBlogg.stack_id,
@@ -178,6 +179,7 @@ const BloggPage = () => {
   };
 
   const handleEditFromFlipBook = useCallback((blogg: BloggItem) => {
+    if (!isAdmin) return;
     setActiveForm({
       isOpen: true,
       stackId: blogg.stack_id,
@@ -185,7 +187,7 @@ const BloggPage = () => {
       selectedBlogg: blogg,
       initialEditMode: true,
     });
-  }, []);
+  }, [isAdmin]);
 
   return (
     <div className="w-full h-full flex flex-col bg-white">
@@ -207,10 +209,12 @@ const BloggPage = () => {
         {activeForm.isOpen ? (
           <div className={isAdmin ? "h-full" : "h-full public-readonly-note-form"}>
             <BloggPageContainer
+              key={activeForm.selectedBlogg?.blogg_id || activeForm.selectedBlogg?._id || "new-note"}
               groupId={activeForm.groupId}
               stackId={activeForm.stackId}
               selectedBlogg={activeForm.selectedBlogg}
               initialEditMode={activeForm.initialEditMode}
+              canEdit={isAdmin}
               onSaved={closeFormAfterSave}
             />
           </div>

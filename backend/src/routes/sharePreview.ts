@@ -1,6 +1,10 @@
 import { Router } from "express";
 import { ObjectId } from "mongodb";
 import { getDB } from "../db/mongoDBConnect.ts";
+import {
+  isConfiguredAdminRequest,
+  optionalAuthenticationMiddleware,
+} from "../middleware/authenticationMiddleware.ts";
 
 const sharePreviewRouter = Router();
 
@@ -138,42 +142,48 @@ const buildMetadataHtml = ({
 </html>`;
 };
 
-sharePreviewRouter.get("/share/:bloggId", async (req, res, next) => {
-  try {
-    const requestedId = req.params.bloggId;
-    const collection = getDB().collection("bloggs");
-    const objectId = /^[a-f\d]{24}$/i.test(requestedId) ? new ObjectId(requestedId) : null;
-    const filter = objectId
-      ? { $or: [{ blogg_id: requestedId }, { _id: objectId }] }
-      : { blogg_id: requestedId };
-    const note = await collection.findOne(filter);
+const notFoundHtml = "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>Note not found | Blogg</title></head><body><h1>Note not found</h1><p>This shared note may have been removed or is private.</p></body></html>";
 
-    if (!note) {
-      return res.status(404).type("html").send(
-        "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>Note not found | Blogg</title></head><body><h1>Note not found</h1><p>This shared note may have been removed.</p></body></html>",
+sharePreviewRouter.get(
+  "/share/:bloggId",
+  optionalAuthenticationMiddleware,
+  async (req, res, next) => {
+    try {
+      const requestedId = req.params.bloggId;
+      const collection = getDB().collection("bloggs");
+      const objectId = /^[a-f\d]{24}$/i.test(requestedId) ? new ObjectId(requestedId) : null;
+      const filter = objectId
+        ? { $or: [{ blogg_id: requestedId }, { _id: objectId }] }
+        : { blogg_id: requestedId };
+      const note = await collection.findOne(filter);
+
+      // An absent isPublic field is legacy data and is treated as public.
+      // Private metadata must not be sent to public sharing crawlers.
+      if (!note || (note.isPublic === false && !isConfiguredAdminRequest(req))) {
+        res.setHeader("Cache-Control", "private, no-store");
+        return res.status(404).type("html").send(notFoundHtml);
+      }
+
+      const isPublic = note.isPublic !== false;
+      const noteId = String(note.blogg_id || note._id);
+      const frontendBase = getFrontendBaseUrl();
+      const shareUrl = `${frontendBase}/share/${encodeURIComponent(noteId)}`;
+      const readUrl = `${frontendBase}/read/${encodeURIComponent(noteId)}`;
+      const title = typeof note.title === "string" && note.title.trim()
+        ? note.title.trim()
+        : "Untitled note";
+      const description = descriptionFor(note as Record<string, unknown>);
+      const imageUrl = firstImageUrl(note.content) || `${frontendBase}/og-default.png`;
+
+      // Private administrator previews must never be stored in a shared cache.
+      res.setHeader("Cache-Control", isPublic ? "public, max-age=60, s-maxage=300" : "private, no-store");
+      return res.status(200).type("html").send(
+        buildMetadataHtml({ title, description, shareUrl, readUrl, imageUrl }),
       );
+    } catch (error) {
+      next(error);
     }
-
-    const noteId = String(note.blogg_id || note._id);
-    const frontendBase = getFrontendBaseUrl();
-    const shareUrl = `${frontendBase}/share/${encodeURIComponent(noteId)}`;
-    const readUrl = `${frontendBase}/read/${encodeURIComponent(noteId)}`;
-    const title = typeof note.title === "string" && note.title.trim()
-      ? note.title.trim()
-      : "Untitled note";
-    const description = descriptionFor(note as Record<string, unknown>);
-    const imageUrl = firstImageUrl(note.content) || `${frontendBase}/og-default.png`;
-
-    // Return metadata in the initial HTML for preview crawlers. A tiny client-
-    // side redirect sends regular browsers and in-app webviews to the reader.
-    // This avoids misclassifying messaging-app webviews as preview crawlers.
-    res.setHeader("Cache-Control", "public, max-age=60, s-maxage=300");
-    return res.status(200).type("html").send(
-      buildMetadataHtml({ title, description, shareUrl, readUrl, imageUrl }),
-    );
-  } catch (error) {
-    next(error);
-  }
-});
+  },
+);
 
 export default sharePreviewRouter;

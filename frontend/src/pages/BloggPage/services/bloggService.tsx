@@ -11,11 +11,11 @@ export async function saveBlog(
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...blog, blogg_id, stack_id, group_id }),
+    body: JSON.stringify({ ...blog, isPublic: blog.isPublic !== false, blogg_id, stack_id, group_id }),
   });
   if (!response.ok) {
     if (response.status === 401 || response.status === 403) {
-      throw new Error("Sign in from Account before creating or editing notes.");
+      throw new Error("Sign in as the administrator before creating or editing notes.");
     }
     throw new Error(`Failed to save note (${response.status})`);
   }
@@ -32,7 +32,7 @@ export async function uploadFile(file: File) {
   });
   if (!response.ok) {
     if (response.status === 401 || response.status === 403) {
-      throw new Error("Sign in from Account before uploading media.");
+      throw new Error("Sign in as the administrator before uploading media.");
     }
     throw new Error("Media upload failed");
   }

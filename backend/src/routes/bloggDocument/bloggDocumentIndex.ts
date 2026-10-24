@@ -1,5 +1,5 @@
 import express from "express";
-import { authenticationMiddleware } from "../../middleware/authenticationMiddleware.ts";
+import { authenticationMiddleware, isConfiguredAdminRequest, optionalAuthenticationMiddleware } from "../../middleware/authenticationMiddleware.ts";
 import { adminMiddleware } from "../../middleware/adminMiddleware.ts";
 import { trace } from "../../middleware/trace.ts";
 import {
@@ -38,16 +38,18 @@ blogInterceptRouter.post(
 
 blogInterceptRouter.post(
   "/canvas/blogg/fetchBloggByGroup",
+  optionalAuthenticationMiddleware,
   trace("GROUP_BLOGS_FETCH", async (req) => {
-    const bloggs = await getBlogsByGroup(req.body);
+    const bloggs = await getBlogsByGroup(req.body, isConfiguredAdminRequest(req));
     return { success: true, message: "GROUP_BLOGS_FETCH", bloggs };
   }),
 );
 
 blogInterceptRouter.post(
   "/canvas/blogg/fetchBloggById",
+  optionalAuthenticationMiddleware,
   trace("GROUP_BLOGS_FETCH", async (req) => {
-    const bloggs = await getBloggContent(req.body);
+    const bloggs = await getBloggContent(req.body, isConfiguredAdminRequest(req));
     return { success: true, message: "BLOG_ID_CONTENT_FETCH", bloggs };
   }),
 );

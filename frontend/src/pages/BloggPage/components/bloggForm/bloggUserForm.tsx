@@ -90,9 +90,12 @@ const UserForm = ({
   onContentChange,
   selectedBlogg,
   initialEditMode = false,
+  canEdit = false,
 }: userFormtypes) => {
+  // A saved note starts in read-only mode. Non-admins can never turn editing on,
+  // even if they manipulate component state or open a direct reader URL.
   const [isReadOnly, setIsReadOnly] = useState(
-    selectedBlogg !== null && selectedBlogg !== undefined && !initialEditMode,
+    !canEdit || (selectedBlogg !== null && selectedBlogg !== undefined && !initialEditMode),
   );
   const [formData, setFormData] = useState({
     author: selectedBlogg?.author ?? "",
@@ -100,6 +103,7 @@ const UserForm = ({
     description: selectedBlogg?.subtitle ?? "",
     content: selectedBlogg?.content ?? [],
   });
+  const [isPublic, setIsPublic] = useState(selectedBlogg?.isPublic !== false);
   const [tags, setTags] = useState<{ text: string; colorClass: string }[]>(
     (selectedBlogg?.tags ?? []).map((text, index) => ({
       text,
@@ -109,6 +113,7 @@ const UserForm = ({
   const [isAddingTag, setIsAddingTag] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const pendingPreviewsRef = useRef<Set<Promise<void>>>(new Set());
+  const isEditable = canEdit && !isReadOnly;
 
   const editor = useCreateBlockNote({
     schema: bloggEditorSchema,
@@ -232,6 +237,7 @@ const UserForm = ({
   };
 
   const saveForm = async () => {
+    if (!canEdit || isReadOnly) return;
     // Do not persist a temporary "Loading link preview…" placeholder if the user saves quickly.
     if (pendingPreviewsRef.current.size > 0) {
       await Promise.all(Array.from(pendingPreviewsRef.current));
@@ -242,6 +248,7 @@ const UserForm = ({
       subtitle: formData.description,
       tags: tags.map((tag) => tag.text),
       content: editor.document,
+      isPublic,
     };
     onContentChange(blog);
   };
@@ -253,7 +260,7 @@ const UserForm = ({
           <textarea
             ref={authorRef}
             value={formData.author}
-            readOnly={isReadOnly}
+            readOnly={!canEdit || isReadOnly}
             onChange={(event) => {
               handleTitleChange("author", event.target.value);
               autoResize(authorRef);
@@ -265,7 +272,7 @@ const UserForm = ({
         <textarea
           ref={titleRef}
           value={formData.title}
-          readOnly={isReadOnly}
+          readOnly={!canEdit || isReadOnly}
           onChange={(event) => {
             handleTitleChange("title", event.target.value);
             autoResize(titleRef);
@@ -277,7 +284,7 @@ const UserForm = ({
           <textarea
             ref={descriptionRef}
             value={formData.description}
-            readOnly={isReadOnly}
+            readOnly={!canEdit || isReadOnly}
             onChange={(event) => {
               handleTitleChange("description", event.target.value);
               autoResize(descriptionRef);
@@ -287,14 +294,34 @@ const UserForm = ({
           />
         </div>
 
+        {canEdit && (
+          <div className="mx-auto mt-2 flex w-full max-w-3xl flex-col gap-1 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-slate-800">
+              <input
+                type="checkbox"
+                checked={isPublic}
+                disabled={isReadOnly}
+                onChange={(event) => setIsPublic(event.target.checked)}
+                className="h-4 w-4 accent-black disabled:cursor-not-allowed"
+              />
+              Make this note public
+            </label>
+            <p className="text-xs leading-5 text-slate-600">
+              {isPublic
+                ? "Public notes appear in Blog Feed, Folder view and Flipbook."
+                : "Private notes are visible only when the administrator is signed in."}
+            </p>
+          </div>
+        )}
+
         <div className="flex flex-wrap items-center justify-center gap-2 mt-4 min-h-[32px]">
           {tags.map((tag, index) => (
             <div key={index} className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border transition-all ${tag.colorClass}`}>
               <span>{tag.text}</span>
-              {!isReadOnly && <button onClick={() => removeTag(index)} className="hover:text-black opacity-50 hover:opacity-100 transition-opacity focus:outline-none" title="Remove tag">×</button>}
+              {isEditable && <button onClick={() => removeTag(index)} className="hover:text-black opacity-50 hover:opacity-100 transition-opacity focus:outline-none" title="Remove tag">×</button>}
             </div>
           ))}
-          {!isReadOnly && (isAddingTag ? (
+          {isEditable && (isAddingTag ? (
             <input
               autoFocus
               type="text"
@@ -311,13 +338,13 @@ const UserForm = ({
         </div>
 
         <div className="mt-10 [&_.bn-editor]:pt-6 [&_.bn-editor]:pb-12">
-          <BlockNoteView editor={editor} theme="dark" filePanel={!isReadOnly} editable={!isReadOnly} formattingToolbar={false}>
-            {!isReadOnly && <FormattingToolbarController formattingToolbar={BloggFormattingToolbar} />}
+          <BlockNoteView editor={editor} theme="dark" filePanel={isEditable} editable={isEditable} formattingToolbar={false}>
+            {isEditable && <FormattingToolbarController formattingToolbar={BloggFormattingToolbar} />}
           </BlockNoteView>
         </div>
 
-        {isReadOnly && <div className="flex justify-end mt-4"><button className="px-5 py-1 text-l bg-white border border-gray-300 text-black rounded font-bold hover:bg-black hover:text-white transition-colors" onClick={() => setIsReadOnly(!isReadOnly)}>EDIT</button></div>}
-        {!isReadOnly && <div className="flex justify-end mt-4"><button className="px-5 py-1 text-l bg-white border border-gray-300 text-black rounded font-bold hover:bg-black hover:text-white transition-colors" onClick={saveForm}>SAVE</button></div>}
+        {isReadOnly && canEdit && selectedBlogg && <div className="flex justify-end mt-4"><button className="px-5 py-1 text-l bg-white border border-gray-300 text-black rounded font-bold hover:bg-black hover:text-white transition-colors" onClick={() => setIsReadOnly(false)}>EDIT</button></div>}
+        {isEditable && <div className="flex justify-end mt-4"><button className="px-5 py-1 text-l bg-white border border-gray-300 text-black rounded font-bold hover:bg-black hover:text-white transition-colors" onClick={() => void saveForm()}>SAVE</button></div>}
       </div>
     </div>
   );
