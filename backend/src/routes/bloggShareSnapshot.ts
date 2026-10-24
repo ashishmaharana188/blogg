@@ -8,6 +8,9 @@ const router = Router();
 const SNAPSHOT_COLLECTION = "bloggShareSnapshots";
 const MAX_PNG_BYTES = 3 * 1024 * 1024;
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+const SNAPSHOT_WAIT_MS = 7000;
+const SNAPSHOT_POLL_MS = 350;
+const wait = (milliseconds: number) => new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 
 function noteLookupFilter(bloggId: string) {
   const objectId = /^[a-f\d]{24}$/i.test(bloggId) ? new ObjectId(bloggId) : null;
@@ -30,10 +33,33 @@ router.get("/share/blog/:bloggId/og-image.png", optionalAuthenticationMiddleware
     }
 
     const canonicalId = String(note.blogg_id || note._id);
-    const snapshot = await getDB().collection(SNAPSHOT_COLLECTION).findOne({ blogg_id: canonicalId });
-    if (typeof snapshot?.pngBase64 !== "string" || !snapshot.pngBase64) {
-      res.setHeader("Cache-Control", note.isPublic === false ? "private, no-store" : "public, max-age=0, s-maxage=60, must-revalidate");
-      return res.status(404).type("text").send("Blog preview snapshot has not been captured yet.");
+    const snapshots = getDB().collection(SNAPSHOT_COLLECTION);
+    let snapshot = await snapshots.findOne({ blogg_id: canonicalId });
+    const requestedVersion = Number(req.query.v);
+    const minimumUpdatedAt = Number.isFinite(requestedVersion) && requestedVersion > 0
+      ? requestedVersion
+      : 0;
+    const isFreshEnough = (value: typeof snapshot) => {
+      if (typeof value?.pngBase64 !== "string" || !value.pngBase64) return false;
+      if (minimumUpdatedAt <= 0) return true;
+      const updatedAt = value.updatedAt ? new Date(value.updatedAt).getTime() : 0;
+      return updatedAt >= minimumUpdatedAt;
+    };
+
+    // An admin Share click creates a timestamped OG-image URL. If a snapshot
+    // from the previous click exists, do not return it while the new capture is
+    // pending. Wait for an upload newer than this click or report that it is
+    // still being prepared, never substituting generic default artwork.
+    const deadline = Date.now() + SNAPSHOT_WAIT_MS;
+    while (!isFreshEnough(snapshot) && Date.now() < deadline) {
+      await wait(SNAPSHOT_POLL_MS);
+      snapshot = await snapshots.findOne({ blogg_id: canonicalId });
+    }
+
+    if (!isFreshEnough(snapshot)) {
+      res.setHeader("Cache-Control", "private, no-store");
+      res.setHeader("Retry-After", "2");
+      return res.status(404).type("text").send("This note's rendered preview is still being prepared. Retry the preview image shortly.");
     }
 
     const image = Buffer.from(snapshot.pngBase64, "base64");

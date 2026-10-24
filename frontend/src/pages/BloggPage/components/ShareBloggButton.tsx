@@ -26,7 +26,15 @@ export default function ShareBloggButton({ blogg }: ShareBloggButtonProps) {
   const capturePromiseRef = useRef<Promise<boolean> | null>(null);
 
   const noteId = blogg.blogg_id || blogg._id;
-  const directUrl = absolutePath(`/share/${encodeURIComponent(noteId)}`);
+
+  // Social platforms cache Open Graph metadata aggressively. A per-click token
+  // lets each Share action fetch the refreshed snapshot instead of old/default art.
+  const createShareUrl = () => {
+    const baseUrl = `/share/${encodeURIComponent(noteId)}`;
+    // Admin clicks refresh the snapshot, so give this share a fresh crawler key.
+    // Non-admin users keep the canonical public share URL and cannot trigger uploads.
+    return absolutePath(isAdmin ? `${baseUrl}?preview=${Date.now()}` : baseUrl);
+  };
 
   const finishCapture = useCallback((success: boolean) => {
     setSnapshotCaptureUrl(null);
@@ -80,16 +88,16 @@ export default function ShareBloggButton({ blogg }: ShareBloggButtonProps) {
     return promise;
   }, [isAdmin, noteId]);
 
-  const copyLink = async () => {
+  const copyLink = async (shareUrl: string) => {
     let copied = false;
     try {
       if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
-      await navigator.clipboard.writeText(directUrl);
+      await navigator.clipboard.writeText(shareUrl);
       copied = true;
     } catch {
       // Preserve copy behavior in browsers that deny the Clipboard API.
       const textarea = document.createElement("textarea");
-      textarea.value = directUrl;
+      textarea.value = shareUrl;
       textarea.readOnly = true;
       textarea.setAttribute("aria-hidden", "true");
       textarea.style.position = "fixed";
@@ -113,7 +121,7 @@ export default function ShareBloggButton({ blogg }: ShareBloggButtonProps) {
   const handleShare = () => {
     setFeedback("");
     // Start the clipboard operation directly from the click; do not wait for rendering.
-    const copyTask = copyLink();
+    const copyTask = copyLink(createShareUrl());
     // Refresh the Open Graph image silently in parallel. No share menu or second action.
     if (isAdmin) void refreshSnapshot();
     void copyTask;

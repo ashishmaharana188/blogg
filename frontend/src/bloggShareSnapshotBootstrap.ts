@@ -80,123 +80,35 @@ async function waitForRenderedBlogg(): Promise<HTMLElement> {
   return card;
 }
 
-type FirstBlockPreview = { kind: "image"; imageUrl: string; alt: string } | { kind: "text"; text: string };
-
-function topLevelBlockElements(card: HTMLElement): HTMLElement[] {
-  const editor = card.querySelector<HTMLElement>(".blogg-reader-body .bn-editor");
-  if (!editor) return [];
-  const allBlocks = Array.from(editor.querySelectorAll<HTMLElement>(".bn-block-outer"));
-  const topLevel = allBlocks.filter((block) => !block.parentElement?.closest(".bn-block-outer"));
-  if (topLevel.length) return topLevel;
-
-  // Fallback for a BlockNote version whose top-level wrappers use a different class.
-  return Array.from(editor.children).filter((element): element is HTMLElement => element instanceof HTMLElement);
-}
-
-function firstBlockPreview(card: HTMLElement): FirstBlockPreview | null {
-  for (const block of topLevelBlockElements(card)) {
-    const imageContent = block.matches('[data-content-type="image"]')
-      ? block
-      : block.querySelector<HTMLElement>('[data-content-type="image"]');
-    const image = imageContent?.querySelector<HTMLImageElement>("img") || block.querySelector<HTMLImageElement>("img");
-    if (image) {
-      const imageUrl = image.currentSrc || image.getAttribute("src") || image.src || "";
-      if (imageUrl) {
-        return {
-          kind: "image",
-          imageUrl,
-          alt: image.getAttribute("alt") || "First image in this note",
-        };
-      }
-    }
-
-    const text = (block.innerText || block.textContent || "").replace(/\s+/g, " ").trim();
-    if (text) return { kind: "text", text };
-  }
-  return null;
-}
-
-function addTextElement(parent: HTMLElement, text: string, styles: Partial<CSSStyleDeclaration>) {
-  const element = document.createElement("div");
-  element.textContent = text;
-  Object.assign(element.style, styles);
-  parent.appendChild(element);
-  return element;
-}
-
+/**
+ * Capture the actual rendered reader card, not a synthetic card assembled from
+ * only the first content block. This preserves the visible combination of text,
+ * images, link previews, tags, and other BlockNote content exactly as a reader
+ * sees it when opening the note from the feed.
+ */
 function createRichPreviewCard(readerCard: HTMLElement): HTMLElement {
-  const title = readerCard.querySelector<HTMLElement>(".blogg-reader-title")?.innerText.trim() || "Untitled note";
-  const author = readerCard.querySelector<HTMLElement>(".blogg-reader-author")?.innerText.trim() || "Blogg";
-  const subtitle = readerCard.querySelector<HTMLElement>(".blogg-reader-subtitle")?.innerText.trim() || "";
-  const firstBlock = firstBlockPreview(readerCard);
-
   const stage = document.createElement("div");
   stage.setAttribute("aria-hidden", "true");
   stage.style.cssText = [
     "position:fixed", "left:-1500px", "top:0", "z-index:-1", "box-sizing:border-box",
-    `width:${WIDTH}px`, `height:${HEIGHT}px`, "overflow:hidden", "display:flex", "flex-direction:column",
-    "gap:14px", "padding:42px 48px", "border:1px solid #e5e7eb", "border-radius:20px",
-    "background:#ffffff", "color:#111827", "font-family:Arial,Helvetica,sans-serif",
+    `width:${WIDTH}px`, `height:${HEIGHT}px`, "overflow:hidden", "display:flex",
+    "align-items:flex-start", "justify-content:center", "padding:24px 0 0",
+    "background:#f8fafc", "color:#111827",
   ].join(";");
 
-  const topLine = document.createElement("div");
-  topLine.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:22px;color:#64748b;font-size:16px;line-height:1.3;letter-spacing:.02em";
-  const brand = document.createElement("span");
-  brand.textContent = "BLOGG  ·  NOTE";
-  brand.style.cssText = "font-weight:700;letter-spacing:.14em;color:#475569";
-  const authorLabel = document.createElement("span");
-  authorLabel.textContent = author;
-  authorLabel.style.cssText = "overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;max-width:55%";
-  topLine.append(brand, authorLabel);
-  stage.appendChild(topLine);
+  const snapshot = readerCard.cloneNode(true) as HTMLElement;
+  snapshot.style.cssText = `${snapshot.style.cssText};${[
+    "box-sizing:border-box", "width:900px", "min-width:900px", "max-width:900px",
+    "height:606px", "min-height:606px", "max-height:606px", "margin:0",
+    "flex:0 0 900px", "overflow:hidden", "background:#ffffff",
+  ].join(";")}`;
 
-  addTextElement(stage, title, {
-    margin: "0",
-    color: "#111827",
-    fontSize: "52px",
-    fontWeight: "750",
-    lineHeight: "1.12",
-    letterSpacing: "-0.025em",
-    maxHeight: "116px",
-    overflow: "hidden",
-    overflowWrap: "anywhere",
-  });
+  // Navigation and action controls are not part of the article preview. Keep
+  // the actual note header and content area, clipped to the first 630px view.
+  const actions = snapshot.querySelector<HTMLElement>(".blogg-reader-actions");
+  if (actions) actions.style.display = "none";
 
-  if (subtitle) {
-    addTextElement(stage, subtitle, {
-      margin: "-2px 0 0",
-      color: "#64748b",
-      fontSize: "20px",
-      lineHeight: "1.35",
-      maxHeight: "54px",
-      overflow: "hidden",
-      overflowWrap: "anywhere",
-    });
-  }
-
-  const body = document.createElement("div");
-  body.style.cssText = "box-sizing:border-box;flex:1 1 auto;min-height:0;width:100%;overflow:hidden;border-top:1px solid #e5e7eb;padding-top:16px;display:flex;align-items:stretch;justify-content:stretch";
-
-  if (firstBlock?.kind === "image") {
-    body.style.paddingTop = "12px";
-    const imageFrame = document.createElement("div");
-    imageFrame.style.cssText = "box-sizing:border-box;width:100%;height:100%;min-height:0;overflow:hidden;border-radius:12px;background:#f1f5f9;display:flex;align-items:center;justify-content:center";
-    const image = document.createElement("img");
-    image.crossOrigin = "anonymous";
-    image.alt = firstBlock.alt;
-    image.src = firstBlock.imageUrl;
-    image.style.cssText = "display:block;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;object-position:center;border-radius:10px";
-    imageFrame.appendChild(image);
-    body.appendChild(imageFrame);
-  } else {
-    const text = firstBlock?.kind === "text" ? firstBlock.text : "Open this note on Blogg to read more.";
-    const textBlock = document.createElement("div");
-    textBlock.textContent = text;
-    textBlock.style.cssText = "width:100%;height:100%;overflow:hidden;color:#334155;font-size:27px;line-height:1.42;white-space:pre-wrap;overflow-wrap:anywhere;display:block";
-    body.appendChild(textBlock);
-  }
-
-  stage.appendChild(body);
+  stage.appendChild(snapshot);
   document.body.appendChild(stage);
   return stage;
 }
@@ -220,9 +132,9 @@ async function captureAndSaveBloggSnapshot(noteId: string) {
     ]);
     showCaptureStatus("Capturing the blog preview as a 1200 × 630 image…");
 
-    // Capture a purpose-built card containing the title and only the first actual
-    // BlockNote content block. A first image is shown as an image; otherwise the
-    // first text block is shown. The full reader page is never cropped or hidden.
+    // Capture the real reader card at the top of its rendered view. This includes
+    // whatever content is actually visible first: text, images, link previews, or
+    // a mixture. It deliberately does not substitute a default hero image.
     const dataUrl = await toPng(previewCard, {
       width: WIDTH,
       height: HEIGHT,
@@ -264,7 +176,7 @@ async function captureAndSaveBloggSnapshot(noteId: string) {
     if (!response.ok) throw new Error(result.message || `Blog snapshot upload failed (${response.status}).`);
 
     const version = String(result.updatedAt || Date.now());
-    showCaptureStatus("Snapshot saved. The rich preview now shows the first content block.");
+    showCaptureStatus("Snapshot saved. The rich preview now matches the rendered note.");
     if (window.parent && window.parent !== window) {
       window.parent.postMessage({ type: "blogg-note-snapshot-updated", bloggId: noteId, version }, window.location.origin);
     }

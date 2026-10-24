@@ -43,18 +43,10 @@ const textFromBlocks = (blocks: unknown): string => {
   return parts.join(" ").replace(/\s+/g, " ").trim();
 };
 
-const isPublicHttpsUrl = (value: unknown): value is string => {
-  if (typeof value !== "string" || !value.trim()) return false;
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" && !url.username && !url.password;
-  } catch {
-    return false;
-  }
-};
+type FirstBlockMetadata = { text: string };
 
-type FirstBlockMetadata = { text: string; imageUrl?: string };
-
+// This text feeds the OG description only. The OG image comes from the captured
+// reader snapshot, regardless of which block happens to contain the first image.
 const firstBlockMetadata = (blocks: unknown): FirstBlockMetadata => {
   if (!Array.isArray(blocks)) return { text: "" };
 
@@ -62,24 +54,21 @@ const firstBlockMetadata = (blocks: unknown): FirstBlockMetadata => {
     if (!rawBlock || typeof rawBlock !== "object") continue;
     const block = rawBlock as {
       type?: unknown;
-      props?: { url?: unknown; src?: unknown; image?: unknown; title?: unknown; description?: unknown };
+      props?: { title?: unknown; description?: unknown };
     };
 
-    // The rich preview represents the first meaningful top-level BlockNote
-    // block, not an unrelated image buried later in the document.
-    if (block.type === "image") {
-      const imageUrl = block.props?.url ?? block.props?.src;
-      return { text: "", ...(isPublicHttpsUrl(imageUrl) ? { imageUrl } : {}) };
-    }
+    // Images are represented inside the rendered snapshot. Keep scanning for
+    // text so an image-first note can still provide a useful OG description.
+    if (block.type === "image") continue;
 
-    const linkImage = block.props?.image;
-    if (block.type === "linkPreview" && isPublicHttpsUrl(linkImage)) {
+    if (block.type === "linkPreview") {
       const text = [block.props?.title, block.props?.description]
         .filter((value): value is string => typeof value === "string")
         .join(". ")
         .replace(/\s+/g, " ")
         .trim();
-      return { text, imageUrl: linkImage };
+      if (text) return { text };
+      continue;
     }
 
     const text = textFromBlocks([block]);
@@ -178,13 +167,16 @@ sharePreviewRouter.get(
       const isPublic = note.isPublic !== false;
       const noteId = String(note.blogg_id || note._id);
       const frontendBase = getFrontendBaseUrl();
-      const shareUrl = `${frontendBase}/share/${encodeURIComponent(noteId)}`;
+      const baseShareUrl = `${frontendBase}/share/${encodeURIComponent(noteId)}`;
+      const previewToken = typeof req.query.preview === "string"
+        ? req.query.preview.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80)
+        : "";
+      const shareUrl = previewToken ? `${baseShareUrl}?preview=${encodeURIComponent(previewToken)}` : baseShareUrl;
       const readUrl = `${frontendBase}/read/${encodeURIComponent(noteId)}`;
       const title = typeof note.title === "string" && note.title.trim()
         ? note.title.trim()
         : "Untitled note";
       const description = descriptionFor(note as Record<string, unknown>);
-      const firstBlock = firstBlockMetadata(note.content);
       const savedSnapshot = await getDB()
         .collection("bloggShareSnapshots")
         .findOne({ blogg_id: noteId }, { projection: { updatedAt: 1 } });
@@ -193,9 +185,12 @@ sharePreviewRouter.get(
         : savedSnapshot?.updatedAt
           ? new Date(savedSnapshot.updatedAt).getTime()
           : 0;
-      const imageUrl = savedAt > 0
-        ? `${frontendBase}/share/blog/${encodeURIComponent(noteId)}/og-image.png?v=${savedAt}`
-        : firstBlock.imageUrl || `${frontendBase}/og-default.png`;
+      // Always use this note's rendered snapshot endpoint. If it has not yet
+      // been stored, the image endpoint briefly waits for the in-flight capture.
+      // Never publish the generic site default as if it represented this note.
+      const requestedVersion = /^\d{10,16}$/.test(previewToken) ? Number(previewToken) : 0;
+      const imageVersion = requestedVersion || (savedAt > 0 ? savedAt : Date.now());
+      const imageUrl = `${frontendBase}/share/blog/${encodeURIComponent(noteId)}/og-image.png?v=${imageVersion}`;
 
       // Private administrator previews must never be stored in a shared cache.
       res.setHeader("Cache-Control", isPublic ? "public, max-age=60, s-maxage=300" : "private, no-store");
