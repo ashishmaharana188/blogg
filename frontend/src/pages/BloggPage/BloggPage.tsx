@@ -51,6 +51,10 @@ const BloggPage = () => {
     setCanvasRefreshKey((key) => key + 1);
   }, []);
 
+  const refreshCanvasAfterAutoSave = useCallback(() => {
+    setCanvasRefreshKey((key) => key + 1);
+  }, []);
+
   const toggleNote = useCallback(() => {
     if (!isAdmin) return;
     if (activeForm.isOpen) {
@@ -216,6 +220,7 @@ const BloggPage = () => {
               initialEditMode={activeForm.initialEditMode}
               canEdit={isAdmin}
               onSaved={closeFormAfterSave}
+              onAutoSaved={refreshCanvasAfterAutoSave}
             />
           </div>
         ) : viewMode === "canvas" && !bloggId ? (

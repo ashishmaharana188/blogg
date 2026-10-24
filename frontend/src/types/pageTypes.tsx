@@ -29,7 +29,8 @@ export interface User {
 }
 
 export interface userFormtypes {
-  onContentChange: (blog: BlogSavetypes) => void;
+  onContentChange: (blog: BlogSavetypes, bloggId?: string | null, closeAfterSave?: boolean) => Promise<unknown>;
+  onAutoSaved?: () => void;
   selectedBlogg?: BloggItem | null;
   initialEditMode?: boolean;
   /** True only when the authenticated user is the configured administrator. */

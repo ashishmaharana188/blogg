@@ -1,5 +1,8 @@
 import { userFormtypes } from "../../../../types/pageTypes";
-import { useCreateBlockNote, FormattingToolbarController } from "@blocknote/react";
+import {
+  useCreateBlockNote,
+  FormattingToolbarController,
+} from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 import { uploadFile } from "../../services/bloggService";
 import { BloggFormattingToolbar } from "./bloggFormattingToolbar";
@@ -8,7 +11,7 @@ import { fetchLinkPreview } from "./linkPreviewService";
 
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const TAG_COLORS = [
   "bg-blue-100 text-blue-800 border-blue-200",
@@ -24,7 +27,12 @@ type PastedLink = { url: string; label: string };
 function normaliseHttpUrl(value: string): string | null {
   try {
     const url = new URL(value.trim());
-    if ((url.protocol !== "https:" && url.protocol !== "http:") || url.username || url.password) return null;
+    if (
+      (url.protocol !== "https:" && url.protocol !== "http:") ||
+      url.username ||
+      url.password
+    )
+      return null;
     return url.toString();
   } catch {
     return null;
@@ -48,9 +56,14 @@ function readPastedLink(event: ClipboardEvent): PastedLink | null {
     if (anchors.length !== 1) return null;
     const anchor = anchors[0];
     const url = normaliseHttpUrl(anchor.getAttribute("href") || "");
-    const label = (anchor.textContent || plain || "").replace(/\s+/g, " ").trim();
-    const wholeClipboardText = (parsed.body.textContent || "").replace(/\s+/g, " ").trim();
-    if (!url || (wholeClipboardText && label && wholeClipboardText !== label)) return null;
+    const label = (anchor.textContent || plain || "")
+      .replace(/\s+/g, " ")
+      .trim();
+    const wholeClipboardText = (parsed.body.textContent || "")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!url || (wholeClipboardText && label && wholeClipboardText !== label))
+      return null;
     return { url, label: label || plain || url };
   } catch {
     return null;
@@ -60,17 +73,29 @@ function readPastedLink(event: ClipboardEvent): PastedLink | null {
 function textOfBlock(block: { content?: unknown }): string {
   if (typeof block.content === "string") return block.content;
   if (!Array.isArray(block.content)) return "";
-  return block.content.map((part) => {
-    if (typeof part === "string") return part;
-    if (part && typeof part === "object") {
-      const inline = part as { type?: string; text?: string; content?: unknown };
-      if (inline.type === "text") return inline.text || "";
-      if (inline.type === "link" && Array.isArray(inline.content)) {
-        return inline.content.map((nested) => typeof nested === "object" && nested && "text" in nested ? String((nested as { text?: unknown }).text || "") : "").join("");
+  return block.content
+    .map((part) => {
+      if (typeof part === "string") return part;
+      if (part && typeof part === "object") {
+        const inline = part as {
+          type?: string;
+          text?: string;
+          content?: unknown;
+        };
+        if (inline.type === "text") return inline.text || "";
+        if (inline.type === "link" && Array.isArray(inline.content)) {
+          return inline.content
+            .map((nested) =>
+              typeof nested === "object" && nested && "text" in nested
+                ? String((nested as { text?: unknown }).text || "")
+                : "",
+            )
+            .join("");
+        }
       }
-    }
-    return "";
-  }).join("");
+      return "";
+    })
+    .join("");
 }
 
 function providerLabel(urlValue: string): string {
@@ -78,8 +103,17 @@ function providerLabel(urlValue: string): string {
     const url = new URL(urlValue);
     if (url.hostname === "open.spotify.com") return "Spotify";
     if (url.hostname === "music.youtube.com") return "YouTube Music";
-    if (["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"].includes(url.hostname)) return "YouTube";
-    if (url.hostname === "noteonstuff.vercel.app" && url.pathname.startsWith("/share/")) return "Blogg";
+    if (
+      ["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"].includes(
+        url.hostname,
+      )
+    )
+      return "YouTube";
+    if (
+      url.hostname === "noteonstuff.vercel.app" &&
+      url.pathname.startsWith("/share/")
+    )
+      return "Blogg";
     return url.hostname.replace(/^www\./i, "");
   } catch {
     return "Website";
@@ -88,6 +122,7 @@ function providerLabel(urlValue: string): string {
 
 const UserForm = ({
   onContentChange,
+  onAutoSaved,
   selectedBlogg,
   initialEditMode = false,
   canEdit = false,
@@ -95,7 +130,10 @@ const UserForm = ({
   // A saved note starts in read-only mode. Non-admins can never turn editing on,
   // even if they manipulate component state or open a direct reader URL.
   const [isReadOnly, setIsReadOnly] = useState(
-    !canEdit || (selectedBlogg !== null && selectedBlogg !== undefined && !initialEditMode),
+    !canEdit ||
+      (selectedBlogg !== null &&
+        selectedBlogg !== undefined &&
+        !initialEditMode),
   );
   const [formData, setFormData] = useState({
     author: selectedBlogg?.author ?? "",
@@ -112,8 +150,27 @@ const UserForm = ({
   );
   const [isAddingTag, setIsAddingTag] = useState(false);
   const [tagInput, setTagInput] = useState("");
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
+  const [saveStatus, setSaveStatus] = useState<
+    "idle" | "pending" | "saving" | "saved" | "error"
+  >("idle");
+  const [saveError, setSaveError] = useState("");
+  const [contentRevision, setContentRevision] = useState(0);
   const pendingPreviewsRef = useRef<Set<Promise<void>>>(new Set());
+  const savedBloggIdRef = useRef<string | null>(
+    selectedBlogg?.blogg_id || null,
+  );
+  const editRevisionRef = useRef(0);
+  const hasUnsavedChangesRef = useRef(false);
+  const saveQueueRef = useRef<Promise<unknown>>(Promise.resolve());
   const isEditable = canEdit && !isReadOnly;
+
+  const markDirty = useCallback(() => {
+    editRevisionRef.current += 1;
+    hasUnsavedChangesRef.current = true;
+    setSaveStatus("pending");
+    setSaveError("");
+  }, []);
 
   const editor = useCreateBlockNote({
     schema: bloggEditorSchema,
@@ -131,7 +188,9 @@ const UserForm = ({
       }
 
       const currentBlock = cursor.block;
-      const isBlankParagraph = currentBlock.type === "paragraph" && textOfBlock(currentBlock).trim() === "";
+      const isBlankParagraph =
+        currentBlock.type === "paragraph" &&
+        textOfBlock(currentBlock).trim() === "";
 
       // A standalone HTTPS URL on a blank paragraph becomes a saved, clickable preview block.
       // URLs pasted into an existing sentence (or HTTP URLs) remain inline hyperlinks instead.
@@ -144,7 +203,10 @@ const UserForm = ({
           image: "",
           provider: providerLabel(pasted.url),
         };
-        pasteEditor.updateBlock(blockId, { type: "linkPreview", props: initialProps });
+        pasteEditor.updateBlock(blockId, {
+          type: "linkPreview",
+          props: initialProps,
+        });
         // A preview is a non-editable block. Keep a normal paragraph after it so
         // the caret has a safe place to land and the user can continue writing.
         const trailingParagraph = pasteEditor.insertBlocks(
@@ -157,30 +219,34 @@ const UserForm = ({
         }
 
         let pending: Promise<void>;
-        pending = fetchLinkPreview(pasted.url).then((metadata) => {
-          const latestBlock = pasteEditor.getBlock(blockId);
-          if (!latestBlock || latestBlock.type !== "linkPreview") return;
-          pasteEditor.updateBlock(blockId, {
-            props: {
-              url: metadata.url || pasted.url,
-              title: metadata.title || pasted.url,
-              description: metadata.description || "",
-              image: metadata.image || "",
-              provider: metadata.provider || initialProps.provider,
-            },
+        pending = fetchLinkPreview(pasted.url)
+          .then((metadata) => {
+            const latestBlock = pasteEditor.getBlock(blockId);
+            if (!latestBlock || latestBlock.type !== "linkPreview") return;
+            pasteEditor.updateBlock(blockId, {
+              props: {
+                url: metadata.url || pasted.url,
+                title: metadata.title || pasted.url,
+                description: metadata.description || "",
+                image: metadata.image || "",
+                provider: metadata.provider || initialProps.provider,
+              },
+            });
+          })
+          .catch(() => {
+            const latestBlock = pasteEditor.getBlock(blockId);
+            if (!latestBlock || latestBlock.type !== "linkPreview") return;
+            pasteEditor.updateBlock(blockId, {
+              props: {
+                ...initialProps,
+                description:
+                  "Preview details could not be loaded. Open the original link.",
+              },
+            });
+          })
+          .finally(() => {
+            pendingPreviewsRef.current.delete(pending);
           });
-        }).catch(() => {
-          const latestBlock = pasteEditor.getBlock(blockId);
-          if (!latestBlock || latestBlock.type !== "linkPreview") return;
-          pasteEditor.updateBlock(blockId, {
-            props: {
-              ...initialProps,
-              description: "Preview details could not be loaded. Open the original link.",
-            },
-          });
-        }).finally(() => {
-          pendingPreviewsRef.current.delete(pending);
-        });
         pendingPreviewsRef.current.add(pending);
         return true;
       }
@@ -201,8 +267,12 @@ const UserForm = ({
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleTitleChange = (field: "author" | "title" | "description", value: string) => {
-    setFormData({ ...formData, [field]: value });
+  const handleTitleChange = (
+    field: "author" | "title" | "description",
+    value: string,
+  ) => {
+    markDirty();
+    setFormData((current) => ({ ...current, [field]: value }));
   };
 
   const autoResize = (ref: React.RefObject<HTMLTextAreaElement | null>) => {
@@ -214,8 +284,13 @@ const UserForm = ({
 
   const confirmTag = () => {
     if (tagInput.trim()) {
-      const randomColor = TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)];
-      setTags([...tags, { text: tagInput.trim(), colorClass: randomColor }]);
+      markDirty();
+      const randomColor =
+        TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)];
+      setTags((current) => [
+        ...current,
+        { text: tagInput.trim(), colorClass: randomColor },
+      ]);
     }
     setTagInput("");
     setIsAddingTag(false);
@@ -233,25 +308,116 @@ const UserForm = ({
   };
 
   const removeTag = (indexToRemove: number) => {
-    setTags(tags.filter((_, index) => index !== indexToRemove));
+    markDirty();
+    setTags((current) => current.filter((_, index) => index !== indexToRemove));
   };
 
-  const saveForm = async () => {
-    if (!canEdit || isReadOnly) return;
-    // Do not persist a temporary "Loading link preview…" placeholder if the user saves quickly.
-    if (pendingPreviewsRef.current.size > 0) {
-      await Promise.all(Array.from(pendingPreviewsRef.current));
-    }
-    const blog = {
-      author: formData.author,
-      title: formData.title,
-      subtitle: formData.description,
-      tags: tags.map((tag) => tag.text),
-      content: editor.document,
+  const saveForm = useCallback(
+    async (closeAfterSave = false) => {
+      if (!canEdit || isReadOnly) return;
+
+      // Capture the revision when this save was requested. If the user keeps typing
+      // while a request is in flight, the later queued save must keep the form dirty.
+      const requestedRevision = editRevisionRef.current;
+      const runSave = async () => {
+        // Do not persist a temporary "Loading link preview…" placeholder if the user saves quickly.
+        if (pendingPreviewsRef.current.size > 0) {
+          await Promise.all(Array.from(pendingPreviewsRef.current));
+        }
+        const blog = {
+          author: formData.author,
+          title: formData.title,
+          subtitle: formData.description,
+          tags: tags.map((tag) => tag.text),
+          content: editor.document,
+          isPublic,
+        };
+        const result = await onContentChange(
+          blog,
+          savedBloggIdRef.current,
+          closeAfterSave,
+        );
+        const savedRecord =
+          result && typeof result === "object" && "blog" in result
+            ? (result as { blog?: unknown }).blog
+            : result;
+        if (savedRecord && typeof savedRecord === "object") {
+          const savedId = (savedRecord as { blogg_id?: unknown }).blogg_id;
+          if (typeof savedId === "string" && savedId.trim()) {
+            // Critical for a brand-new note: the next autosave updates this record
+            // instead of creating a duplicate note on every edit.
+            savedBloggIdRef.current = savedId;
+          }
+        }
+        return result;
+      };
+
+      // Serialize writes so a slower previous request cannot overwrite newer edits.
+      const queuedSave = saveQueueRef.current
+        .catch(() => undefined)
+        .then(runSave);
+      saveQueueRef.current = queuedSave;
+      setSaveStatus("saving");
+      setSaveError("");
+
+      try {
+        await queuedSave;
+        if (editRevisionRef.current === requestedRevision) {
+          hasUnsavedChangesRef.current = false;
+          setSaveStatus("saved");
+        } else {
+          setSaveStatus("pending");
+        }
+        if (!closeAfterSave) onAutoSaved?.();
+      } catch (error) {
+        setSaveStatus("error");
+        setSaveError(
+          error instanceof Error ? error.message : "Could not save changes.",
+        );
+      }
+    },
+    [
+      canEdit,
+      isReadOnly,
+      formData,
+      tags,
+      editor,
       isPublic,
-    };
-    onContentChange(blog);
-  };
+      onContentChange,
+      onAutoSaved,
+    ],
+  );
+
+  useEffect(() => {
+    if (!isEditable || !autoSaveEnabled || !hasUnsavedChangesRef.current)
+      return;
+    const timer = window.setTimeout(() => {
+      void saveForm(false);
+    }, 3000);
+    return () => window.clearTimeout(timer);
+  }, [
+    isEditable,
+    autoSaveEnabled,
+    formData,
+    tags,
+    isPublic,
+    contentRevision,
+    saveForm,
+  ]);
+
+  const saveStatusMessage = !autoSaveEnabled
+    ? hasUnsavedChangesRef.current
+      ? "Auto-save off · unsaved changes"
+      : "Auto-save off"
+    : saveStatus === "saving"
+      ? "Saving changes…"
+      : saveStatus === "pending"
+        ? "Unsaved changes · saving automatically"
+        : saveStatus === "saved"
+          ? "All changes saved"
+          : saveStatus === "error"
+            ? saveError || "Save failed"
+            : "Auto-save is on";
 
   return (
     <div className="blogg-editor-form mt-6 sm:mt-10 w-full min-h-full relative">
@@ -301,7 +467,10 @@ const UserForm = ({
                 type="checkbox"
                 checked={isPublic}
                 disabled={isReadOnly}
-                onChange={(event) => setIsPublic(event.target.checked)}
+                onChange={(event) => {
+                  markDirty();
+                  setIsPublic(event.target.checked);
+                }}
                 className="h-4 w-4 accent-black disabled:cursor-not-allowed"
               />
               Make this note public
@@ -316,35 +485,107 @@ const UserForm = ({
 
         <div className="flex flex-wrap items-center justify-center gap-2 mt-4 min-h-[32px]">
           {tags.map((tag, index) => (
-            <div key={index} className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border transition-all ${tag.colorClass}`}>
+            <div
+              key={index}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border transition-all ${tag.colorClass}`}
+            >
               <span>{tag.text}</span>
-              {isEditable && <button onClick={() => removeTag(index)} className="hover:text-black opacity-50 hover:opacity-100 transition-opacity focus:outline-none" title="Remove tag">×</button>}
+              {isEditable && (
+                <button
+                  onClick={() => removeTag(index)}
+                  className="hover:text-black opacity-50 hover:opacity-100 transition-opacity focus:outline-none"
+                  title="Remove tag"
+                >
+                  ×
+                </button>
+              )}
             </div>
           ))}
-          {isEditable && (isAddingTag ? (
-            <input
-              autoFocus
-              type="text"
-              value={tagInput}
-              onChange={(event) => setTagInput(event.target.value)}
-              onKeyDown={handleTagKeyDown}
-              onBlur={confirmTag}
-              placeholder="Type & Enter..."
-              className="w-32 px-3 py-1 text-xs font-bold border border-gray-300 rounded-full focus:outline-none focus:border-slate-800 text-center bg-white shadow-sm"
-            />
-          ) : (
-            <button onClick={() => setIsAddingTag(true)} className="px-4 py-1 text-xs border border-gray-300 rounded-full font-bold text-gray-600 hover:bg-gray-100 transition-colors shadow-sm">+ Add Tag</button>
-          ))}
+          {isEditable &&
+            (isAddingTag ? (
+              <input
+                autoFocus
+                type="text"
+                value={tagInput}
+                onChange={(event) => setTagInput(event.target.value)}
+                onKeyDown={handleTagKeyDown}
+                onBlur={confirmTag}
+                placeholder="Type & Enter..."
+                className="w-32 px-3 py-1 text-xs font-bold border border-gray-300 rounded-full focus:outline-none focus:border-slate-800 text-center bg-white shadow-sm"
+              />
+            ) : (
+              <button
+                onClick={() => setIsAddingTag(true)}
+                className="px-4 py-1 text-xs border border-gray-300 rounded-full font-bold text-gray-600 hover:bg-gray-100 transition-colors shadow-sm"
+              >
+                + Add Tag
+              </button>
+            ))}
         </div>
 
         <div className="mt-10 [&_.bn-editor]:pt-6 [&_.bn-editor]:pb-12">
-          <BlockNoteView editor={editor} theme="dark" filePanel={isEditable} editable={isEditable} formattingToolbar={false}>
-            {isEditable && <FormattingToolbarController formattingToolbar={BloggFormattingToolbar} />}
+          <BlockNoteView
+            editor={editor}
+            theme="dark"
+            filePanel={isEditable}
+            editable={isEditable}
+            formattingToolbar={false}
+            onChange={() => {
+              markDirty();
+              setContentRevision((revision) => revision + 1);
+            }}
+          >
+            {isEditable && (
+              <FormattingToolbarController
+                formattingToolbar={BloggFormattingToolbar}
+              />
+            )}
           </BlockNoteView>
         </div>
 
-        {isReadOnly && canEdit && selectedBlogg && <div className="flex justify-end mt-4"><button className="px-5 py-1 text-l bg-white border border-gray-300 text-black rounded font-bold hover:bg-black hover:text-white transition-colors" onClick={() => setIsReadOnly(false)}>EDIT</button></div>}
-        {isEditable && <div className="flex justify-end mt-4"><button className="px-5 py-1 text-l bg-white border border-gray-300 text-black rounded font-bold hover:bg-black hover:text-white transition-colors" onClick={() => void saveForm()}>SAVE</button></div>}
+        {isReadOnly && canEdit && selectedBlogg && (
+          <div className="flex justify-end mt-4">
+            <button
+              className="px-5 py-1 text-l bg-white border border-gray-300 text-black rounded font-bold hover:bg-black hover:text-white transition-colors"
+              onClick={() => setIsReadOnly(false)}
+            >
+              EDIT
+            </button>
+          </div>
+        )}
+        {isEditable && (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4">
+            <div className="min-w-0">
+              <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-slate-800">
+                <input
+                  type="checkbox"
+                  checked={autoSaveEnabled}
+                  onChange={(event) => {
+                    setAutoSaveEnabled(event.target.checked);
+                    setSaveStatus(
+                      hasUnsavedChangesRef.current ? "pending" : "idle",
+                    );
+                  }}
+                  className="h-4 w-4 accent-black"
+                />
+                Auto-save changes
+              </label>
+              <p
+                className={`mt-1 text-xs ${saveStatus === "error" ? "text-red-700" : "text-slate-500"}`}
+                role="status"
+                aria-live="polite"
+              >
+                {saveStatusMessage}
+              </p>
+            </div>
+            <button
+              className="px-5 py-2 text-sm bg-white border border-gray-300 text-black rounded font-bold hover:bg-black hover:text-white transition-colors"
+              onClick={() => void saveForm(true)}
+            >
+              SAVE &amp; CLOSE
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
