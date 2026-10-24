@@ -13,6 +13,7 @@ import authenticationRouter from "../routes/authentication/authenticationIndex.t
 import accountSharePreviewRouter from "../routes/accountSharePreview.ts";
 import feedSharePreviewRouter from "../routes/feedSharePreview.ts";
 import sharePreviewRouter from "../routes/sharePreview.ts";
+import bloggShareSnapshotRouter from "../routes/bloggShareSnapshot.ts";
 import cookieParser from "cookie-parser";
 import { errorHandler } from "../middleware/errorHandler.ts";
 import adminStatusRouter from "../routes/adminStatus.ts";
@@ -46,6 +47,7 @@ app.use(cookieParser());
 app.use(accountSharePreviewRouter);
 app.use(feedSharePreviewRouter);
 app.use(sharePreviewRouter);
+app.use(bloggShareSnapshotRouter);
 app.use("/api/auth", authenticationRouter);
 app.use("/api/admin", adminStatusRouter);
 

@@ -2,6 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
+      "source": "/share/blog/:bloggId/og-image.png",
+      "destination": "https://blogg-api-m785.onrender.com/share/blog/:bloggId/og-image.png"
+    },
+    {
       "source": "/share/account/og-image.png",
       "destination": "https://blogg-api-m785.onrender.com/share/account/og-image.png"
     },

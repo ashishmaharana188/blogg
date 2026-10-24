@@ -1,6 +1,7 @@
 import "./shareBlogg.css";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { BloggItem } from "../../../types/pageTypes";
+import { useAuth } from "../../../context/authContext";
 
 type ShareBloggButtonProps = {
   blogg: BloggItem;
@@ -9,59 +10,113 @@ type ShareBloggButtonProps = {
 };
 
 const absolutePath = (path: string) => new URL(path, window.location.origin).toString();
+const SNAPSHOT_PROGRESS_MESSAGES = [
+  "Preparing the blog snapshot…",
+  "Waiting for the rendered blog…",
+  "Capturing the blog preview as a 1200 × 630 image…",
+  "Saving the new blog preview and replacing the previous snapshot…",
+];
 
-function buildEmbedCode(embedUrl: string, title: string) {
-  const safeTitle = title
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-  return `<iframe src="${embedUrl}" title="${safeTitle}" loading="lazy" width="640" height="420" style="max-width:100%;border:1px solid #d8dce2;border-radius:16px;overflow:hidden" allow="clipboard-write"></iframe>`;
-}
-
-export default function ShareBloggButton({
-  blogg,
-  stackName = "Unsorted stack",
-  groupName = "Others",
-}: ShareBloggButtonProps) {
-  const [isOpen, setIsOpen] = useState(false);
+export default function ShareBloggButton({ blogg }: ShareBloggButtonProps) {
+  const { isAdmin } = useAuth();
   const [feedback, setFeedback] = useState("");
-  const noteId = blogg.blogg_id || blogg._id;
-  // Vercel proxies /share/:id to the backend. The public URL remains on the
-  // frontend origin, while the backend returns note-specific Open Graph HTML.
-  const directUrl = absolutePath(`/share/${encodeURIComponent(noteId)}`);
-  const embedUrl = absolutePath(`/embed/${encodeURIComponent(noteId)}`);
-  const embedCode = buildEmbedCode(embedUrl, blogg.title || "Shared note");
+  const [snapshotCaptureUrl, setSnapshotCaptureUrl] = useState<string | null>(null);
+  const snapshotCaptureFrameRef = useRef<HTMLIFrameElement | null>(null);
+  const captureResolveRef = useRef<((success: boolean) => void) | null>(null);
+  const capturePromiseRef = useRef<Promise<boolean> | null>(null);
 
-  const copyText = async (value: string, label: string) => {
-    try {
-      if (!navigator.clipboard?.writeText) {
-        throw new Error("Clipboard API unavailable");
+  const noteId = blogg.blogg_id || blogg._id;
+  const directUrl = absolutePath(`/share/${encodeURIComponent(noteId)}`);
+
+  const finishCapture = useCallback((success: boolean) => {
+    setSnapshotCaptureUrl(null);
+    const resolve = captureResolveRef.current;
+    captureResolveRef.current = null;
+    capturePromiseRef.current = null;
+    resolve?.(success);
+  }, []);
+
+  useEffect(() => {
+    if (!snapshotCaptureUrl) return;
+    let attempts = 0;
+    const poll = window.setInterval(() => {
+      attempts += 1;
+      let statusElement: HTMLElement | null = null;
+      try {
+        statusElement = snapshotCaptureFrameRef.current?.contentDocument?.getElementById(
+          "blogg-share-snapshot-status",
+        ) ?? null;
+      } catch {
+        // The capture frame is same-origin; frame navigation errors are handled as a timeout.
       }
-      await navigator.clipboard.writeText(value);
-      setFeedback(`${label} copied`);
+
+      const message = statusElement?.textContent?.trim() || "";
+      if (message.startsWith("Snapshot saved.")) {
+        finishCapture(true);
+        return;
+      }
+      if (message && !SNAPSHOT_PROGRESS_MESSAGES.includes(message)) {
+        finishCapture(false);
+        return;
+      }
+      if (attempts >= 90) finishCapture(false);
+    }, 500);
+
+    return () => window.clearInterval(poll);
+  }, [snapshotCaptureUrl, finishCapture]);
+
+  const refreshSnapshot = useCallback((): Promise<boolean> => {
+    // Snapshot writes are administrator-only. Other visitors still copy the public URL normally.
+    if (!isAdmin || !noteId) return Promise.resolve(false);
+    if (capturePromiseRef.current) return capturePromiseRef.current;
+
+    const captureUrl = new URL(`/read/${encodeURIComponent(noteId)}`, window.location.origin);
+    captureUrl.searchParams.set("captureBloggSnapshot", "1");
+    const promise = new Promise<boolean>((resolve) => {
+      captureResolveRef.current = resolve;
+      setSnapshotCaptureUrl(captureUrl.toString());
+    });
+    capturePromiseRef.current = promise;
+    return promise;
+  }, [isAdmin, noteId]);
+
+  const copyLink = async () => {
+    let copied = false;
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
+      await navigator.clipboard.writeText(directUrl);
+      copied = true;
     } catch {
-      setFeedback("Copy was blocked by this browser. Select and copy the field below.");
+      // Preserve copy behavior in browsers that deny the Clipboard API.
+      const textarea = document.createElement("textarea");
+      textarea.value = directUrl;
+      textarea.readOnly = true;
+      textarea.setAttribute("aria-hidden", "true");
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      textarea.style.pointerEvents = "none";
+      textarea.style.left = "-9999px";
+      try {
+        document.body.appendChild(textarea);
+        textarea.select();
+        copied = document.execCommand("copy");
+      } catch {
+        copied = false;
+      } finally {
+        textarea.remove();
+      }
     }
+
+    setFeedback(copied ? "Copied link" : "Could not copy link");
   };
 
-  const handleShare = async () => {
-    if (!navigator.share) {
-      await copyText(directUrl, "Share link");
-      return;
-    }
-    try {
-      await navigator.share({
-        title: blogg.title || "Shared note",
-        text: blogg.subtitle || `Read ${blogg.title || "this note"}`,
-        url: directUrl,
-      });
-    } catch (error) {
-      if (error instanceof Error && error.name !== "AbortError") {
-        setFeedback("Use the share link below to share this note.");
-      }
-    }
+  const handleShare = () => {
+    setFeedback("");
+    // Start the clipboard operation directly from the click; do not wait for rendering.
+    const copyTask = copyLink();
+    // Refresh the Open Graph image silently in parallel. No share menu or second action.
+    if (isAdmin) void refreshSnapshot();
+    void copyTask;
   };
 
   return (
@@ -71,11 +126,10 @@ export default function ShareBloggButton({
         type="button"
         onClick={(event) => {
           event.stopPropagation();
-          setFeedback("");
-          setIsOpen(true);
+          handleShare();
         }}
-        aria-label={`Share ${blogg.title || "note"}`}
-        title="Share note"
+        aria-label={`Copy share link for ${blogg.title || "note"}`}
+        title="Copy share link"
       >
         <svg viewBox="0 0 24 24" aria-hidden="true" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="18" cy="5" r="3" />
@@ -85,64 +139,29 @@ export default function ShareBloggButton({
         </svg>
         <span>Share</span>
       </button>
+      {feedback && <span className="blogg-share-feedback" role="status" aria-live="polite">{feedback}</span>}
 
-      {isOpen && (
-        <div
-          className="blogg-share-backdrop"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setIsOpen(false);
+      {snapshotCaptureUrl && (
+        <iframe
+          ref={snapshotCaptureFrameRef}
+          key={snapshotCaptureUrl}
+          src={snapshotCaptureUrl}
+          title="Background blog rich-preview snapshot capture"
+          aria-hidden="true"
+          tabIndex={-1}
+          loading="eager"
+          style={{
+            position: "fixed",
+            left: "-1300px",
+            top: 0,
+            width: "1200px",
+            height: "630px",
+            border: 0,
+            opacity: 0,
+            pointerEvents: "none",
+            zIndex: -1,
           }}
-        >
-          <section
-            aria-labelledby="blogg-share-title"
-            aria-modal="true"
-            className="blogg-share-dialog typewriter-font"
-            role="dialog"
-          >
-            <div className="blogg-share-dialog-heading">
-              <div>
-                <p className="blogg-share-eyebrow">SHARE NOTE</p>
-                <h2 id="blogg-share-title">{blogg.title || "Untitled note"}</h2>
-              </div>
-              <button type="button" className="blogg-share-close" onClick={() => setIsOpen(false)} aria-label="Close share dialog">×</button>
-            </div>
-
-            <div className="blogg-share-preview" aria-label="Local share preview">
-              <div className="blogg-share-preview-topline">
-                <span>{blogg.author?.trim() || "Unknown author"}</span>
-                <span>{stackName} › {groupName}</span>
-              </div>
-              <strong>{blogg.title || "Untitled note"}</strong>
-              <p>{blogg.subtitle?.trim() || "Open the note to read its content."}</p>
-              {!!blogg.tags?.length && (
-                <div className="blogg-share-preview-tags">
-                  {blogg.tags.slice(0, 3).map((tag) => <span key={tag}>{tag}</span>)}
-                </div>
-              )}
-              <small>blogg · note preview</small>
-            </div>
-
-            <button className="blogg-share-copy-code" type="button" onClick={() => void handleShare()}>Share link…</button>
-
-            <label className="blogg-share-label" htmlFor={`share-url-${noteId}`}>Share link with rich preview</label>
-            <div className="blogg-share-copy-row">
-              <input id={`share-url-${noteId}`} readOnly value={directUrl} onFocus={(event) => event.currentTarget.select()} />
-              <button type="button" onClick={() => void copyText(directUrl, "Share link")}>Copy link</button>
-            </div>
-
-            <label className="blogg-share-label" htmlFor={`embed-url-${noteId}`}>Embed thumbnail link</label>
-            <div className="blogg-share-copy-row">
-              <input id={`embed-url-${noteId}`} readOnly value={embedUrl} onFocus={(event) => event.currentTarget.select()} />
-              <button type="button" onClick={() => void copyText(embedUrl, "Embed link")}>Copy</button>
-            </div>
-
-            <label className="blogg-share-label" htmlFor={`embed-code-${noteId}`}>Embed code</label>
-            <textarea id={`embed-code-${noteId}`} readOnly value={embedCode} rows={3} onFocus={(event) => event.currentTarget.select()} />
-            <button className="blogg-share-copy-code" type="button" onClick={() => void copyText(embedCode, "Embed code")}>Copy embed code</button>
-            {feedback && <p className="blogg-share-feedback" role="status">{feedback}</p>}
-          </section>
-        </div>
+        />
       )}
     </>
   );

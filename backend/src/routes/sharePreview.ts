@@ -43,46 +43,57 @@ const textFromBlocks = (blocks: unknown): string => {
   return parts.join(" ").replace(/\s+/g, " ").trim();
 };
 
-const descriptionFor = (note: Record<string, unknown>) => {
-  const subtitle = typeof note.subtitle === "string" ? note.subtitle.trim() : "";
-  const body = textFromBlocks(note.content);
-  const description = subtitle || body || "Open this note on Blogg.";
-  return description.length > 220 ? `${description.slice(0, 217).trimEnd()}…` : description;
-};
-
 const isPublicHttpsUrl = (value: unknown): value is string => {
   if (typeof value !== "string" || !value.trim()) return false;
   try {
     const url = new URL(value);
-    return url.protocol === "https:";
+    return url.protocol === "https:" && !url.username && !url.password;
   } catch {
     return false;
   }
 };
 
-const firstImageUrl = (blocks: unknown): string | undefined => {
-  if (!Array.isArray(blocks)) return undefined;
+type FirstBlockMetadata = { text: string; imageUrl?: string };
+
+const firstBlockMetadata = (blocks: unknown): FirstBlockMetadata => {
+  if (!Array.isArray(blocks)) return { text: "" };
 
   for (const rawBlock of blocks) {
     if (!rawBlock || typeof rawBlock !== "object") continue;
     const block = rawBlock as {
       type?: unknown;
-      props?: { url?: unknown; src?: unknown };
-      children?: unknown;
+      props?: { url?: unknown; src?: unknown; image?: unknown; title?: unknown; description?: unknown };
     };
 
+    // The rich preview represents the first meaningful top-level BlockNote
+    // block, not an unrelated image buried later in the document.
     if (block.type === "image") {
-      const url = block.props?.url ?? block.props?.src;
-      if (isPublicHttpsUrl(url)) return url;
+      const imageUrl = block.props?.url ?? block.props?.src;
+      return { text: "", ...(isPublicHttpsUrl(imageUrl) ? { imageUrl } : {}) };
     }
 
-    if (Array.isArray(block.children)) {
-      const nestedUrl = firstImageUrl(block.children);
-      if (nestedUrl) return nestedUrl;
+    const linkImage = block.props?.image;
+    if (block.type === "linkPreview" && isPublicHttpsUrl(linkImage)) {
+      const text = [block.props?.title, block.props?.description]
+        .filter((value): value is string => typeof value === "string")
+        .join(". ")
+        .replace(/\s+/g, " ")
+        .trim();
+      return { text, imageUrl: linkImage };
     }
+
+    const text = textFromBlocks([block]);
+    if (text) return { text };
   }
 
-  return undefined;
+  return { text: "" };
+};
+
+const descriptionFor = (note: Record<string, unknown>) => {
+  const subtitle = typeof note.subtitle === "string" ? note.subtitle.trim() : "";
+  const firstBlock = firstBlockMetadata(note.content);
+  const description = subtitle || firstBlock.text || "Open this note on Blogg.";
+  return description.length > 220 ? `${description.slice(0, 217).trimEnd()}…` : description;
 };
 
 const buildMetadataHtml = ({
@@ -173,7 +184,18 @@ sharePreviewRouter.get(
         ? note.title.trim()
         : "Untitled note";
       const description = descriptionFor(note as Record<string, unknown>);
-      const imageUrl = firstImageUrl(note.content) || `${frontendBase}/og-default.png`;
+      const firstBlock = firstBlockMetadata(note.content);
+      const savedSnapshot = await getDB()
+        .collection("bloggShareSnapshots")
+        .findOne({ blogg_id: noteId }, { projection: { updatedAt: 1 } });
+      const savedAt = savedSnapshot?.updatedAt instanceof Date
+        ? savedSnapshot.updatedAt.getTime()
+        : savedSnapshot?.updatedAt
+          ? new Date(savedSnapshot.updatedAt).getTime()
+          : 0;
+      const imageUrl = savedAt > 0
+        ? `${frontendBase}/share/blog/${encodeURIComponent(noteId)}/og-image.png?v=${savedAt}`
+        : firstBlock.imageUrl || `${frontendBase}/og-default.png`;
 
       // Private administrator previews must never be stored in a shared cache.
       res.setHeader("Cache-Control", isPublic ? "public, max-age=60, s-maxage=300" : "private, no-store");
