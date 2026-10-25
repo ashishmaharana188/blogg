@@ -8,7 +8,7 @@ export interface BlogSavetypes {
   isPublic?: boolean;
   /** Enables a plain copyright footer on public note renderers. */
   showCopyright?: boolean;
-  /** Actual rights holder when different from the author; blank defaults to author. */
+  /** Explicit rights holder for a © notice; blank renders the general Section 17/57 declaration. */
   copyrightHolder?: string;
 }
 

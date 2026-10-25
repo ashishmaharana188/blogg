@@ -511,8 +511,8 @@ const UserForm = ({
               </label>
               {showCopyright && (
                 <div className="blogg-copyright-editor-details">
-                  <input type="text" maxLength={180} value={copyrightHolder} onChange={(event) => { markDirty(); setCopyrightHolder(event.target.value); }} placeholder={`Copyright holder (blank uses ${formData.author.trim() || "author"})`} aria-label="Copyright owner or rights holder" />
-                  <p>Section 17 ordinarily makes the author the first owner, subject to exceptions. Section 57 preserves the author's right to claim authorship. This footer is attribution, not a transfer of rights. <a href="https://copyright.gov.in/Copyright_Act_1957/chapter_iv.html" target="_blank" rel="noreferrer">Section 17</a> · <a href="https://copyright.gov.in/Copyright_Act_1957/chapter_xii.html" target="_blank" rel="noreferrer">Section 57</a>.</p>
+                  <input type="text" maxLength={180} value={copyrightHolder} onChange={(event) => { markDirty(); setCopyrightHolder(event.target.value); }} placeholder="Optional rights holder (blank shows legal declaration)" aria-label="Copyright owner or rights holder" />
+                  <p>Enter a rights-holder name only when you want explicit © attribution. Leave this blank to display the general legal declaration instead of assuming the author owns the copyright. <a href="https://copyright.gov.in/Copyright_Act_1957/chapter_iv.html" target="_blank" rel="noreferrer">Section 17</a> · <a href="https://copyright.gov.in/Copyright_Act_1957/chapter_xii.html" target="_blank" rel="noreferrer">Section 57</a>.</p>
                 </div>
               )}
             </section>
