@@ -84,13 +84,20 @@ export default function useRadialGraphMath({
       if (entries) entries.push(folder);
       else foldersByStack.set(stackId, [folder]);
     });
+    // Cache sibling indices while each bucket is built. Calling findIndex for
+    // every folder repeatedly scanned each sibling bucket (quadratic work when
+    // a stack contains many folders).
+    const folderSiblingIndex = new Map<string, number>();
+    for (const siblings of foldersByStack.values()) {
+      siblings.forEach((folder, index) => folderSiblingIndex.set(String(folder.id), index));
+    }
     const folderAngles = new Map<string, number>();
     const groupRotation = rotationOffsets.groups || 0;
     let unparentedFolderIndex = 0;
     for (const folder of folders) {
       const stackId = String(folder.stackId || "");
       const siblings = foldersByStack.get(stackId) || [folder];
-      const siblingIndex = siblings.findIndex((item) => String(item.id) === String(folder.id));
+      const siblingIndex = folderSiblingIndex.get(String(folder.id)) ?? 0;
       const parentAngle = stackAngles.get(stackId);
       const fallbackAngle = (unparentedFolderIndex++ * Math.PI * 2) / Math.max(1, folders.length) - Math.PI / 2;
       const spread = Math.min(Math.PI * 1.35, Math.max(0.32, 0.30 + (siblings.length - 1) * 0.2));
@@ -138,13 +145,20 @@ export default function useRadialGraphMath({
       if (entries) entries.push(blog);
       else blogsByFolder.set(folderId, [blog]);
     });
+    // As above, compute one stable sibling index per blog rather than rescanning
+    // the same folder list for every note. This makes angle assignment linear
+    // in the number of notes instead of quadratic in a crowded folder.
+    const blogSiblingIndex = new Map<string, number>();
+    for (const siblings of blogsByFolder.values()) {
+      siblings.forEach((blog, index) => blogSiblingIndex.set(String(blog.id), index));
+    }
     const blogRotation = rotationOffsets.blogs || 0;
     let unparentedBlogIndex = 0;
     const defaultBlogAngles = new Map<string, number>();
     for (const blog of blogs) {
       const folderId = String(blog.groupId || "");
       const siblings = blogsByFolder.get(folderId) || [blog];
-      const siblingIndex = siblings.findIndex((item) => String(item.id) === String(blog.id));
+      const siblingIndex = blogSiblingIndex.get(String(blog.id)) ?? 0;
       const parentAngle = folderAngles.get(folderId);
       const fallbackAngle = (unparentedBlogIndex++ * Math.PI * 2) / Math.max(1, blogs.length) - Math.PI / 2;
       const spread = Math.min(1.3, Math.max(0.24, 0.22 + (siblings.length - 1) * 0.075));

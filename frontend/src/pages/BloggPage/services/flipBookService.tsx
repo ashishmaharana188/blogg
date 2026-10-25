@@ -1,10 +1,50 @@
 import { API_BASE_URL } from "../../../services/apiBase";
+import type { BloggItem } from "../../../types/pageTypes";
+
+export type BloggFeedPage = {
+  bloggs: BloggItem[];
+  nextCursor: string | null;
+  hasMore: boolean;
+};
+
+export async function fetchBloggFeedPageRequest(
+  cursor: string | null = null,
+  limit = 12,
+): Promise<BloggFeedPage> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (cursor) params.set("cursor", cursor);
+  const response = await fetch(`${API_BASE_URL}/bloggs/feed?${params.toString()}`, {
+    credentials: "include",
+    cache: "no-store",
+    headers: { Accept: "application/json" },
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const detail = typeof result?.message === "string" ? `: ${result.message}` : "";
+    throw new Error(`GET /bloggs/feed failed with HTTP ${response.status}${detail}`);
+  }
+  return {
+    bloggs: Array.isArray(result?.bloggs) ? result.bloggs : [],
+    nextCursor: typeof result?.nextCursor === "string" ? result.nextCursor : null,
+    hasMore: result?.hasMore === true,
+  };
+}
 
 export async function fetchAllBloggsRequest() {
-  // The server uses the administrator's session cookie to decide whether the
-  // response may include private notes. Without credentials, admins would see
-  // only the public subset in Feed and Flipbook.
-  const response = await fetch(`${API_BASE_URL}/bloggs`, {
+  // Keep the flipbook API scoped to its selected folder. The server now applies
+  // these filters before returning bodies instead of downloading every note.
+  const pathname = window.location.pathname.replace(/\/$/, "");
+  const params = new URLSearchParams();
+  if (pathname === "/blog") {
+    const search = new URLSearchParams(window.location.search);
+    const stackId = search.get("stackId");
+    const groupId = search.get("groupId");
+    if (!stackId || !groupId) return [];
+    params.set("stackId", stackId);
+    params.set("groupId", groupId);
+  }
+  const suffix = params.size ? `?${params.toString()}` : "";
+  const response = await fetch(`${API_BASE_URL}/bloggs${suffix}`, {
     credentials: "include",
     cache: "no-store",
   });
@@ -19,23 +59,5 @@ export async function fetchAllBloggsRequest() {
     throw new Error(`GET /bloggs failed with HTTP ${response.status}${detail ? `: ${detail}` : ""}`);
   }
   const result = await response.json();
-  const bloggs = Array.isArray(result?.bloggs) ? result.bloggs : [];
-
-  // Blog Profile's flipbook must never default to the full site-wide note list.
-  // Its parent mounts this request only after a stack and group have both been
-  // selected. Filtering here keeps the fetched book scoped to that selection.
-  const pathname = window.location.pathname.replace(/\/$/, "");
-  if (pathname === "/blog") {
-    const params = new URLSearchParams(window.location.search);
-    const stackId = params.get("stackId");
-    const groupId = params.get("groupId");
-    if (!stackId || !groupId) return [];
-
-    return bloggs.filter((blogg: any) =>
-      blogg?.group_id === groupId &&
-      (blogg?.stack_id === stackId || !blogg?.stack_id),
-    );
-  }
-
-  return bloggs;
+  return Array.isArray(result?.bloggs) ? result.bloggs : [];
 }
