@@ -9,7 +9,9 @@ const FEED_BACKGROUND_PREFERENCE_KEY = "blogg-feed-background-enabled";
 
 function readBackgroundPreference(): boolean {
   try {
-    const storedPreference = window.localStorage.getItem(FEED_BACKGROUND_PREFERENCE_KEY);
+    const storedPreference = window.localStorage.getItem(
+      FEED_BACKGROUND_PREFERENCE_KEY,
+    );
     return storedPreference === null ? true : storedPreference === "true";
   } catch {
     return true;
@@ -19,7 +21,9 @@ function readBackgroundPreference(): boolean {
 export default function FeedBackgroundAdminPanel() {
   const { isAdmin } = useAuth();
   const [mountNode, setMountNode] = useState<HTMLElement | null>(null);
-  const [backgroundEnabled, setBackgroundEnabled] = useState<boolean>(readBackgroundPreference);
+  const [backgroundEnabled, setBackgroundEnabled] = useState<boolean>(
+    readBackgroundPreference,
+  );
   const [currentUrl, setCurrentUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -41,10 +45,13 @@ export default function FeedBackgroundAdminPanel() {
 
     const tryAttach = () => {
       if (disposed || mount) return Boolean(mount);
-      const statusCard = document.querySelector<HTMLElement>(".account-dashboard-status");
+      const statusCard = document.querySelector<HTMLElement>(
+        ".account-dashboard-status",
+      );
       if (!statusCard) return false;
 
-      const activitySelect = statusCard.querySelector<HTMLSelectElement>("#admin-activity");
+      const activitySelect =
+        statusCard.querySelector<HTMLSelectElement>("#admin-activity");
       mount = document.createElement("div");
       mount.className = "feed-background-admin-mount";
       if (activitySelect?.parentElement === statusCard) {
@@ -58,7 +65,9 @@ export default function FeedBackgroundAdminPanel() {
     };
 
     if (!tryAttach()) {
-      observer = new MutationObserver(() => { tryAttach(); });
+      observer = new MutationObserver(() => {
+        tryAttach();
+      });
       observer.observe(document.body, { childList: true, subtree: true });
     }
 
@@ -66,13 +75,16 @@ export default function FeedBackgroundAdminPanel() {
       disposed = true;
       observer?.disconnect();
       if (mount) mount.remove();
-      setMountNode((current) => current === mount ? null : current);
+      setMountNode((current) => (current === mount ? null : current));
     };
   }, [isAdmin]);
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(FEED_BACKGROUND_PREFERENCE_KEY, String(backgroundEnabled));
+      window.localStorage.setItem(
+        FEED_BACKGROUND_PREFERENCE_KEY,
+        String(backgroundEnabled),
+      );
     } catch {
       // The preference remains usable for this session if browser storage is unavailable.
     }
@@ -88,17 +100,29 @@ export default function FeedBackgroundAdminPanel() {
       cache: "no-store",
     })
       .then(async (response) => {
-        if (!response.ok) throw new Error(`Could not load feed background (${response.status}).`);
+        if (!response.ok)
+          throw new Error(
+            `Could not load feed background (${response.status}).`,
+          );
         return response.json() as Promise<BackgroundSetting>;
       })
       .then((setting) => {
         if (!cancelled) setCurrentUrl(setting.url || "/feed-background.jpg");
       })
       .catch((reason) => {
-        if (!cancelled) setError(reason instanceof Error ? reason.message : "Could not load the current background.");
+        if (!cancelled)
+          setError(
+            reason instanceof Error
+              ? reason.message
+              : "Could not load the current background.",
+          );
       })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [isAdmin]);
 
   if (!isAdmin || !mountNode) return null;
@@ -108,7 +132,13 @@ export default function FeedBackgroundAdminPanel() {
     event.target.value = "";
     if (!file) return;
 
-    const allowedTypes = new Set(["image/png", "image/jpeg", "image/webp", "image/avif", "image/gif"]);
+    const allowedTypes = new Set([
+      "image/png",
+      "image/jpeg",
+      "image/webp",
+      "image/avif",
+      "image/gif",
+    ]);
     if (!allowedTypes.has(file.type)) {
       setError("Choose a PNG, JPEG, WebP, AVIF, or GIF image.");
       setMessage("");
@@ -126,30 +156,44 @@ export default function FeedBackgroundAdminPanel() {
     try {
       const body = new FormData();
       body.append("file", file);
-      const response = await fetch(`${API_BASE_URL}/api/admin/showcase/feed-background`, {
-        method: "POST",
-        credentials: "include",
-        body,
-      });
-      const result = await response.json().catch(() => ({})) as { url?: string; message?: string };
+      const response = await fetch(
+        `${API_BASE_URL}/api/admin/showcase/feed-background`,
+        {
+          method: "POST",
+          credentials: "include",
+          body,
+        },
+      );
+      const result = (await response.json().catch(() => ({}))) as {
+        url?: string;
+        message?: string;
+      };
       if (!response.ok || !result.url) {
-        throw new Error(result.message || `Background upload failed (${response.status}).`);
+        throw new Error(
+          result.message || `Background upload failed (${response.status}).`,
+        );
       }
       setCurrentUrl(result.url);
       setMessage("Background image replaced successfully.");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Could not upload the background image.");
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Could not upload the background image.",
+      );
     } finally {
       setUploading(false);
     }
   };
 
   return createPortal(
-    <section className="feed-background-admin-panel" aria-labelledby="feed-background-admin-title">
+    <section
+      className="feed-background-admin-panel"
+      aria-labelledby="feed-background-admin-title"
+    >
       <div className="feed-background-admin-heading">
         <div className="feed-background-admin-title-copy">
           <p className="feed-background-admin-eyebrow">APPEARANCE</p>
-          <h3 id="feed-background-admin-title">Feed and Note View background</h3>
         </div>
         <button
           type="button"
@@ -162,9 +206,6 @@ export default function FeedBackgroundAdminPanel() {
           <span aria-hidden="true" />
         </button>
       </div>
-      <p className="feed-background-admin-description">
-        {backgroundEnabled ? "Background is on in Feed and full Note View." : "Background is off in Feed and full Note View."}
-      </p>
 
       <div className="feed-background-admin-upload-area">
         <div className="feed-background-admin-upload-copy">
@@ -174,10 +215,16 @@ export default function FeedBackgroundAdminPanel() {
         {loading ? (
           <p className="feed-background-admin-status">Loading current image…</p>
         ) : currentUrl ? (
-          <img className="feed-background-admin-preview" src={currentUrl} alt="Current Feed and Note View background preview" />
+          <img
+            className="feed-background-admin-preview"
+            src={currentUrl}
+            alt="Current Feed and Note View background preview"
+          />
         ) : null}
         <label className="feed-background-admin-upload">
-          <span>{uploading ? "Replacing background…" : "Choose replacement image"}</span>
+          <span>
+            {uploading ? "Replacing background…" : "Choose replacement image"}
+          </span>
           <input
             type="file"
             accept="image/png,image/jpeg,image/webp,image/avif,image/gif"
@@ -185,10 +232,17 @@ export default function FeedBackgroundAdminPanel() {
             onChange={(event) => void handleUpload(event)}
           />
         </label>
-        <p className="feed-background-admin-hint">PNG, JPEG, WebP, AVIF, or GIF · 12 MB maximum.</p>
       </div>
-      {message && <p className="feed-background-admin-status" role="status">{message}</p>}
-      {error && <p className="feed-background-admin-error" role="alert">{error}</p>}
+      {message && (
+        <p className="feed-background-admin-status" role="status">
+          {message}
+        </p>
+      )}
+      {error && (
+        <p className="feed-background-admin-error" role="alert">
+          {error}
+        </p>
+      )}
     </section>,
     mountNode,
   );
