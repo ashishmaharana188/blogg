@@ -696,3 +696,82 @@
 .blogg-copyright-editor-details input { box-sizing: border-box; width: 100%; min-height: 32px; padding: 6px 8px; border: 1px solid #d9dfe7; border-radius: 4px; background: #fff; color: #263247; font: inherit; }
 .blogg-copyright-editor-details p { margin: 5px 0 0; color: #7a8492; font-size: 10px; line-height: 1.5; }
 .blogg-copyright-editor-details a { color: #536174; text-decoration: underline; text-underline-offset: 2px; }
+
+/* Keep Save & Close and Auto-save reachable on phones. The action strip is
+   pinned above the references bottom sheet, or at the viewport bottom when
+   the sheet is hidden, rather than being stranded after the long note body. */
+@media (max-width: 720px) {
+  .blogg-editor-bottom-area > div.mt-4.flex.flex-wrap.items-center.justify-between.gap-3.border-t.border-slate-200.pt-4 {
+    position: fixed !important;
+    left: 8px !important;
+    right: 8px !important;
+    bottom: env(safe-area-inset-bottom, 0px) !important;
+    z-index: 10060 !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    margin: 0 !important;
+    padding: 8px 10px !important;
+    border: 1px solid #dbe1e8 !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+    box-shadow: 0 -3px 12px rgb(15 23 42 / 10%);
+  }
+
+  .blogg-editor-bottom-area > div.mt-4.flex.flex-wrap.items-center.justify-between.gap-3.border-t.border-slate-200.pt-4 > div {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+  }
+
+  .blogg-editor-bottom-area > div.mt-4.flex.flex-wrap.items-center.justify-between.gap-3.border-t.border-slate-200.pt-4 > div label {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    white-space: nowrap;
+    font-size: 11px !important;
+    line-height: 1.3 !important;
+  }
+
+  .blogg-editor-bottom-area > div.mt-4.flex.flex-wrap.items-center.justify-between.gap-3.border-t.border-slate-200.pt-4 > div p {
+    margin-top: 3px !important;
+    font-size: 9px !important;
+    line-height: 1.35 !important;
+    overflow-wrap: anywhere;
+  }
+
+  .blogg-editor-bottom-area > div.mt-4.flex.flex-wrap.items-center.justify-between.gap-3.border-t.border-slate-200.pt-4 > button {
+    flex: 0 0 auto !important;
+    min-height: 38px;
+    padding: 8px 10px !important;
+    font-size: 10px !important;
+    line-height: 1.25 !important;
+    white-space: nowrap;
+  }
+
+  /* The references panel starts as a compact dock at the physical screen edge. */
+  .blogg-editor-layout.is-references-open:has(.blogg-references-sidebar.is-collapsed) .blogg-editor-bottom-area > div.mt-4.flex.flex-wrap.items-center.justify-between.gap-3.border-t.border-slate-200.pt-4 {
+    bottom: calc(48px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* When the drawer expands, move the action strip just above its top edge. */
+  .blogg-editor-layout.is-references-open:has(.blogg-references-sidebar:not(.is-collapsed)) .blogg-editor-bottom-area > div.mt-4.flex.flex-wrap.items-center.justify-between.gap-3.border-t.border-slate-200.pt-4 {
+    bottom: calc(min(56dvh, 520px) + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .blogg-editor-bottom-area > div.mt-4.flex.flex-wrap.items-center.justify-between.gap-3.border-t.border-slate-200.pt-4 {
+    left: 5px !important;
+    right: 5px !important;
+    gap: 6px !important;
+    padding: 7px !important;
+  }
+
+  .blogg-editor-bottom-area > div.mt-4.flex.flex-wrap.items-center.justify-between.gap-3.border-t.border-slate-200.pt-4 > button {
+    padding: 8px 7px !important;
+    font-size: 9px !important;
+  }
+}
