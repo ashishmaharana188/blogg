@@ -154,29 +154,72 @@ export default function useRadialGraphMath({
       );
     }
 
-    // The title search temporarily moves the matching blog into a predictable
-    // spotlight slot on the outer ring and swaps the nearest occupant into its
-    // former angle. Clearing search restores the untouched default positions.
+    // Search spotlight: move the matched blog and its directly referenced blogs
+    // into adjacent, easy-to-find slots on the outer ring. Each moved blog trades
+    // places with the nearest available non-participating blog, so the map does
+    // not simply pile the searched notes on top of the nodes already there.
+    // These positions are derived in memory and revert automatically on Clear.
     const visibleBlogAngles = new Map(defaultBlogAngles);
     const focusedId = focusedBloggId ? String(focusedBloggId) : "";
     const focusedOriginalAngle = defaultBlogAngles.get(focusedId);
     if (focusedId && focusedOriginalAngle !== undefined) {
       const spotlightAngle = -Math.PI / 2 + blogRotation;
-      let nearestId = "";
-      let nearestDistance = Number.POSITIVE_INFINITY;
-      for (const [id, angle] of defaultBlogAngles) {
-        if (id === focusedId) continue;
-        const angularDistance = Math.abs(Math.atan2(
-          Math.sin(angle - spotlightAngle),
-          Math.cos(angle - spotlightAngle),
-        ));
-        if (angularDistance < nearestDistance) {
-          nearestDistance = angularDistance;
-          nearestId = id;
-        }
+      const directConnectionIds = new Set<string>();
+
+      // rawLinks are the explicit blog-to-blog references. Ignore ownership
+      // edges added later for folders, since those are not note references.
+      for (const raw of rawLinks) {
+        const sourceId = String(raw.source || raw.source_id || "");
+        const targetId = String(raw.target || raw.target_id || "");
+        if (sourceId === focusedId && defaultBlogAngles.has(targetId)) directConnectionIds.add(targetId);
+        if (targetId === focusedId && defaultBlogAngles.has(sourceId)) directConnectionIds.add(sourceId);
       }
-      visibleBlogAngles.set(focusedId, spotlightAngle);
-      if (nearestId) visibleBlogAngles.set(nearestId, focusedOriginalAngle);
+      directConnectionIds.delete(focusedId);
+
+      const angularDistance = (a: number, b: number) => Math.abs(Math.atan2(
+        Math.sin(a - b),
+        Math.cos(a - b),
+      ));
+      const connectedIds = [...directConnectionIds].sort((a, b) => {
+        const angleA = defaultBlogAngles.get(a) ?? 0;
+        const angleB = defaultBlogAngles.get(b) ?? 0;
+        return angularDistance(angleA, spotlightAngle) - angularDistance(angleB, spotlightAngle);
+      });
+      const spotlightIds = [focusedId, ...connectedIds];
+      const participantIds = new Set(spotlightIds);
+      const displacedIds = new Set<string>();
+      const slotStep = spotlightIds.length > 1
+        ? Math.min(0.22, 2.0 / (spotlightIds.length - 1))
+        : 0.22;
+      const slotOffset = (index: number) => {
+        if (index === 0) return 0;
+        const magnitude = Math.ceil(index / 2);
+        return index % 2 === 1 ? -magnitude : magnitude;
+      };
+
+      spotlightIds.forEach((id, index) => {
+        const desiredAngle = spotlightAngle + slotOffset(index) * slotStep;
+        const originalAngle = defaultBlogAngles.get(id);
+        visibleBlogAngles.set(id, desiredAngle);
+        if (originalAngle === undefined || angularDistance(originalAngle, desiredAngle) < 0.025) return;
+
+        // Find the node closest to the desired slot. Do not displace another
+        // participant or reuse one displaced for an earlier spotlight slot.
+        let nearestId = "";
+        let nearestDistance = Number.POSITIVE_INFINITY;
+        for (const [candidateId, candidateAngle] of defaultBlogAngles) {
+          if (participantIds.has(candidateId) || displacedIds.has(candidateId)) continue;
+          const candidateDistance = angularDistance(candidateAngle, desiredAngle);
+          if (candidateDistance < nearestDistance) {
+            nearestDistance = candidateDistance;
+            nearestId = candidateId;
+          }
+        }
+        if (nearestId) {
+          displacedIds.add(nearestId);
+          visibleBlogAngles.set(nearestId, originalAngle);
+        }
+      });
     }
 
     for (const blog of blogs) {
