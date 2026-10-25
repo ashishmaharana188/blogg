@@ -15,11 +15,13 @@ import { bloggEditorSchema } from "../BloggPage/components/bloggForm/bloggEditor
 import FeedNoteWindow from "./FeedNoteWindow";
 import "@blocknote/mantine/style.css";
 import "./blogFeed.css";
+import "./blogFeedBackground.css";
 
 type CanvasStack = { stack_id: string; stack_name: string };
 type CanvasGroup = { group_id: string; group_name: string; stack_id: string };
 const EMPTY_BLOCKS: any[] = [{ type: "paragraph", content: "" }];
 const FEED_PAGE_SIZE = 12;
+const FEED_BACKGROUND_PREFERENCE_KEY = "blogg-feed-background-enabled";
 
 type MusicTrack = {
   title?: string;
@@ -206,6 +208,14 @@ const HomePage = () => {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [cursorHistory, setCursorHistory] = useState<Array<string | null>>([null]);
   const [nowPlayingTrack, setNowPlayingTrack] = useState<FeedNowPlayingTrack | null>(null);
+  const [feedBackgroundEnabled, setFeedBackgroundEnabled] = useState<boolean>(() => {
+    try {
+      const storedPreference = window.localStorage.getItem(FEED_BACKGROUND_PREFERENCE_KEY);
+      return storedPreference === null ? true : storedPreference === "true";
+    } catch {
+      return true;
+    }
+  });
   const [windowBlog, setWindowBlog] = useState<BloggItem | null>(null);
   const [windowInstance, setWindowInstance] = useState(0);
 
@@ -215,6 +225,14 @@ const HomePage = () => {
   }, []);
 
   const closeFeedWindow = useCallback(() => setWindowBlog(null), []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(FEED_BACKGROUND_PREFERENCE_KEY, String(feedBackgroundEnabled));
+    } catch {
+      // Background preference remains usable for this session if storage is unavailable.
+    }
+  }, [feedBackgroundEnabled]);
 
   const refreshNowPlaying = useCallback(async () => {
     const [integrationsResult, ytmusicResult] = await Promise.allSettled([
@@ -295,7 +313,17 @@ const HomePage = () => {
   return (
     <div className="blog-feed-page typewriter-font">
       <BloggHeader page="feed" onNewNote={() => navigate("/blog?newNote=1")} />
-      <main className="blog-feed-content">
+      <main className={`blog-feed-content${feedBackgroundEnabled ? " has-feed-background" : ""}`}>
+        <button
+          type="button"
+          className={`blog-feed-background-toggle${feedBackgroundEnabled ? " is-on" : ""}`}
+          onClick={() => setFeedBackgroundEnabled((enabled) => !enabled)}
+          aria-pressed={feedBackgroundEnabled}
+          title={feedBackgroundEnabled ? "Turn feed background off" : "Turn feed background on"}
+        >
+          <span className="blog-feed-background-toggle-mark" aria-hidden="true">{feedBackgroundEnabled ? "●" : "○"}</span>
+          <span>Background {feedBackgroundEnabled ? "On" : "Off"}</span>
+        </button>
         <div className="blog-feed-widget-rail" aria-label="Music and status widgets">
           <NowPlayingTeaser track={nowPlayingTrack} />
         </div>
