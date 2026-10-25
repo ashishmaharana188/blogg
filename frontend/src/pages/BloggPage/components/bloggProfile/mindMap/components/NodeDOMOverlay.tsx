@@ -1,4 +1,5 @@
 import React from "react";
+import { publicStateAssets } from "virtual:public-state-assets";
 
 interface NodeDOMOverlayProps {
   activeLayer: string | null;
@@ -12,22 +13,20 @@ interface NodeDOMOverlayProps {
   CENTER_Y: number;
 }
 
-/**
- * The centre node uses a media URL configured at build time. A regular <img>
- * preserves GIF animation in the browser; video URLs use a muted inline loop.
- * Vite's VITE_BLOGG_MINDMAP_CENTER_MEDIA environment variable lets deployments
- * change the media without editing source. Empty configuration falls back to
- * a restrained branded centre instead of a broken media element.
- */
-const centerMediaUrl = (import.meta.env.VITE_BLOGG_MINDMAP_CENTER_MEDIA || "").trim();
-const centerMediaKind = (import.meta.env.VITE_BLOGG_MINDMAP_CENTER_MEDIA_TYPE || "").trim().toLowerCase();
-const isCenterVideo = centerMediaKind === "video" ||
-  /\.(mp4|webm|mov)(?:[?#].*)?$/i.test(centerMediaUrl);
+// Select from Blogg's existing frontend/src/public assets. If a GIF exists,
+// prefer it so the centre remains animated; otherwise use an existing image.
+const centerGifs = publicStateAssets.filter((asset) => /\.gif(?:[?#].*)?$/i.test(asset));
+const centerImages = publicStateAssets.filter((asset) => /\.(?:png|jpe?g|webp|avif|svg)(?:[?#].*)?$/i.test(asset));
+const centerMediaCandidates = centerGifs.length ? centerGifs : centerImages;
+const centerMediaUrl = centerMediaCandidates.length
+  ? centerMediaCandidates[Math.floor(Math.random() * centerMediaCandidates.length)]
+  : "";
 
 const NodeDOMOverlay: React.FC<NodeDOMOverlayProps> = React.memo(({
   activeLayer, processedGraph, connectedNodes, hoveredNode,
-  setSelectedNode, setHoveredNode, focusedBloggId,
+  setSelectedNode, setHoveredNode, focusedBloggId, CENTER_X, CENTER_Y,
 }) => {
+  const [centerMediaFailed, setCenterMediaFailed] = React.useState(false);
   const focusedConnectionIds = new Set<string>();
   if (focusedBloggId) {
     focusedConnectionIds.add(String(focusedBloggId));
@@ -40,6 +39,7 @@ const NodeDOMOverlay: React.FC<NodeDOMOverlayProps> = React.memo(({
       }
     });
 
+    // Ownership is a two-edge path: blog -> folder -> stack.
     const focusedBlog = processedGraph.nodes.find(
       (node: any) => String(node.uniqueId || node.id) === String(focusedBloggId),
     );
@@ -53,8 +53,34 @@ const NodeDOMOverlay: React.FC<NodeDOMOverlayProps> = React.memo(({
   }
 
   return <div className="absolute inset-0 pointer-events-none">
+    {/* The center is a geometric anchor rather than a graph data node in Blogg.
+        Render it independently so it always appears, even when no media exists. */}
+    <div
+      className={`graph-node blogg-mindmap-center-node absolute z-30 flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-gray-100 bg-gray-900 shadow-[0_0_20px_rgba(0,0,0,0.2)] transition-all duration-500 pointer-events-none ${activeLayer ? "scale-90 opacity-80" : "scale-100 opacity-100"}`}
+      style={{ left: CENTER_X - 48, top: CENTER_Y - 48 }}
+      role="img"
+      aria-label="Blogg Mind Map centre"
+    >
+      <span className={`blogg-mindmap-center-fallback ${centerMediaUrl && !centerMediaFailed ? "is-covered" : ""}`}>
+        <span className="blogg-mindmap-center-mark" aria-hidden="true">B</span>
+        <span className="blogg-mindmap-center-label">BLOGG</span>
+      </span>
+      {centerMediaUrl && !centerMediaFailed && (
+        <img
+          className="blogg-mindmap-center-media"
+          src={centerMediaUrl}
+          alt=""
+          draggable={false}
+          loading="eager"
+          decoding="async"
+          onError={() => setCenterMediaFailed(true)}
+        />
+      )}
+    </div>
+
     {processedGraph.nodes.map((node: any) => {
       const isCenter = node.radius === 0;
+      if (isCenter) return null;
       const isNotActiveLayer = activeLayer && node.layer !== activeLayer;
       const nodeKey = node.uniqueId || node.id;
       const isSpotlightNode = Boolean(focusedBloggId && String(nodeKey) === focusedBloggId);
@@ -68,46 +94,6 @@ const NodeDOMOverlay: React.FC<NodeDOMOverlayProps> = React.memo(({
       else if (node.group === "notes" && node.isGroupNode) dotColor = "bg-violet-500";
       else if (node.group === "notes") dotColor = "bg-blue-500";
       else if (node.group === "stacks") dotColor = "bg-amber-500";
-
-      if (isCenter) return (
-        <button
-          key={nodeKey}
-          type="button"
-          aria-label="Open Mind Map centre node"
-          className={`graph-node blogg-mindmap-center-node absolute z-30 flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full border-4 border-gray-100 bg-gray-900 shadow-[0_0_20px_rgba(0,0,0,0.2)] transition-all duration-500 pointer-events-auto ${activeLayer ? "scale-90 opacity-80" : "scale-100 opacity-100"}`}
-          style={{ left: node.x - 48, top: node.y - 48 }}
-          onClick={(event) => { event.stopPropagation(); setSelectedNode(node); }}
-        >
-          {centerMediaUrl ? (
-            isCenterVideo ? (
-              <video
-                className="blogg-mindmap-center-media"
-                src={centerMediaUrl}
-                autoPlay
-                loop
-                muted
-                playsInline
-                preload="metadata"
-                aria-hidden="true"
-              />
-            ) : (
-              <img
-                className="blogg-mindmap-center-media"
-                src={centerMediaUrl}
-                alt=""
-                draggable={false}
-                loading="eager"
-                decoding="async"
-              />
-            )
-          ) : (
-            <span className="blogg-mindmap-center-fallback">
-              <span className="blogg-mindmap-center-mark" aria-hidden="true">B</span>
-              <span className="blogg-mindmap-center-label">{node.label || node.title || "BLOGG"}</span>
-            </span>
-          )}
-        </button>
-      );
 
       const searchDimmed = Boolean(focusedBloggId && !isSearchConnection);
       const nodeVisibility = isSpotlightNode

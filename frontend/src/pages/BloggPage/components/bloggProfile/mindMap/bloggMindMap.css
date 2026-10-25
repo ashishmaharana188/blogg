@@ -4,7 +4,8 @@
   backface-visibility: hidden;
 }
 
-/* Centre media: keep the same 96px anchor geometry as the original node. */
+/* Center media always has a real fallback underneath it. The fallback becomes
+   visible if the public asset list is empty or the selected asset fails to load. */
 .blogg-radial-map .blogg-mindmap-center-node {
   padding: 0;
   isolation: isolate;
@@ -13,12 +14,10 @@
   line-height: 1;
 }
 
-.blogg-radial-map .blogg-mindmap-center-node:focus-visible {
-  outline: 2px solid #64748b;
-  outline-offset: 4px;
-}
-
 .blogg-radial-map .blogg-mindmap-center-media {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
   display: block;
   width: 100%;
   height: 100%;
@@ -29,6 +28,9 @@
 }
 
 .blogg-radial-map .blogg-mindmap-center-fallback {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
   display: flex;
   width: 100%;
   height: 100%;
@@ -41,6 +43,11 @@
   background:
     radial-gradient(circle at 50% 28%, rgb(100 116 139 / 45%), transparent 45%),
     #111827;
+  opacity: 1;
+}
+
+.blogg-radial-map .blogg-mindmap-center-fallback.is-covered {
+  opacity: 0;
 }
 
 .blogg-radial-map .blogg-mindmap-center-mark {
