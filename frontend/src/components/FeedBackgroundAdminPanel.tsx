@@ -193,7 +193,7 @@ export default function FeedBackgroundAdminPanel() {
     >
       <div className="feed-background-admin-heading">
         <div className="feed-background-admin-title-copy">
-          <p className="feed-background-admin-eyebrow">APPEARANCE</p>
+          <h3 id="feed-background-admin-title">APPEARANCE</h3>
         </div>
         <button
           type="button"
@@ -210,7 +210,6 @@ export default function FeedBackgroundAdminPanel() {
       <div className="feed-background-admin-upload-area">
         <div className="feed-background-admin-upload-copy">
           <strong>Background image</strong>
-          <span>Upload one image. It replaces the current background.</span>
         </div>
         {loading ? (
           <p className="feed-background-admin-status">Loading current image…</p>
