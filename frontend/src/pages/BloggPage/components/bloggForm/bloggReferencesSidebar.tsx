@@ -9,6 +9,11 @@ import {
   type MindMapGroup,
 } from "../../services/bloggReferencesService";
 import { fetchBloggByIdRequest } from "../../services/canvasViewService";
+import { useCreateBlockNote } from "@blocknote/react";
+import { createPortal } from "react-dom";
+import { BlockNoteView } from "@blocknote/mantine";
+import { bloggEditorSchema } from "./bloggEditorSchema";
+import "./bloggReferenceNoteWindow.css";
 
 type LinkSelectionResult = { sourceText: string; error?: string };
 type Props = {
@@ -67,6 +72,92 @@ function readableBlocks(content: unknown): string[] {
 
 const quietButton = "inline-flex items-center justify-center border-0 border-b border-slate-400 bg-transparent px-0 py-1 text-xs font-medium text-slate-700 hover:border-slate-900 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-40";
 
+type ReferenceNoteWindowProps = {
+  note: TargetBlogContent | null;
+  title: string;
+  loading: boolean;
+  error: string;
+  minimized: boolean;
+  onMinimize: () => void;
+  onRestore: () => void;
+  onClose: () => void;
+};
+
+function ReferenceNoteWindow({
+  note,
+  title,
+  loading,
+  error,
+  minimized,
+  onMinimize,
+  onRestore,
+  onClose,
+}: ReferenceNoteWindowProps) {
+  const initialContent = Array.isArray(note?.content) && note.content.length
+    ? note.content as any[]
+    : [{ type: "paragraph", content: "" }];
+  const editor = useCreateBlockNote({
+    schema: bloggEditorSchema,
+    initialContent,
+  });
+  const heading = note?.title?.trim() || title || "Referenced note";
+
+  return (
+    <section
+      className={`blogg-reference-note-window${minimized ? " is-minimized" : ""}`}
+      role="dialog"
+      aria-label={`Referenced note: ${heading}`}
+      aria-modal={false}
+    >
+      <header className="blogg-reference-note-window-header">
+        <div className="blogg-reference-note-window-heading">
+          <span className="blogg-reference-note-window-eyebrow">OPEN NOTE</span>
+          <h2 title={heading}>{heading}</h2>
+        </div>
+        <div className="blogg-reference-note-window-controls">
+          <button
+            type="button"
+            onClick={minimized ? onRestore : onMinimize}
+            aria-label={minimized ? "Restore note window" : "Minimize note window"}
+            title={minimized ? "Restore" : "Minimize"}
+          >
+            {minimized ? "□" : "−"}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close note window"
+            title="Close"
+          >
+            ×
+          </button>
+        </div>
+      </header>
+      {!minimized && (
+        <div className="blogg-reference-note-window-content">
+          {loading ? (
+            <p className="blogg-reference-note-window-state" role="status">Loading note…</p>
+          ) : error ? (
+            <p className="blogg-reference-note-window-state is-error" role="alert">{error}</p>
+          ) : note ? (
+            <article className="blogg-reference-note-window-article">
+              {note.author?.trim() && <p className="blogg-reference-note-window-author">{note.author}</p>}
+              <h3>{note.title || "Untitled note"}</h3>
+              {note.subtitle?.trim() && <p className="blogg-reference-note-window-subtitle">{note.subtitle}</p>}
+              <div className="blogg-reference-note-window-body">
+                <BlockNoteView editor={editor} editable={false} theme="dark" />
+              </div>
+            </article>
+          ) : (
+            <p className="blogg-reference-note-window-state">No note content is available.</p>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+
 export default function BloggReferencesSidebar({ bloggId, canEdit, linkSelectedSourceText, saveBlogBody, focusReferenceId = null, onClose }: Props) {
   const [targets, setTargets] = useState<MindMapBlogg[]>([]);
   const [stacks, setStacks] = useState<MindMapStack[]>([]);
@@ -87,6 +178,13 @@ export default function BloggReferencesSidebar({ bloggId, canEdit, linkSelectedS
   const [isAddedCollapsed, setIsAddedCollapsed] = useState(false);
   const [expandedReferenceId, setExpandedReferenceId] = useState<string | null>(null);
   const passageRef = useRef<HTMLDivElement | null>(null);
+  const [isNoteWindowOpen, setIsNoteWindowOpen] = useState(false);
+  const [isNoteWindowMinimized, setIsNoteWindowMinimized] = useState(false);
+  const [noteWindowBlog, setNoteWindowBlog] = useState<TargetBlogContent | null>(null);
+  const [noteWindowTitle, setNoteWindowTitle] = useState("Referenced note");
+  const [noteWindowLoading, setNoteWindowLoading] = useState(false);
+  const [noteWindowError, setNoteWindowError] = useState("");
+  const noteWindowRequestRef = useRef(0);
 
   const folders = useMemo(() => groups.filter((group) => group.stack_id === selectedStackId), [groups, selectedStackId]);
   const blogsInFolder = useMemo(() => targets.filter((blog) =>
@@ -123,6 +221,59 @@ export default function BloggReferencesSidebar({ bloggId, canEdit, linkSelectedS
   }, [bloggId]);
 
   useEffect(() => { void load(); }, [load]);
+
+
+  const openReferenceNoteWindow = useCallback(async (targetBloggId: string, fallbackTitle = "Referenced note") => {
+    const requestId = ++noteWindowRequestRef.current;
+    setIsNoteWindowOpen(true);
+    setIsNoteWindowMinimized(false);
+    setNoteWindowBlog(null);
+    setNoteWindowTitle(fallbackTitle);
+    setNoteWindowLoading(true);
+    setNoteWindowError("");
+    try {
+      const record: unknown = await fetchBloggByIdRequest({ blogg_id: targetBloggId });
+      if (requestId !== noteWindowRequestRef.current) return;
+      if (!record || typeof record !== "object") {
+        setNoteWindowError("This note could not be found or is not available.");
+        return;
+      }
+      const blog = record as TargetBlogContent;
+      setNoteWindowBlog(blog);
+      setNoteWindowTitle(blog.title || fallbackTitle);
+    } catch (reason) {
+      if (requestId === noteWindowRequestRef.current) {
+        setNoteWindowError(reason instanceof Error ? reason.message : "Could not open this note.");
+      }
+    } finally {
+      if (requestId === noteWindowRequestRef.current) setNoteWindowLoading(false);
+    }
+  }, []);
+
+  const openSelectedTargetWindow = useCallback(() => {
+    if (selectedTargetBlog) {
+      noteWindowRequestRef.current += 1;
+      setIsNoteWindowOpen(true);
+      setIsNoteWindowMinimized(false);
+      setNoteWindowBlog(selectedTargetBlog);
+      setNoteWindowTitle(selectedTargetBlog.title || selectedTarget?.title || "Source note");
+      setNoteWindowLoading(false);
+      setNoteWindowError("");
+      return;
+    }
+    if (selectedTargetId) {
+      void openReferenceNoteWindow(selectedTargetId, selectedTarget?.title || "Source note");
+    }
+  }, [openReferenceNoteWindow, selectedTarget, selectedTargetBlog, selectedTargetId]);
+
+  const closeNoteWindow = useCallback(() => {
+    noteWindowRequestRef.current += 1;
+    setIsNoteWindowOpen(false);
+    setIsNoteWindowMinimized(false);
+    setNoteWindowBlog(null);
+    setNoteWindowLoading(false);
+    setNoteWindowError("");
+  }, []);
 
   useEffect(() => {
     if (!focusReferenceId) return;
@@ -266,6 +417,7 @@ export default function BloggReferencesSidebar({ bloggId, canEdit, linkSelectedS
   };
 
   return (
+    <>
     <aside className="blogg-references-sidebar flex min-h-0 flex-col overflow-hidden bg-white text-slate-900" aria-label="Footnotes and references">
       <header className="blogg-ref-header">
         <button
@@ -305,7 +457,7 @@ export default function BloggReferencesSidebar({ bloggId, canEdit, linkSelectedS
                   <div className="divide-y divide-slate-200">
                     {references.map((reference, index) => (
                       <article key={reference.reference_id} className="py-3 first:pt-1">
-                        <button type="button" onClick={() => setExpandedReferenceId((current) => current === reference.reference_id ? null : reference.reference_id)} aria-expanded={expandedReferenceId === reference.reference_id} className="flex w-full items-start gap-2 bg-transparent p-0 text-left">
+                        <button type="button" onClick={() => { setExpandedReferenceId((current) => current === reference.reference_id ? null : reference.reference_id); void openReferenceNoteWindow(reference.target_blogg_id, reference.target_title || "Referenced blog"); }} aria-expanded={expandedReferenceId === reference.reference_id} className="flex w-full items-start gap-2 bg-transparent p-0 text-left">
                           <span className="text-xs text-slate-500">{index + 1}.</span>
                           <span className="flex-1 text-sm font-medium text-slate-800 underline decoration-dotted underline-offset-2">{reference.target_title || "Referenced blog"}</span>
                           <span className="text-xs text-slate-500">{expandedReferenceId === reference.reference_id ? "−" : "+"}</span>
@@ -313,7 +465,7 @@ export default function BloggReferencesSidebar({ bloggId, canEdit, linkSelectedS
                         {expandedReferenceId === reference.reference_id && (
                           <div className="pl-5 pt-2">
                             <p className="whitespace-pre-wrap text-xs leading-5 text-slate-600">{reference.target_excerpt}</p>
-                            <a href={`/read/${encodeURIComponent(reference.target_blogg_id)}?excerpt=${encodeURIComponent(reference.target_excerpt)}`} className="mt-2 inline-block text-xs font-semibold text-slate-700 underline underline-offset-2 hover:text-black">Open referenced blog ↗</a>
+                            <button type="button" onClick={() => void openReferenceNoteWindow(reference.target_blogg_id, reference.target_title || "Referenced blog")} className="mt-2 inline-block text-xs font-semibold text-slate-700 underline underline-offset-2 hover:text-black">Open referenced note ↗</button>
                           </div>
                         )}
                       </article>
@@ -357,7 +509,10 @@ export default function BloggReferencesSidebar({ bloggId, canEdit, linkSelectedS
 
                   {selectedTargetId && (
                     <div className="blogg-ref-passage-section mt-3 border-t border-[#edf0f4] pt-3">
-                      <div className="mb-2 text-sm font-medium text-slate-800">{selectedTarget?.title || selectedTargetBlog?.title || "Source text"}</div>
+                      <div className="blogg-ref-source-title-row">
+                        <div className="mb-2 text-sm font-medium text-slate-800">{selectedTarget?.title || selectedTargetBlog?.title || "Source text"}</div>
+                        <button type="button" onClick={openSelectedTargetWindow} disabled={targetLoading || !selectedTargetId} className="blogg-ref-open-note-button">Open note window ↗</button>
+                      </div>
                       <div ref={passageRef} onMouseUp={captureTargetPassage} onKeyUp={captureTargetPassage} tabIndex={0} aria-label="Select a passage from the target blog" className="blogg-ref-passage max-h-44 select-text space-y-2 overflow-y-auto py-1 text-sm leading-5 text-slate-700 selection:bg-slate-200 selection:text-slate-950">
                         {targetLoading ? <p className="text-xs text-slate-500">Loading…</p> : passageBlocks.length ? passageBlocks.map((text, index) => <p data-reference-paragraph={index} key={`${index}:${text.slice(0, 16)}`} className="whitespace-pre-wrap">{text}</p>) : <p className="text-xs text-slate-500">No selectable text in this blog.</p>}
                       </div>
@@ -386,7 +541,7 @@ export default function BloggReferencesSidebar({ bloggId, canEdit, linkSelectedS
                     <div className="blogg-ref-list mt-2 divide-y divide-slate-200">
                       {references.map((reference) => (
                         <article key={reference.reference_id} className="blogg-ref-item py-3 first:pt-1 last:pb-0">
-                          <a href={`/read/${encodeURIComponent(reference.target_blogg_id)}?excerpt=${encodeURIComponent(reference.target_excerpt)}`} className="blogg-ref-item-title text-sm font-medium text-slate-800 underline decoration-dotted underline-offset-2 hover:text-black">{reference.target_title || "Referenced blog"}</a>
+                          <button type="button" onClick={() => void openReferenceNoteWindow(reference.target_blogg_id, reference.target_title || "Referenced blog")} className="blogg-ref-item-title text-sm font-medium text-slate-800 underline decoration-dotted underline-offset-2 hover:text-black">{reference.target_title || "Referenced blog"}</button>
                           {reference.source_excerpt ? <p className="blogg-ref-linked-text mt-1 text-xs leading-5 text-slate-500">Linked text: {reference.source_excerpt}</p> : <p className="blogg-ref-linked-text mt-1 text-xs text-slate-500">Not linked to body text</p>}
                           <button
                             type="button"
@@ -425,5 +580,20 @@ export default function BloggReferencesSidebar({ bloggId, canEdit, linkSelectedS
         </>
       )}
     </aside>
+    {isNoteWindowOpen && typeof document !== "undefined" && createPortal(
+      <ReferenceNoteWindow
+        key={noteWindowBlog?.blogg_id || `loading:${noteWindowTitle}`}
+        note={noteWindowBlog}
+        title={noteWindowTitle}
+        loading={noteWindowLoading}
+        error={noteWindowError}
+        minimized={isNoteWindowMinimized}
+        onMinimize={() => setIsNoteWindowMinimized(true)}
+        onRestore={() => setIsNoteWindowMinimized(false)}
+        onClose={closeNoteWindow}
+      />,
+      document.body,
+    )}
+    </>
   );
 }

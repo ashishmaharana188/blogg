@@ -12,6 +12,18 @@ interface NodeDOMOverlayProps {
   CENTER_Y: number;
 }
 
+/**
+ * The centre node uses a media URL configured at build time. A regular <img>
+ * preserves GIF animation in the browser; video URLs use a muted inline loop.
+ * Vite's VITE_BLOGG_MINDMAP_CENTER_MEDIA environment variable lets deployments
+ * change the media without editing source. Empty configuration falls back to
+ * a restrained branded centre instead of a broken media element.
+ */
+const centerMediaUrl = (import.meta.env.VITE_BLOGG_MINDMAP_CENTER_MEDIA || "").trim();
+const centerMediaKind = (import.meta.env.VITE_BLOGG_MINDMAP_CENTER_MEDIA_TYPE || "").trim().toLowerCase();
+const isCenterVideo = centerMediaKind === "video" ||
+  /\.(mp4|webm|mov)(?:[?#].*)?$/i.test(centerMediaUrl);
+
 const NodeDOMOverlay: React.FC<NodeDOMOverlayProps> = React.memo(({
   activeLayer, processedGraph, connectedNodes, hoveredNode,
   setSelectedNode, setHoveredNode, focusedBloggId,
@@ -19,8 +31,6 @@ const NodeDOMOverlay: React.FC<NodeDOMOverlayProps> = React.memo(({
   const focusedConnectionIds = new Set<string>();
   if (focusedBloggId) {
     focusedConnectionIds.add(String(focusedBloggId));
-
-    // Keep explicit blog-reference neighbors highlighted.
     processedGraph.links.forEach((link: any) => {
       const sourceId = String(link.sourceNode?.uniqueId || link.sourceNode?.id || link.source || "");
       const targetId = String(link.targetNode?.uniqueId || link.targetNode?.id || link.target || "");
@@ -30,8 +40,6 @@ const NodeDOMOverlay: React.FC<NodeDOMOverlayProps> = React.memo(({
       }
     });
 
-    // Ownership is a two-edge path: blog -> folder -> stack. Add both
-    // ancestors directly so the stack is spotlighted during title search.
     const focusedBlog = processedGraph.nodes.find(
       (node: any) => String(node.uniqueId || node.id) === String(focusedBloggId),
     );
@@ -61,9 +69,45 @@ const NodeDOMOverlay: React.FC<NodeDOMOverlayProps> = React.memo(({
       else if (node.group === "notes") dotColor = "bg-blue-500";
       else if (node.group === "stacks") dotColor = "bg-amber-500";
 
-      if (isCenter) return <div key={nodeKey} className={`graph-node absolute z-30 flex h-24 w-24 cursor-pointer items-center justify-center rounded-full border-4 border-gray-100 bg-gray-900 shadow-[0_0_20px_rgba(0,0,0,0.2)] transition-all duration-500 pointer-events-auto ${activeLayer ? "scale-90 opacity-80" : "scale-100 opacity-100"}`} style={{ left: node.x - 48, top: node.y - 48 }} onClick={(event) => { event.stopPropagation(); setSelectedNode(node); }}>
-        <span className="max-w-[76px] px-1 text-center text-[8px] font-bold uppercase leading-tight tracking-[0.12em] text-white">{node.label || node.title || "STACK"}</span>
-      </div>;
+      if (isCenter) return (
+        <button
+          key={nodeKey}
+          type="button"
+          aria-label="Open Mind Map centre node"
+          className={`graph-node blogg-mindmap-center-node absolute z-30 flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full border-4 border-gray-100 bg-gray-900 shadow-[0_0_20px_rgba(0,0,0,0.2)] transition-all duration-500 pointer-events-auto ${activeLayer ? "scale-90 opacity-80" : "scale-100 opacity-100"}`}
+          style={{ left: node.x - 48, top: node.y - 48 }}
+          onClick={(event) => { event.stopPropagation(); setSelectedNode(node); }}
+        >
+          {centerMediaUrl ? (
+            isCenterVideo ? (
+              <video
+                className="blogg-mindmap-center-media"
+                src={centerMediaUrl}
+                autoPlay
+                loop
+                muted
+                playsInline
+                preload="metadata"
+                aria-hidden="true"
+              />
+            ) : (
+              <img
+                className="blogg-mindmap-center-media"
+                src={centerMediaUrl}
+                alt=""
+                draggable={false}
+                loading="eager"
+                decoding="async"
+              />
+            )
+          ) : (
+            <span className="blogg-mindmap-center-fallback">
+              <span className="blogg-mindmap-center-mark" aria-hidden="true">B</span>
+              <span className="blogg-mindmap-center-label">{node.label || node.title || "BLOGG"}</span>
+            </span>
+          )}
+        </button>
+      );
 
       const searchDimmed = Boolean(focusedBloggId && !isSearchConnection);
       const nodeVisibility = isSpotlightNode

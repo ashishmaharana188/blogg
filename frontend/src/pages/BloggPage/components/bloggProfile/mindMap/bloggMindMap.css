@@ -4,6 +4,72 @@
   backface-visibility: hidden;
 }
 
+/* Centre media: keep the same 96px anchor geometry as the original node. */
+.blogg-radial-map .blogg-mindmap-center-node {
+  padding: 0;
+  isolation: isolate;
+  border-color: #f1f5f9;
+  background: #111827;
+  line-height: 1;
+}
+
+.blogg-radial-map .blogg-mindmap-center-node:focus-visible {
+  outline: 2px solid #64748b;
+  outline-offset: 4px;
+}
+
+.blogg-radial-map .blogg-mindmap-center-media {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.blogg-radial-map .blogg-mindmap-center-fallback {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  color: #f8fafc;
+  background:
+    radial-gradient(circle at 50% 28%, rgb(100 116 139 / 45%), transparent 45%),
+    #111827;
+}
+
+.blogg-radial-map .blogg-mindmap-center-mark {
+  display: flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(226 232 240 / 65%);
+  border-radius: 50%;
+  color: #fff;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -.05em;
+}
+
+.blogg-radial-map .blogg-mindmap-center-label {
+  display: block;
+  max-width: 70px;
+  overflow: hidden;
+  color: rgb(248 250 252 / 90%);
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: .13em;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
 
 /* Search for crowded outer-ring blogs without changing the canvas interaction model. */
 .blogg-radial-map .mindmap-title-search {
@@ -86,5 +152,11 @@
     grid-template-columns: minmax(0, 1fr) auto auto;
     width: calc(100vw - 48px);
     max-width: 420px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blogg-radial-map .blogg-mindmap-center-node {
+    transition: none;
   }
 }
