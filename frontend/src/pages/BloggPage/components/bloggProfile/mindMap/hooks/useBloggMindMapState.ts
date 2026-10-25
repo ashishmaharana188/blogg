@@ -69,7 +69,7 @@ function toGraphData(data: BloggMindMapData | null) {
   return { nodes: [...stackNodes, ...groupNodes, ...blogNodes], links };
 }
 
-export default function useBloggMindMapState() {
+export default function useBloggMindMapState(focusedBloggId: string | null = null) {
   const [data, setData] = useState<BloggMindMapData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -109,7 +109,7 @@ export default function useBloggMindMapState() {
   }, [refresh]);
 
   const graphData = useMemo(() => toGraphData(data), [data]);
-  const math = useRadialGraphMath({ graphData, rotationOffsets, hoveredNode });
+  const math = useRadialGraphMath({ graphData, rotationOffsets, hoveredNode, focusedBloggId });
 
   // All nodes already have a stable position on one of the three data rings.
   // Selecting a footnote target only selects that Blog; it never promotes it to the centre.

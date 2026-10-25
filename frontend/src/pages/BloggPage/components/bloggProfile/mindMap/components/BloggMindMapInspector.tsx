@@ -98,10 +98,10 @@ export default function BloggMindMapInspector({
               <p className="rounded border border-dashed border-slate-300 p-3 text-xs text-slate-500">No references yet. Add one manually in the blog editor; nothing is linked automatically.</p>
             ) : (
               <ol className="space-y-2">
-                {outgoingReferences.map(({ reference_id, target_blogg_id, target_title, target_excerpt, target }) => (
-                  <li key={reference_id} className="rounded border border-slate-200 bg-white p-3">
-                    <button onClick={() => openReferencedBlog(target_blogg_id)} className="flex w-full items-start gap-2 text-left text-sm font-semibold text-blue-700 hover:text-blue-900 hover:underline"><OpenIcon /><span>{target_title || target?.title || "Referenced blog"}</span></button>
-                    {target_excerpt && <blockquote className="mt-2 border-l-2 border-slate-300 pl-3 text-xs leading-5 text-slate-600">{target_excerpt}</blockquote>}
+                {outgoingReferences.map(({ reference, target }) => (
+                  <li key={reference.reference_id} className="rounded border border-slate-200 bg-white p-3">
+                    <button onClick={() => openReferencedBlog(reference.target_blogg_id)} className="flex w-full items-start gap-2 text-left text-sm font-semibold text-blue-700 hover:text-blue-900 hover:underline"><OpenIcon /><span>{reference.target_title || target?.title || "Referenced blog"}</span></button>
+                    {reference.target_excerpt && <blockquote className="mt-2 border-l-2 border-slate-300 pl-3 text-xs leading-5 text-slate-600">{reference.target_excerpt}</blockquote>}
                   </li>
                 ))}
               </ol>

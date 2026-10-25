@@ -23,10 +23,12 @@ export default function useRadialGraphMath({
   graphData,
   rotationOffsets,
   hoveredNode,
+  focusedBloggId,
 }: {
   graphData: any;
   rotationOffsets: Record<string, number>;
   hoveredNode: any;
+  focusedBloggId?: string | null;
 }) {
   const processedGraph = useMemo(() => {
     const rawNodes: GraphNode[] = Array.isArray(graphData?.nodes) ? graphData.nodes : [];
@@ -138,6 +140,7 @@ export default function useRadialGraphMath({
     });
     const blogRotation = rotationOffsets.blogs || 0;
     let unparentedBlogIndex = 0;
+    const defaultBlogAngles = new Map<string, number>();
     for (const blog of blogs) {
       const folderId = String(blog.groupId || "");
       const siblings = blogsByFolder.get(folderId) || [blog];
@@ -145,7 +148,40 @@ export default function useRadialGraphMath({
       const parentAngle = folderAngles.get(folderId);
       const fallbackAngle = (unparentedBlogIndex++ * Math.PI * 2) / Math.max(1, blogs.length) - Math.PI / 2;
       const spread = Math.min(1.3, Math.max(0.24, 0.22 + (siblings.length - 1) * 0.075));
-      const angle = (parentAngle ?? fallbackAngle) + spreadOffset(siblingIndex, siblings.length, spread) + blogRotation;
+      defaultBlogAngles.set(
+        String(blog.id),
+        (parentAngle ?? fallbackAngle) + spreadOffset(siblingIndex, siblings.length, spread) + blogRotation,
+      );
+    }
+
+    // The title search temporarily moves the matching blog into a predictable
+    // spotlight slot on the outer ring and swaps the nearest occupant into its
+    // former angle. Clearing search restores the untouched default positions.
+    const visibleBlogAngles = new Map(defaultBlogAngles);
+    const focusedId = focusedBloggId ? String(focusedBloggId) : "";
+    const focusedOriginalAngle = defaultBlogAngles.get(focusedId);
+    if (focusedId && focusedOriginalAngle !== undefined) {
+      const spotlightAngle = -Math.PI / 2 + blogRotation;
+      let nearestId = "";
+      let nearestDistance = Number.POSITIVE_INFINITY;
+      for (const [id, angle] of defaultBlogAngles) {
+        if (id === focusedId) continue;
+        const angularDistance = Math.abs(Math.atan2(
+          Math.sin(angle - spotlightAngle),
+          Math.cos(angle - spotlightAngle),
+        ));
+        if (angularDistance < nearestDistance) {
+          nearestDistance = angularDistance;
+          nearestId = id;
+        }
+      }
+      visibleBlogAngles.set(focusedId, spotlightAngle);
+      if (nearestId) visibleBlogAngles.set(nearestId, focusedOriginalAngle);
+    }
+
+    for (const blog of blogs) {
+      const folderId = String(blog.groupId || "");
+      const angle = visibleBlogAngles.get(String(blog.id)) ?? defaultBlogAngles.get(String(blog.id)) ?? -Math.PI / 2;
       const pos = point(angle, ORBITS.blogs);
       const parentFolder = folderMap.get(folderId);
       const stackId = String(parentFolder?.stackId || blog.stackId || "");
@@ -203,7 +239,7 @@ export default function useRadialGraphMath({
     }
 
     return { nodes, links };
-  }, [graphData, rotationOffsets]);
+  }, [graphData, rotationOffsets, focusedBloggId]);
 
   const { connectedNodes, connectedLinks } = useMemo(() => {
     if (!hoveredNode || !processedGraph.links) {

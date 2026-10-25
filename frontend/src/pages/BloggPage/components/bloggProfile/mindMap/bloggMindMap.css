@@ -3,3 +3,88 @@
 .blogg-radial-map .graph-node {
   backface-visibility: hidden;
 }
+
+
+/* Search for crowded outer-ring blogs without changing the canvas interaction model. */
+.blogg-radial-map .mindmap-title-search {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(190px, 270px) auto auto;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  max-width: min(520px, calc(100vw - 48px));
+  margin: 0 0 10px;
+  padding: 7px;
+  border: 1px solid #dfe5eb;
+  background: rgb(255 255 255 / 94%);
+  box-shadow: 0 2px 8px rgb(15 23 42 / 5%);
+  pointer-events: auto;
+}
+
+.blogg-radial-map .mindmap-title-search input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 31px;
+  padding: 6px 9px;
+  border: 1px solid #d7dee7;
+  border-radius: 2px;
+  background: #fff;
+  color: #172033;
+  font: inherit;
+  font-size: 11px;
+  outline: none;
+}
+
+.blogg-radial-map .mindmap-title-search input:focus {
+  border-color: #6b7b8f;
+  box-shadow: 0 0 0 2px rgb(100 116 139 / 14%);
+}
+
+.blogg-radial-map .mindmap-title-search button {
+  min-height: 31px;
+  padding: 6px 10px;
+  border: 1px solid #263449;
+  background: #263449;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  cursor: pointer;
+}
+
+.blogg-radial-map .mindmap-title-search button:hover:not(:disabled) {
+  background: #111827;
+}
+
+.blogg-radial-map .mindmap-title-search button:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
+.blogg-radial-map .mindmap-title-search .mindmap-title-search-clear {
+  border-color: #d7dee7;
+  background: #fff;
+  color: #475569;
+}
+
+.blogg-radial-map .mindmap-title-search p,
+.blogg-radial-map .mindmap-title-search .mindmap-title-search-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.blogg-radial-map .mindmap-title-search p.is-success { color: #087f73; }
+.blogg-radial-map .mindmap-title-search p.is-error { color: #a33131; }
+.blogg-radial-map .mindmap-title-search .mindmap-title-search-hint { color: #7b8794; }
+
+@media (max-width: 560px) {
+  .blogg-radial-map .mindmap-title-search {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    width: calc(100vw - 48px);
+    max-width: 420px;
+  }
+}
