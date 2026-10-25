@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { MouseEvent as ReactMouseEvent } from "react";
+import type { CSSProperties, MouseEvent as ReactMouseEvent } from "react";
 import {
   Link,
   useNavigate,
@@ -9,6 +9,7 @@ import {
 import { BlockNoteView } from "@blocknote/mantine";
 import { useCreateBlockNote } from "@blocknote/react";
 import type { BloggItem } from "../types/pageTypes";
+import { API_BASE_URL } from "../services/apiBase";
 import {
   fetchBloggReferences,
   type BloggReference,
@@ -30,6 +31,16 @@ import "./bloggReferenceHighlight.css";
 type CanvasStack = { stack_id: string; stack_name: string };
 type CanvasGroup = { group_id: string; group_name: string; stack_id: string };
 const EMPTY_BLOCKS: any[] = [{ type: "paragraph", content: "" }];
+const FEED_BACKGROUND_PREFERENCE_KEY = "blogg-feed-background-enabled";
+
+function readFeedBackgroundPreference(): boolean {
+  try {
+    const stored = window.localStorage.getItem(FEED_BACKGROUND_PREFERENCE_KEY);
+    return stored === null ? true : stored === "true";
+  } catch {
+    return true;
+  }
+}
 
 function NoteBody({
   content,
@@ -82,6 +93,43 @@ export default function BloggReadPage() {
   const [activeReferenceId, setActiveReferenceId] = useState<string | null>(
     null,
   );
+  const [readerBackgroundUrl, setReaderBackgroundUrl] = useState(
+    "/feed-background.jpg",
+  );
+  const [readerBackgroundEnabled] = useState<boolean>(
+    readFeedBackgroundPreference,
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${API_BASE_URL}/api/showcase/feed-background`, {
+      credentials: "include",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    })
+      .then(async (response) => {
+        if (!response.ok)
+          throw new Error(
+            `Could not load Feed background (${response.status}).`,
+          );
+        return response.json() as Promise<{ url?: string | null }>;
+      })
+      .then((setting) => {
+        if (
+          !cancelled &&
+          typeof setting?.url === "string" &&
+          setting.url.trim()
+        ) {
+          setReaderBackgroundUrl(setting.url);
+        }
+      })
+      .catch(() => {
+        // Keep the bundled background if the public settings endpoint is unavailable.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const returnToFlipbook = searchParams.get("returnTo") === "flipbook";
   const requestedExcerpt = searchParams.get("excerpt")?.trim() || "";
@@ -241,7 +289,14 @@ export default function BloggReadPage() {
   };
 
   return (
-    <div className="blogg-reader-page">
+    <div
+      className={`blogg-reader-page${readerBackgroundEnabled ? " has-reader-background" : ""}`}
+      style={
+        {
+          "--blogg-reader-background-image": `url(${JSON.stringify(readerBackgroundUrl)})`,
+        } as CSSProperties
+      }
+    >
       <BloggHeader page="feed" onNewNote={() => navigate("/blog?newNote=1")} />
       <main className="blogg-reader-scroll">
         {status === "loading" ? (
@@ -364,7 +419,7 @@ export default function BloggReadPage() {
           >
             <header className="blogg-footnotes-drawer-header">
               <div>
-                <h2>Footnotes &amp; References</h2>
+                <h2>Footnotes</h2>
                 <p>
                   {references.length}{" "}
                   {references.length === 1 ? "reference" : "references"}

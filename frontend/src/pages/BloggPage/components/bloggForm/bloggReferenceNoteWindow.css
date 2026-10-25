@@ -235,3 +235,40 @@
 @media (prefers-reduced-motion: reduce) {
   .blogg-reference-note-window { scroll-behavior: auto; }
 }
+
+/* Keep the mini reader's content surfaces crisp and square-edged. BlockNote's
+   default rounded corners are overridden only within the floating note window. */
+.blogg-reference-note-window-content,
+.blogg-reference-note-window-article,
+.blogg-reference-note-window-body,
+.blogg-reference-note-window-body .bn-container,
+.blogg-reference-note-window-body .bn-editor,
+.blogg-reference-note-window-body .bn-block-outer,
+.blogg-reference-note-window-body .bn-block-content,
+.blogg-reference-note-window-body [data-node-type],
+.blogg-reference-note-window-body table,
+.blogg-reference-note-window-body th,
+.blogg-reference-note-window-body td,
+.blogg-reference-note-window-body blockquote,
+.blogg-reference-note-window-body pre,
+.blogg-reference-note-window-body code {
+  border-radius: 0 !important;
+}
+
+.blogg-reference-note-window-body {
+  border: 1px solid #cbd2dc;
+  padding: 14px 14px 8px;
+}
+
+.blogg-reference-note-window-body .bn-container,
+.blogg-reference-note-window-body .bn-editor {
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.blogg-reference-note-window-body .bn-block-content,
+.blogg-reference-note-window-body table,
+.blogg-reference-note-window-body blockquote,
+.blogg-reference-note-window-body pre {
+  outline-offset: 0;
+}
