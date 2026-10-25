@@ -1,0 +1,117 @@
+/*
+ * Mobile/tablet bottom sheet for Footnotes & References.
+ * Position the slot against the viewport, not the editor's content box, so the
+ * dock remains attached to the actual bottom edge even when the form scrolls.
+ */
+.blogg-ref-minimize-button {
+  display: none;
+}
+
+@media (max-width: 1199px) {
+  .blogg-editor-layout.is-references-open .blogg-reference-panel-slot.is-visible {
+    position: fixed !important;
+    inset: 0;
+    display: block;
+    flex: none;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    max-height: none;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+    opacity: 1;
+    transform: none;
+    pointer-events: none;
+    z-index: 10050;
+    background: transparent;
+  }
+
+  .blogg-editor-layout.is-references-open .blogg-reference-panel-slot.is-visible .blogg-references-sidebar {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    bottom: 0;
+    box-sizing: border-box;
+    width: auto;
+    height: min(56vh, 520px);
+    height: min(56dvh, 520px);
+    max-height: calc(100dvh - 76px);
+    min-height: 160px;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+    overflow: hidden;
+    border: 1px solid #e7eaee;
+    border-bottom: 0;
+    border-radius: 12px 12px 0 0;
+    background: #fff;
+    box-shadow: 0 -10px 28px rgb(15 23 42 / 15%);
+    pointer-events: auto;
+    transition: height 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .blogg-editor-layout.is-references-open .blogg-reference-panel-slot.is-visible .blogg-references-sidebar.is-collapsed {
+    height: auto;
+    max-height: none;
+    min-height: 0;
+    padding: 6px 12px 0;
+    border-bottom: 0;
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 -6px 18px rgb(15 23 42 / 12%);
+  }
+
+  .blogg-editor-layout.is-references-open .blogg-reference-panel-slot.is-visible .blogg-references-sidebar.is-collapsed .blogg-ref-header {
+    min-height: 40px;
+    padding: 0;
+    border-bottom: 0;
+  }
+
+  .blogg-editor-layout.is-references-open .blogg-reference-panel-slot.is-visible .blogg-references-sidebar.is-collapsed .blogg-ref-header-toggle {
+    min-height: 40px;
+  }
+
+  .blogg-editor-layout.is-references-open .blogg-reference-panel-slot.is-visible .blogg-references-sidebar.is-collapsed .blogg-ref-header-glyph {
+    font-size: 14px;
+  }
+
+  .blogg-ref-minimize-button {
+    display: inline-flex;
+    flex: 0 0 30px;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    margin-left: 8px;
+    padding: 0;
+    border: 1px solid #d5dae2;
+    border-radius: 6px;
+    background: #fff;
+    color: #364152;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .blogg-ref-minimize-button:hover {
+    border-color: #8792a2;
+    background: #f7f8fa;
+  }
+
+  .blogg-ref-minimize-button:focus-visible {
+    outline: 2px solid #475569;
+    outline-offset: 2px;
+  }
+
+  .blogg-editor-layout.is-references-open .blogg-reference-panel-slot.is-visible .blogg-references-sidebar .blogg-ref-scroll {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blogg-editor-layout.is-references-open .blogg-reference-panel-slot.is-visible .blogg-references-sidebar {
+    transition: none;
+  }
+}

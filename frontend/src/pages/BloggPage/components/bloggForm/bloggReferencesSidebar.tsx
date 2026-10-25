@@ -14,6 +14,7 @@ import { createPortal } from "react-dom";
 import { BlockNoteView } from "@blocknote/mantine";
 import { bloggEditorSchema } from "./bloggEditorSchema";
 import "./bloggReferenceNoteWindow.css";
+import "./bloggReferencesMobileSheet.css";
 
 type LinkSelectionResult = { sourceText: string; error?: string };
 type Props = {
@@ -174,7 +175,13 @@ export default function BloggReferencesSidebar({ bloggId, canEdit, linkSelectedS
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
   const [editingReferenceId, setEditingReferenceId] = useState<string | null>(null);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  // On tablets and phones, keep the references drawer docked at the bottom in
+  // its compact state. Desktop retains the existing expanded sidebar behavior.
+  const [isCollapsed, setIsCollapsed] = useState(() =>
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(max-width: 1199px)").matches,
+  );
   const [isAddedCollapsed, setIsAddedCollapsed] = useState(false);
   const [expandedReferenceId, setExpandedReferenceId] = useState<string | null>(null);
   const passageRef = useRef<HTMLDivElement | null>(null);
@@ -273,6 +280,22 @@ export default function BloggReferencesSidebar({ bloggId, canEdit, linkSelectedS
     setNoteWindowBlog(null);
     setNoteWindowLoading(false);
     setNoteWindowError("");
+  }, []);
+
+  // Keep the drawer compact whenever the layout first enters the mobile/tablet
+  // breakpoint, including when the viewport changes after the component mounted.
+  // The desktop sidebar remains expanded by default.
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const mobileQuery = window.matchMedia("(max-width: 1199px)");
+    const syncCollapsedState = () => setIsCollapsed(mobileQuery.matches);
+    syncCollapsedState();
+    if (typeof mobileQuery.addEventListener === "function") {
+      mobileQuery.addEventListener("change", syncCollapsedState);
+      return () => mobileQuery.removeEventListener("change", syncCollapsedState);
+    }
+    mobileQuery.addListener(syncCollapsedState);
+    return () => mobileQuery.removeListener(syncCollapsedState);
   }, []);
 
   useEffect(() => {
@@ -418,7 +441,10 @@ export default function BloggReferencesSidebar({ bloggId, canEdit, linkSelectedS
 
   return (
     <>
-    <aside className="blogg-references-sidebar flex min-h-0 flex-col overflow-hidden bg-white text-slate-900" aria-label="Footnotes and references">
+    <aside
+      className={`blogg-references-sidebar flex min-h-0 flex-col overflow-hidden bg-white text-slate-900${isCollapsed ? " is-collapsed" : ""}`}
+      aria-label="Footnotes and references"
+    >
       <header className="blogg-ref-header">
         <button
           type="button"
@@ -431,6 +457,17 @@ export default function BloggReferencesSidebar({ bloggId, canEdit, linkSelectedS
           <span>Footnotes &amp; References</span>
           <span className="blogg-ref-count">{references.length}</span>
         </button>
+        {!isCollapsed && (
+          <button
+            type="button"
+            onClick={() => setIsCollapsed(true)}
+            aria-label="Minimize Footnotes and References"
+            title="Minimize"
+            className="blogg-ref-minimize-button"
+          >
+            <span aria-hidden="true">−</span>
+          </button>
+        )}
         {onClose && (
           <button
             type="button"

@@ -662,9 +662,6 @@ const UserForm = ({
                     >
                       <span className="blogg-editor-switch-thumb" />
                     </button>
-                    <span className="blogg-editor-references-toggle-state">
-                      {isReferencesOpen ? "Shown" : "Hidden"}
-                    </span>
                   </div>
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4">
                     <div className="min-w-0">
