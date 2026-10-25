@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import BloggPageContainer from "./components/bloggForm/bloggPageContainer";
 import BlogFlipBookUI from "./components/bloggProfile/flipBook/bloggFlipBookUI";
 import BloggCanvasUI from "./components/bloggProfile/canvasView/bloggCanvasUI";
+import BloggMindMap from "./components/bloggProfile/mindMap/BloggMindMap";
 import BloggHeader from "./components/bloggHeader/BloggHeader";
 import type { BloggSummary } from "./components/bloggProfile/canvasView/bloggCanvasType";
 import type { BloggItem } from "../../types/pageTypes";
@@ -37,6 +38,7 @@ const BloggPage = () => {
     searchParams.get("view") === "flipbook" ? "flipbook" : "canvas",
   );
   const [canvasRefreshKey, setCanvasRefreshKey] = useState(0);
+  const [isMindMapOpen, setIsMindMapOpen] = useState(false);
   const [flipBookStacks, setFlipBookStacks] = useState<FlipBookStack[]>([]);
   const [flipBookGroups, setFlipBookGroups] = useState<FlipBookGroup[]>([]);
   const [filtersLoading, setFiltersLoading] = useState(true);
@@ -71,6 +73,7 @@ const BloggPage = () => {
 
   const toggleNote = useCallback(() => {
     if (!isAdmin) return;
+    setIsMindMapOpen(false);
     if (activeForm.isOpen) {
       setActiveForm((prev) => ({ ...prev, isOpen: false }));
       return;
@@ -86,6 +89,7 @@ const BloggPage = () => {
   }, [activeForm.isOpen, isAdmin]);
 
   const toggleViewMode = useCallback(() => {
+    setIsMindMapOpen(false);
     const nextMode: ViewMode = viewMode === "canvas" ? "flipbook" : "canvas";
     setViewMode(nextMode);
     const next = new URLSearchParams(searchParams);
@@ -244,6 +248,27 @@ const BloggPage = () => {
     });
   };
 
+  const handleOpenMindMapBlogg = useCallback(async (bloggId: string, edit = false) => {
+    try {
+      const fullBlogg = await fetchBloggByIdRequest({ blogg_id: bloggId });
+      if (!fullBlogg) {
+        window.alert("This blog could not be found or is private.");
+        return;
+      }
+      setIsMindMapOpen(false);
+      setActiveForm({
+        isOpen: true,
+        stackId: fullBlogg.stack_id ?? null,
+        groupId: fullBlogg.group_id ?? null,
+        selectedBlogg: fullBlogg as BloggItem,
+        initialEditMode: Boolean(edit && isAdmin),
+      });
+    } catch (error) {
+      console.error("Could not open blog from Mind Map:", error);
+      window.alert("Could not open this blog. Please try again.");
+    }
+  }, [isAdmin]);
+
   const handleEditFromFlipBook = useCallback((blogg: BloggItem) => {
     if (!isAdmin) return;
     setActiveForm({
@@ -256,7 +281,7 @@ const BloggPage = () => {
   }, [isAdmin]);
 
   return (
-    <div className="w-full h-full flex flex-col bg-white">
+    <div className="blogg-profile-root w-full h-full min-h-0 flex flex-col bg-white">
       <BloggHeader
         page="profile"
         viewMode={viewMode}
@@ -266,14 +291,14 @@ const BloggPage = () => {
       />
 
       <div
-        className={`flex-1 relative w-full ${
+        className={`blogg-main-viewport flex-1 relative w-full min-h-0 ${
           activeForm.isOpen
-            ? "overflow-y-auto custom-scrollbar"
+            ? "overflow-hidden"
             : "overflow-hidden"
         }`}
       >
         {activeForm.isOpen ? (
-          <div className={`${isAdmin ? "" : "public-readonly-note-form"} h-full min-h-0`}>
+          <div className={`blogg-form-host ${isAdmin ? "" : "public-readonly-note-form"} h-full min-h-0 w-full overflow-hidden`}>
             <BloggPageContainer
               key={activeForm.selectedBlogg?.blogg_id || activeForm.selectedBlogg?._id || "new-note"}
               groupId={activeForm.groupId}
@@ -285,12 +310,29 @@ const BloggPage = () => {
               onAutoSaved={refreshCanvasAfterAutoSave}
             />
           </div>
+        ) : isMindMapOpen ? (
+          <BloggMindMap
+            onBack={() => setIsMindMapOpen(false)}
+            canEdit={isAdmin}
+            onOpenBlogg={(bloggId, edit) => void handleOpenMindMapBlogg(bloggId, edit)}
+          />
         ) : viewMode === "canvas" ? (
-          <div className={isAdmin ? "absolute inset-0" : "absolute inset-0 canvas-readonly-scope"}>
-            <BloggCanvasUI
-              key={canvasRefreshKey}
-              onOpenForm={handleOpenFormFromCanvas}
-            />
+          <div className="absolute inset-0">
+            <div className={isAdmin ? "absolute inset-0" : "absolute inset-0 canvas-readonly-scope"}>
+              <BloggCanvasUI
+                key={canvasRefreshKey}
+                onOpenForm={handleOpenFormFromCanvas}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsMindMapOpen(true)}
+              aria-label="Open Mind Map"
+              title="Open Mind Map"
+              className="absolute right-[76px] top-9 z-[3000] bg-transparent p-0 text-xs font-semibold uppercase tracking-[0.14em] text-slate-600 shadow-none transition-colors hover:text-slate-950 hover:underline hover:underline-offset-4 focus:outline-none focus-visible:underline"
+            >
+              <span>Open Mind Map</span>
+            </button>
           </div>
         ) : (
           <div className="flipbook-page-shell">

@@ -1,0 +1,5 @@
+/* Keep the radial canvas static while the camera transforms the world layer.
+   Per-node staggered animations caused needless work on large maps. */
+.blogg-radial-map .graph-node {
+  backface-visibility: hidden;
+}

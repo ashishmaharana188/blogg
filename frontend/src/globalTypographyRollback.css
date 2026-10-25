@@ -1,0 +1,76 @@
+/*
+ * Global typography baseline: use the same Courier New face rendered by the
+ * admin panel. Avoid a remote font import so every browser uses the same local
+ * Courier New face and fallback sequence.
+ *
+ * The body- and #root-scoped selectors intentionally outrank component-level font-family
+ * declarations while leaving font size, weight, color, spacing, and layout alone.
+ * Icon/SVG elements are excluded so their glyph artwork is not replaced.
+ */
+:root {
+  --blogg-global-font-family: "Courier New", Courier, monospace;
+}
+
+html,
+body,
+#root {
+  font-family: var(--blogg-global-font-family) !important;
+}
+
+body :is(
+  address,
+  article,
+  aside,
+  blockquote,
+  button,
+  caption,
+  cite,
+  code,
+  dd,
+  details,
+  dialog,
+  div,
+  dt,
+  em,
+  fieldset,
+  figcaption,
+  figure,
+  footer,
+  form,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  header,
+  input,
+  label,
+  legend,
+  li,
+  main,
+  menu,
+  nav,
+  ol,
+  option,
+  output,
+  p,
+  pre,
+  section,
+  select,
+  small,
+  span,
+  strong,
+  summary,
+  table,
+  tbody,
+  td,
+  textarea,
+  th,
+  thead,
+  time,
+  tr,
+  ul
+):not(svg):not(ion-icon):not([class*="icon"]):not([class*="Icon"]) {
+  font-family: var(--blogg-global-font-family) !important;
+}

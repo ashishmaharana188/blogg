@@ -1,0 +1,128 @@
+/* Reference links scroll the reader to this restrained target highlight. */
+.blogg-reader-body .blogg-reference-target-highlight {
+  background: #f1f5f9 !important;
+  outline: 2px solid #94a3b8;
+  outline-offset: 4px;
+  border-radius: 2px;
+  scroll-margin-top: 96px;
+  transition: background-color 180ms ease;
+}
+
+/* Reference anchors are visibly links, but the reader intercepts their clicks
+   and opens the footnote drawer instead of navigating immediately. */
+.blogg-reader-body a[href*="referenceId="],
+.blogg-editor-form .bn-editor a[href*="referenceId="] {
+  color: #2563eb !important;
+  text-decoration: underline !important;
+  text-decoration-color: #2563eb !important;
+  text-decoration-style: dotted !important;
+  text-decoration-thickness: 1px !important;
+  text-underline-offset: 3px !important;
+  cursor: pointer;
+  border-bottom: 1px dotted currentColor;
+  font-weight: 500;
+}
+
+.blogg-reader-footnotes-trigger-wrap {
+  display: flex;
+  justify-content: flex-start;
+  margin: 1.5rem 0 0;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 0.85rem;
+}
+
+.blogg-reader-footnotes-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: #475569;
+  background: transparent;
+  border: 0;
+  padding: 0.2rem 0;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.blogg-reader-footnotes-trigger:hover { color: #0f172a; }
+.blogg-reader-footnotes-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #334155;
+  font: inherit;
+  font-size: 0.7rem;
+}
+.blogg-reader-footnotes-action { text-decoration: underline; text-underline-offset: 3px; }
+
+.blogg-footnotes-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  display: flex;
+  justify-content: flex-end;
+  background: rgb(15 23 42 / 24%);
+  color: #0f172a;
+}
+.blogg-footnotes-drawer {
+  display: flex;
+  flex-direction: column;
+  width: min(440px, 100vw);
+  height: 100%;
+  max-height: 100dvh;
+  background: #fff;
+  border-left: 1px solid #e2e8f0;
+  box-shadow: -8px 0 28px rgb(15 23 42 / 10%);
+  font-family: inherit;
+}
+.blogg-footnotes-drawer-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem 0.9rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+.blogg-footnotes-drawer-header h2 { margin: 0; font-family: inherit; font-size: 0.95rem; line-height: 1.4; font-weight: 600; }
+.blogg-footnotes-drawer-header p { margin: 0.2rem 0 0; font-size: 0.75rem; color: #64748b; }
+.blogg-footnotes-drawer-header button { border: 0; background: transparent; padding: 0 0.2rem; color: #64748b; font-size: 1.5rem; line-height: 1; cursor: pointer; }
+.blogg-footnotes-drawer-body { min-height: 0; flex: 1; overflow-y: auto; padding: 0.35rem 1.1rem 1.2rem; }
+.blogg-footnote-entry { border-bottom: 1px solid #e2e8f0; padding: 0.7rem 0; }
+.blogg-footnote-entry-toggle { display: flex; width: 100%; align-items: flex-start; gap: 0.5rem; border: 0; padding: 0; background: transparent; color: #334155; text-align: left; font-family: inherit; cursor: pointer; }
+.blogg-footnote-number { flex: none; color: #64748b; font-size: 0.75rem; line-height: 1.6; }
+.blogg-footnote-title { min-width: 0; flex: 1; font-size: 0.84rem; line-height: 1.5; font-weight: 600; }
+.blogg-footnote-chevron { color: #64748b; font-size: 1rem; line-height: 1.2; }
+.blogg-footnote-preview { margin: 0.3rem 1.2rem 0 1.4rem; color: #64748b; font-size: 0.75rem; line-height: 1.5; }
+.blogg-footnote-expanded { padding: 0.5rem 0 0 1.25rem; }
+.blogg-footnote-source { margin: 0 0 0.5rem; color: #64748b; font-size: 0.74rem; line-height: 1.5; }
+.blogg-footnote-expanded blockquote { margin: 0; border-left: 2px solid #cbd5e1; padding-left: 0.75rem; color: #334155; white-space: pre-wrap; font-size: 0.82rem; line-height: 1.6; }
+.blogg-footnote-open-target { display: inline-flex; gap: 0.3rem; margin-top: 0.7rem; color: #334155; font-size: 0.78rem; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+
+@media (max-width: 640px) {
+  .blogg-footnotes-drawer { width: 100vw; }
+}
+
+
+
+/* Keep the footnotes drawer content inset from the viewport edges on all sizes. */
+.blogg-footnotes-drawer {
+  box-sizing: border-box;
+  padding-inline: clamp(12px, 2.5vw, 22px);
+}
+.blogg-footnotes-drawer-header {
+  padding-left: 0;
+  padding-right: 0;
+}
+.blogg-footnotes-drawer-body {
+  padding-left: 0;
+  padding-right: 0;
+  overscroll-behavior: contain;
+}
+.blogg-footnote-expanded blockquote,
+.blogg-footnote-title,
+.blogg-footnote-preview,
+.blogg-footnote-source {
+  overflow-wrap: anywhere;
+}

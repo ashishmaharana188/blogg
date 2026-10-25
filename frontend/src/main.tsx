@@ -7,6 +7,7 @@ import FrontendErrorBoundary from "./components/FrontendErrorBoundary";
 import { installUiConsoleDiagnostics } from "./utils/uiDiagnostics";
 
 import "./App.css";
+import "./globalTypographyRollback.css";
 import "./mobile.css";
 import "./exerciseMetricVisibilityBootstrap.ts";
 import "./healthWidgetsBootstrap.tsx";
