@@ -12,6 +12,7 @@ import { fetchStackAndGroup } from "../BloggPage/services/canvasViewService";
 import BloggHeader from "../BloggPage/components/bloggHeader/BloggHeader";
 import ShareBloggButton from "../BloggPage/components/ShareBloggButton";
 import { bloggEditorSchema } from "../BloggPage/components/bloggForm/bloggEditorSchema";
+import FeedNoteWindow from "./FeedNoteWindow";
 import "@blocknote/mantine/style.css";
 import "./blogFeed.css";
 
@@ -144,7 +145,12 @@ function NoteBody({ content }: { content?: unknown[] }) {
   );
 }
 
-function FeedPost({ blogg, stackName, groupName }: { blogg: BloggItem; stackName: string; groupName: string }) {
+function FeedPost({ blogg, stackName, groupName, onOpenWindow }: {
+  blogg: BloggItem;
+  stackName: string;
+  groupName: string;
+  onOpenWindow: (blogg: BloggItem) => void;
+}) {
   const noteId = blogg.blogg_id || blogg._id;
   const noteUrl = `/read/${encodeURIComponent(noteId)}`;
   return (
@@ -164,7 +170,16 @@ function FeedPost({ blogg, stackName, groupName }: { blogg: BloggItem; stackName
       <div className="blog-feed-note-preview" aria-label="Note content preview"><NoteBody content={blogg.content} /></div>
       {!!blogg.tags?.length && <div className="blog-feed-tags" aria-label="Tags">{blogg.tags.map((tag) => <span className="blog-feed-tag" key={tag}>{tag}</span>)}</div>}
       <footer className="blog-feed-post-actions">
-        <Link className="blog-feed-open-link" to={noteUrl}>Open note</Link>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <button
+            type="button"
+            className="blog-feed-open-link"
+            style={{ padding: 0, border: 0, background: "transparent", fontFamily: "inherit", cursor: "pointer" }}
+            onClick={() => onOpenWindow(blogg)}
+            aria-label={`Open ${blogg.title?.trim() || "note"} in mini window`}
+          >Open window</button>
+          <Link className="blog-feed-open-link" to={noteUrl}>Open note</Link>
+        </div>
         <ShareBloggButton blogg={blogg} stackName={stackName} groupName={groupName} />
       </footer>
     </article>
@@ -191,6 +206,15 @@ const HomePage = () => {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [cursorHistory, setCursorHistory] = useState<Array<string | null>>([null]);
   const [nowPlayingTrack, setNowPlayingTrack] = useState<FeedNowPlayingTrack | null>(null);
+  const [windowBlog, setWindowBlog] = useState<BloggItem | null>(null);
+  const [windowInstance, setWindowInstance] = useState(0);
+
+  const openFeedWindow = useCallback((blogg: BloggItem) => {
+    setWindowBlog(blogg);
+    setWindowInstance((value) => value + 1);
+  }, []);
+
+  const closeFeedWindow = useCallback(() => setWindowBlog(null), []);
 
   const refreshNowPlaying = useCallback(async () => {
     const [integrationsResult, ytmusicResult] = await Promise.allSettled([
@@ -282,7 +306,7 @@ const HomePage = () => {
             <section className="blog-feed-post-list" aria-label="Recent notes">
               {bloggs.map((blogg) => {
                 const location = getLocation(blogg);
-                return <FeedPost key={blogg.blogg_id || blogg._id} blogg={blogg} stackName={location.stackName} groupName={location.groupName} />;
+                return <FeedPost key={blogg.blogg_id || blogg._id} blogg={blogg} stackName={location.stackName} groupName={location.groupName} onOpenWindow={openFeedWindow} />;
               })}
             </section>
             <nav aria-label="Feed pagination" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, padding: "24px 12px" }}>
@@ -293,6 +317,7 @@ const HomePage = () => {
           </>
         )}
       </main>
+      {windowBlog && <FeedNoteWindow key={windowInstance} blogg={windowBlog} onClose={closeFeedWindow} />}
     </div>
   );
 };

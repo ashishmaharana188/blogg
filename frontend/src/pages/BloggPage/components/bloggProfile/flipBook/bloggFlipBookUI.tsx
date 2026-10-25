@@ -13,9 +13,11 @@ import { fetchStackAndGroup } from "../../../services/canvasViewService";
 import FlipBookThumbnailBar from "./flipBookThumbnailBar";
 import "./flipBook.css";
 import "./flipBookSpine.css";
+import "./flipBookTagColors.css";
 import { ReadOnlyBloggContent } from "./readOnlyBloggContent";
 import type { BlogFlipBookUIProps, FlipBookPageType } from "./flipBookTypes";
 import ShareBloggButton from "../../ShareBloggButton";
+import FeedNoteWindow from "../../../../BloggFeed/FeedNoteWindow";
 
 type TurnDirection = "next" | "previous";
 
@@ -228,7 +230,6 @@ const PagePane = ({
               </p>
             )}
           </div>
-
         </article>
       ) : page.pageKind === "detail-cover" ? (
         <article className="flipbook-page-content flipbook-detail-cover">
@@ -248,16 +249,12 @@ const PagePane = ({
               ))}
             </div>
           )}
-          <p className="flipbook-page-count">
-            {page.pageNumber}
-          </p>
+          <p className="flipbook-page-count">{page.pageNumber}</p>
         </article>
       ) : (
         <article className="flipbook-page-content flipbook-detail-page">
           <ReadOnlyBloggContent key={page.id} content={page.content} />
-          <p className="flipbook-page-count">
-            {page.pageNumber}
-          </p>
+          <p className="flipbook-page-count">{page.pageNumber}</p>
         </article>
       )}
     </div>
@@ -303,7 +300,6 @@ const TurningSheet = ({
 const BlogFlipBookUI = ({
   onEditBlogg,
   initialBloggId,
-  onOpenBlogg,
   onBackFromBlogg,
   onOpenInReader,
 }: BlogFlipBookUIProps) => {
@@ -311,6 +307,7 @@ const BlogFlipBookUI = ({
   const [canvasStacks, setCanvasStacks] = useState<any[]>([]);
   const [canvasGroups, setCanvasGroups] = useState<any[]>([]);
   const [selectedBlogg, setSelectedBlogg] = useState<BloggItem | null>(null);
+  const [miniWindowBlogg, setMiniWindowBlogg] = useState<BloggItem | null>(null);
   const [settledSpread, setSettledSpread] = useState(0);
   const [activeTurns, setActiveTurns] = useState<ActiveTurn[]>([]);
 
@@ -347,8 +344,8 @@ const BlogFlipBookUI = ({
     return () => { cancelled = true; };
   }, []);
 
-  // A /blog/:bloggId link opens the matching note directly. When the id is
-  // removed (Back), return to the overview spread.
+  // Direct note routes continue to use the dedicated reader. Selecting a
+  // note from the book itself stays in the flipbook and renders its page spread.
   useEffect(() => {
     if (!initialBloggId) {
       setSelectedBlogg(null);
@@ -362,10 +359,7 @@ const BlogFlipBookUI = ({
   }, [bloggs, initialBloggId]);
 
   const sourcePages = useMemo(
-    () =>
-      selectedBlogg
-        ? createDetailPages(selectedBlogg)
-        : createOverviewPages(bloggs),
+    () => selectedBlogg ? createDetailPages(selectedBlogg) : createOverviewPages(bloggs),
     [bloggs, selectedBlogg],
   );
 
@@ -390,14 +384,12 @@ const BlogFlipBookUI = ({
     setSettledSpread(0);
   }, [stopHold]);
 
-  const handleSelectBlogg = useCallback(
-    (blogg: BloggItem) => {
-      resetTurns();
-      setSelectedBlogg(blogg);
-      onOpenBlogg?.(blogg);
-    },
-    [onOpenBlogg, resetTurns],
-  );
+  const handleSelectBlogg = useCallback((blogg: BloggItem) => {
+    resetTurns();
+    setSelectedBlogg(blogg);
+    // Do not call the legacy onOpenBlogg navigation callback here. The parent
+    // used to route to /read immediately, which made in-flipbook reading vanish.
+  }, [resetTurns]);
 
   const handleBack = useCallback(() => {
     resetTurns();
@@ -417,6 +409,12 @@ const BlogFlipBookUI = ({
     onOpenInReader?.(selectedBlogg);
   }, [onOpenInReader, selectedBlogg, stopHold]);
 
+  const handleOpenMiniWindow = useCallback(() => {
+    if (!selectedBlogg) return;
+    stopHold();
+    setMiniWindowBlogg(selectedBlogg);
+  }, [selectedBlogg, stopHold]);
+
   const currentLogicalSpread = useMemo(() => {
     if (activeTurns.length === 0) return settledSpread;
     const direction = activeTurns[0].direction;
@@ -430,16 +428,13 @@ const BlogFlipBookUI = ({
     (id: number, targetSpread: number, direction: TurnDirection) => {
       // Keep the settled position moving in the same direction as the active
       // stack. Older overlapping sheets must never pull the book backwards.
-      const nextSettled =
-        direction === "next"
-          ? Math.max(settledSpreadRef.current, targetSpread)
-          : Math.min(settledSpreadRef.current, targetSpread);
+      const nextSettled = direction === "next"
+        ? Math.max(settledSpreadRef.current, targetSpread)
+        : Math.min(settledSpreadRef.current, targetSpread);
       settledSpreadRef.current = nextSettled;
-      setSettledSpread((previous) =>
-        direction === "next"
-          ? Math.max(previous, targetSpread)
-          : Math.min(previous, targetSpread),
-      );
+      setSettledSpread((previous) => direction === "next"
+        ? Math.max(previous, targetSpread)
+        : Math.min(previous, targetSpread));
       setActiveTurns((previous) => previous.filter((turn) => turn.id !== id));
     },
     [],
@@ -451,9 +446,7 @@ const BlogFlipBookUI = ({
         // During a held gesture, start the next leaf before earlier sheets
         // finish. This restores the rapid page-stack motion instead of waiting
         // for every 620 ms animation to settle before advancing again.
-        if (previous.length > 0 && previous[0].direction !== direction) {
-          return previous;
-        }
+        if (previous.length > 0 && previous[0].direction !== direction) return previous;
 
         let lastLogical = settledSpreadRef.current;
         if (previous.length > 0) {
@@ -466,43 +459,31 @@ const BlogFlipBookUI = ({
         const to = direction === "next"
           ? Math.min(lastLogical + 2, maxSpread)
           : Math.max(lastLogical - 2, 0);
-
         if (to === lastLogical) return previous;
 
-        return [
-          ...previous,
-          {
-            id: turnIdRef.current++,
-            direction,
-            from: lastLogical,
-            to,
-            isRapid,
-          },
-        ];
+        return [...previous, {
+          id: turnIdRef.current++,
+          direction,
+          from: lastLogical,
+          to,
+          isRapid,
+        }];
       });
     },
     [maxSpread],
   );
 
   useEffect(() => {
-    if (currentLogicalSpread <= 0 || currentLogicalSpread >= maxSpread) {
-      stopHold();
-    }
+    if (currentLogicalSpread <= 0 || currentLogicalSpread >= maxSpread) stopHold();
   }, [currentLogicalSpread, maxSpread, stopHold]);
 
-  const startHold = useCallback(
-    (direction: TurnDirection) => {
-      stopHold();
-      startTurn(direction, false);
-
-      holdTimeoutRef.current = setTimeout(() => {
-        rapidIntervalRef.current = setInterval(() => {
-          startTurn(direction, true);
-        }, 120);
-      }, 300);
-    },
-    [startTurn, stopHold],
-  );
+  const startHold = useCallback((direction: TurnDirection) => {
+    stopHold();
+    startTurn(direction, false);
+    holdTimeoutRef.current = setTimeout(() => {
+      rapidIntervalRef.current = setInterval(() => startTurn(direction, true), 120);
+    }, 300);
+  }, [startTurn, stopHold]);
 
   const handlePointerDown = useCallback(
     (event: PointerEvent<HTMLButtonElement>, direction: TurnDirection) => {
@@ -512,42 +493,33 @@ const BlogFlipBookUI = ({
     [startHold],
   );
 
-  const goToPage = useCallback(
-    (pageIndex: number) => {
-      if (activeTurns.length > 0) return;
-      stopHold();
-
-      const nextSpread = Math.max(
-        0,
-        Math.min(normalizeSpread(pageIndex), maxSpread),
-      );
-
-      if (nextSpread === settledSpread) return;
-
-      if (Math.abs(nextSpread - settledSpread) === 2) {
-        startTurn(nextSpread > settledSpread ? "next" : "previous", false);
-        return;
-      }
-
-      settledSpreadRef.current = nextSpread;
-      setSettledSpread(nextSpread);
-      setActiveTurns([]);
-    },
-    [activeTurns.length, maxSpread, settledSpread, startTurn, stopHold],
-  );
+  const goToPage = useCallback((pageIndex: number) => {
+    if (activeTurns.length > 0) return;
+    stopHold();
+    const nextSpread = Math.max(0, Math.min(normalizeSpread(pageIndex), maxSpread));
+    if (nextSpread === settledSpread) return;
+    if (Math.abs(nextSpread - settledSpread) === 2) {
+      startTurn(nextSpread > settledSpread ? "next" : "previous", false);
+      return;
+    }
+    settledSpreadRef.current = nextSpread;
+    setSettledSpread(nextSpread);
+    setActiveTurns([]);
+  }, [activeTurns.length, maxSpread, settledSpread, startTurn, stopHold]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.repeat) return;
       if (event.key === "ArrowRight") startHold("next");
       if (event.key === "ArrowLeft") startHold("previous");
-      if (event.key === "Escape" && selectedBlogg) handleBack();
+      if (event.key === "Escape") {
+        if (miniWindowBlogg) setMiniWindowBlogg(null);
+        else if (selectedBlogg) handleBack();
+      }
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
-      if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
-        stopHold();
-      }
+      if (event.key === "ArrowRight" || event.key === "ArrowLeft") stopHold();
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -556,11 +528,10 @@ const BlogFlipBookUI = ({
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [handleBack, selectedBlogg, startHold, stopHold]);
+  }, [handleBack, miniWindowBlogg, selectedBlogg, startHold, stopHold]);
 
   let leftIndex = settledSpread;
   let rightIndex = settledSpread + 1;
-
   if (activeTurns.length > 0) {
     const currentDir = activeTurns[0].direction;
     if (currentDir === "next") {
@@ -576,27 +547,17 @@ const BlogFlipBookUI = ({
   const rightPage = bookPages[rightIndex];
   const spreadNumber = currentLogicalSpread / 2 + 1;
   const totalSpreads = bookPages.length / 2;
-
-  const disablePrev =
-    currentLogicalSpread === 0 ||
-    (activeTurns.length > 0 && activeTurns[0].direction === "next");
-  const disableNext =
-    currentLogicalSpread >= maxSpread ||
-    (activeTurns.length > 0 && activeTurns[0].direction === "previous");
-
+  const disablePrev = currentLogicalSpread === 0 || (activeTurns.length > 0 && activeTurns[0].direction === "next");
+  const disableNext = currentLogicalSpread >= maxSpread || (activeTurns.length > 0 && activeTurns[0].direction === "previous");
   const captionLabel = selectedBlogg
-    ? `${selectedBlogg.title || "Blog"} · page ${currentLogicalSpread + 1}-${Math.min(
-        currentLogicalSpread + 2,
-        sourcePages.length,
-      )} of ${sourcePages.length}`
+    ? `${selectedBlogg.title || "Blog"} · page ${currentLogicalSpread + 1}-${Math.min(currentLogicalSpread + 2, sourcePages.length)} of ${sourcePages.length}`
     : `Bloggs · spread ${spreadNumber} of ${totalSpreads}`;
 
   const selectedGroup = selectedBlogg
     ? canvasGroups.find((group) => group.group_id === selectedBlogg.group_id)
     : undefined;
   const selectedStack = selectedBlogg
-    ? canvasStacks.find((stack) => stack.stack_id === selectedBlogg.stack_id) ||
-      canvasStacks.find((stack) => stack.stack_id === selectedGroup?.stack_id)
+    ? canvasStacks.find((stack) => stack.stack_id === selectedBlogg.stack_id) || canvasStacks.find((stack) => stack.stack_id === selectedGroup?.stack_id)
     : undefined;
 
   return (
@@ -608,32 +569,16 @@ const BlogFlipBookUI = ({
         >
           <div className="flipbook-stack flipbook-stack-left" />
           <div className="flipbook-stack flipbook-stack-right" />
-
           <div className="flipbook-spread">
-            <PagePane
-              page={leftPage}
-              side="left"
-              onSelectBlogg={selectedBlogg ? undefined : handleSelectBlogg}
-            />
-            <PagePane
-              page={rightPage}
-              side="right"
-              onSelectBlogg={selectedBlogg ? undefined : handleSelectBlogg}
-            />
-            <div
-              className={`flipbook-center-shadow ${
-                activeTurns.length > 0 ? "flipbook-center-shadow-active" : ""
-              }`}
-            />
+            <PagePane page={leftPage} side="left" onSelectBlogg={selectedBlogg ? undefined : handleSelectBlogg} />
+            <PagePane page={rightPage} side="right" onSelectBlogg={selectedBlogg ? undefined : handleSelectBlogg} />
+            <div className={`flipbook-center-shadow ${activeTurns.length > 0 ? "flipbook-center-shadow-active" : ""}`} />
             {activeTurns.length === 0 && (
               <div className="flipbook-spiral-spine" aria-hidden="true">
-                {Array.from({ length: 20 }, (_, index) => (
-                  <span key={index} />
-                ))}
+                {Array.from({ length: 20 }, (_, index) => <span key={index} />)}
               </div>
             )}
           </div>
-
           {activeTurns.map((turn, index) => (
             <TurningSheet
               key={turn.id}
@@ -661,9 +606,7 @@ const BlogFlipBookUI = ({
           >
             &larr; Prev
           </button>
-
           <div className="flipbook-caption">{captionLabel}</div>
-
           <button
             type="button"
             onPointerDown={(event) => handlePointerDown(event, "next")}
@@ -680,6 +623,7 @@ const BlogFlipBookUI = ({
         {selectedBlogg ? (
           <div className="flipbook-mode-actions" aria-label="Opened note actions">
             <button type="button" onClick={handleBack}>Back</button>
+            <button type="button" onClick={handleOpenMiniWindow}>Open window</button>
             <button type="button" onClick={handleOpenInReader}>Open in Note View</button>
             {onEditBlogg && <button type="button" onClick={handleEdit}>Edit</button>}
             <ShareBloggButton
@@ -690,14 +634,14 @@ const BlogFlipBookUI = ({
           </div>
         ) : (
           <div className="flipbook-thumbnails">
-            <FlipBookThumbnailBar
-              pages={bookPages}
-              currentSpread={currentLogicalSpread}
-              onSelect={goToPage}
-            />
+            <FlipBookThumbnailBar pages={bookPages} currentSpread={currentLogicalSpread} onSelect={goToPage} />
           </div>
         )}
       </footer>
+
+      {miniWindowBlogg && (
+        <FeedNoteWindow blogg={miniWindowBlogg} onClose={() => setMiniWindowBlogg(null)} />
+      )}
     </div>
   );
 };

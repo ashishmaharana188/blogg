@@ -1,0 +1,31 @@
+/* Reuse Blogg Feed's six-color tag palette in both overview and detail-cover pages. */
+.flipbook-blogg-tag:nth-child(6n + 1) {
+  background-color: #dbeafe;
+  color: #1e40af;
+  border-color: #bfdbfe;
+}
+.flipbook-blogg-tag:nth-child(6n + 2) {
+  background-color: #d1fae5;
+  color: #065f46;
+  border-color: #a7f3d0;
+}
+.flipbook-blogg-tag:nth-child(6n + 3) {
+  background-color: #f3e8ff;
+  color: #6b21a8;
+  border-color: #e9d5ff;
+}
+.flipbook-blogg-tag:nth-child(6n + 4) {
+  background-color: #fef3c7;
+  color: #92400e;
+  border-color: #fde68a;
+}
+.flipbook-blogg-tag:nth-child(6n + 5) {
+  background-color: #ffe4e6;
+  color: #9f1239;
+  border-color: #fecdd3;
+}
+.flipbook-blogg-tag:nth-child(6n) {
+  background-color: #cffafe;
+  color: #155e75;
+  border-color: #a5f3fc;
+}
