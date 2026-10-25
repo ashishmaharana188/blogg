@@ -17,6 +17,8 @@ type Props = {
   linkSelectedSourceText: (href: string) => LinkSelectionResult;
   saveBlogBody: () => Promise<boolean>;
   focusReferenceId?: string | null;
+  /** Close button shown for the read-only/public footnotes panel. */
+  onClose?: () => void;
 };
 type TargetBlogContent = MindMapBlogg & { content?: unknown };
 
@@ -65,7 +67,7 @@ function readableBlocks(content: unknown): string[] {
 
 const quietButton = "inline-flex items-center justify-center border-0 border-b border-slate-400 bg-transparent px-0 py-1 text-xs font-medium text-slate-700 hover:border-slate-900 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-40";
 
-export default function BloggReferencesSidebar({ bloggId, canEdit, linkSelectedSourceText, saveBlogBody, focusReferenceId = null }: Props) {
+export default function BloggReferencesSidebar({ bloggId, canEdit, linkSelectedSourceText, saveBlogBody, focusReferenceId = null, onClose }: Props) {
   const [targets, setTargets] = useState<MindMapBlogg[]>([]);
   const [stacks, setStacks] = useState<MindMapStack[]>([]);
   const [groups, setGroups] = useState<MindMapGroup[]>([]);
@@ -271,11 +273,23 @@ export default function BloggReferencesSidebar({ bloggId, canEdit, linkSelectedS
           onClick={() => setIsCollapsed((value) => !value)}
           aria-expanded={!isCollapsed}
           className="blogg-ref-header-toggle"
+          style={onClose ? { width: "auto", flex: "1 1 auto" } : undefined}
         >
           <span aria-hidden="true" className="blogg-ref-header-glyph">{isCollapsed ? "+" : "−"}</span>
           <span>Footnotes &amp; References</span>
           <span className="blogg-ref-count">{references.length}</span>
         </button>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close footnotes"
+            title="Close footnotes"
+            className="ml-2 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-white text-lg leading-none text-slate-500 shadow-sm transition-colors hover:border-slate-400 hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400"
+          >
+            ×
+          </button>
+        )}
       </header>
 
       {!isCollapsed && (
