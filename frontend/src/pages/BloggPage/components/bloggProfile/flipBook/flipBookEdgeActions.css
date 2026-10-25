@@ -1,0 +1,76 @@
+/* Compact alternate-reader actions sit just outside the book's outer page edge. */
+.flipbook-edge-actions {
+  position: absolute;
+  z-index: 160;
+  top: 50%;
+  right: -14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.flipbook-edge-action {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid #111827;
+  border-radius: 2px;
+  background: #fff;
+  color: #111827;
+  box-shadow: 0 2px 6px rgb(15 23 42 / 14%);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+}
+
+.flipbook-edge-action svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.65;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.flipbook-edge-action:hover {
+  background: #111827;
+  color: #fff;
+  box-shadow: 0 3px 8px rgb(15 23 42 / 22%);
+}
+
+.flipbook-edge-action:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 3px;
+}
+
+@media (max-width: 760px) {
+  .flipbook-edge-actions {
+    right: -13px;
+    gap: 5px;
+  }
+
+  .flipbook-edge-action {
+    width: 26px;
+    height: 28px;
+  }
+
+  .flipbook-edge-action svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flipbook-edge-action {
+    transition: none;
+  }
+}

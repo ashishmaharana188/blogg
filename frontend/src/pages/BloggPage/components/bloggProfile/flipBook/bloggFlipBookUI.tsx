@@ -14,6 +14,7 @@ import FlipBookThumbnailBar from "./flipBookThumbnailBar";
 import "./flipBook.css";
 import "./flipBookSpine.css";
 import "./flipBookTagColors.css";
+import "./flipBookEdgeActions.css";
 import { ReadOnlyBloggContent } from "./readOnlyBloggContent";
 import type { BlogFlipBookUIProps, FlipBookPageType } from "./flipBookTypes";
 import ShareBloggButton from "../../ShareBloggButton";
@@ -307,7 +308,11 @@ const BlogFlipBookUI = ({
   const [canvasStacks, setCanvasStacks] = useState<any[]>([]);
   const [canvasGroups, setCanvasGroups] = useState<any[]>([]);
   const [selectedBlogg, setSelectedBlogg] = useState<BloggItem | null>(null);
-  const [miniWindowBlogg, setMiniWindowBlogg] = useState<BloggItem | null>(null);
+  const [miniWindowSession, setMiniWindowSession] = useState<{
+    id: number;
+    blogg: BloggItem;
+  } | null>(null);
+  const miniWindowInstanceRef = useRef(0);
   const [settledSpread, setSettledSpread] = useState(0);
   const [activeTurns, setActiveTurns] = useState<ActiveTurn[]>([]);
 
@@ -412,7 +417,9 @@ const BlogFlipBookUI = ({
   const handleOpenMiniWindow = useCallback(() => {
     if (!selectedBlogg) return;
     stopHold();
-    setMiniWindowBlogg(selectedBlogg);
+    // Each open creates a new keyed session. The previous portal/editor is
+    // unmounted instead of reusing its BlockNote instance for another note.
+    setMiniWindowSession({ id: ++miniWindowInstanceRef.current, blogg: selectedBlogg });
   }, [selectedBlogg, stopHold]);
 
   const currentLogicalSpread = useMemo(() => {
@@ -513,7 +520,7 @@ const BlogFlipBookUI = ({
       if (event.key === "ArrowRight") startHold("next");
       if (event.key === "ArrowLeft") startHold("previous");
       if (event.key === "Escape") {
-        if (miniWindowBlogg) setMiniWindowBlogg(null);
+        if (miniWindowSession) setMiniWindowSession(null);
         else if (selectedBlogg) handleBack();
       }
     };
@@ -528,7 +535,7 @@ const BlogFlipBookUI = ({
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [handleBack, miniWindowBlogg, selectedBlogg, startHold, stopHold]);
+  }, [handleBack, miniWindowSession, selectedBlogg, startHold, stopHold]);
 
   let leftIndex = settledSpread;
   let rightIndex = settledSpread + 1;
@@ -579,6 +586,35 @@ const BlogFlipBookUI = ({
               </div>
             )}
           </div>
+          {selectedBlogg && activeTurns.length === 0 && (
+            <div className="flipbook-edge-actions" role="group" aria-label="Alternative note views">
+              <button
+                type="button"
+                className="flipbook-edge-action"
+                onClick={(event) => { event.stopPropagation(); handleOpenMiniWindow(); }}
+                aria-label="Open note in floating window"
+                title="Open in floating window"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <rect x="3.5" y="4.5" width="17" height="14.5" rx="1" />
+                  <path d="M3.5 8.5h17M7 6.5h.01M10 6.5h.01" />
+                  <rect x="14" y="13" width="6" height="6.5" rx=".5" fill="currentColor" stroke="none" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className="flipbook-edge-action"
+                onClick={(event) => { event.stopPropagation(); handleOpenInReader(); }}
+                aria-label="Open note in Note View"
+                title="Open in Note View"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M5 3.5h9l5 5V20a.5.5 0 0 1-.5.5h-13A.5.5 0 0 1 5 20z" />
+                  <path d="M14 3.5V9h5M8 13h4M8 16.5h4M14.5 15.5 19 11m-3.5 0H19v3.5" />
+                </svg>
+              </button>
+            </div>
+          )}
           {activeTurns.map((turn, index) => (
             <TurningSheet
               key={turn.id}
@@ -623,8 +659,6 @@ const BlogFlipBookUI = ({
         {selectedBlogg ? (
           <div className="flipbook-mode-actions" aria-label="Opened note actions">
             <button type="button" onClick={handleBack}>Back</button>
-            <button type="button" onClick={handleOpenMiniWindow}>Open window</button>
-            <button type="button" onClick={handleOpenInReader}>Open in Note View</button>
             {onEditBlogg && <button type="button" onClick={handleEdit}>Edit</button>}
             <ShareBloggButton
               blogg={selectedBlogg}
@@ -639,8 +673,12 @@ const BlogFlipBookUI = ({
         )}
       </footer>
 
-      {miniWindowBlogg && (
-        <FeedNoteWindow blogg={miniWindowBlogg} onClose={() => setMiniWindowBlogg(null)} />
+      {miniWindowSession && (
+        <FeedNoteWindow
+          key={miniWindowSession.id}
+          blogg={miniWindowSession.blogg}
+          onClose={() => setMiniWindowSession(null)}
+        />
       )}
     </div>
   );
