@@ -608,7 +608,7 @@ const UserForm = ({
               </div>
 
               {canEdit && (
-                <div className="blogg-note-visibility-row">
+                <div>
                   <label className="blogg-note-visibility-label">
                     <input
                       type="checkbox"
@@ -620,13 +620,8 @@ const UserForm = ({
                       }}
                       className="blogg-note-visibility-checkbox"
                     />
-                    <span>Make this note public</span>
+                    <span>Public</span>
                   </label>
-                  <p className="blogg-note-visibility-help">
-                    {isPublic
-                      ? "Visible in Blog Feed, Folder view and Flipbook."
-                      : "Only visible to the administrator while signed in."}
-                  </p>
                 </div>
               )}
 
@@ -637,7 +632,7 @@ const UserForm = ({
                     onClick={() => setIsReadOnlyReferencesOpen(true)}
                     className="text-xs text-slate-600 underline underline-offset-4 hover:text-slate-950"
                   >
-                    Footnotes &amp; References
+                    Footnotes
                   </button>
                 </div>
               )}
@@ -652,10 +647,10 @@ const UserForm = ({
                 </div>
               )}
               {isEditable && (
-                <div className="blogg-editor-bottom-area">
+                <div>
                   <div className="blogg-editor-references-toggle-row">
                     <span className="blogg-editor-references-toggle-label">
-                      Footnotes &amp; References
+                      Footnotes
                     </span>
                     <button
                       type="button"
