@@ -38,11 +38,21 @@ const BloggPage = () => {
     searchParams.get("view") === "flipbook" ? "flipbook" : "canvas",
   );
   const [canvasRefreshKey, setCanvasRefreshKey] = useState(0);
-  const [isMindMapOpen, setIsMindMapOpen] = useState(false);
+  const [isMindMapOpen, setIsMindMapOpen] = useState(
+    () => searchParams.get("view") === "mindmap",
+  );
   const [flipBookStacks, setFlipBookStacks] = useState<FlipBookStack[]>([]);
   const [flipBookGroups, setFlipBookGroups] = useState<FlipBookGroup[]>([]);
   const [filtersLoading, setFiltersLoading] = useState(true);
   const [filtersError, setFiltersError] = useState(false);
+
+  const closeMindMap = useCallback(() => {
+    setIsMindMapOpen(false);
+    if (searchParams.get("view") !== "mindmap") return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("view");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   // Flipbook filters are URL-backed so refreshing or sharing the filtered view
   // never silently falls back to every note in every stack.
@@ -73,7 +83,7 @@ const BloggPage = () => {
 
   const toggleNote = useCallback(() => {
     if (!isAdmin) return;
-    setIsMindMapOpen(false);
+    closeMindMap();
     if (activeForm.isOpen) {
       setActiveForm((prev) => ({ ...prev, isOpen: false }));
       return;
@@ -86,10 +96,10 @@ const BloggPage = () => {
       selectedBlogg: null,
       initialEditMode: false,
     });
-  }, [activeForm.isOpen, isAdmin]);
+  }, [activeForm.isOpen, closeMindMap, isAdmin]);
 
   const toggleViewMode = useCallback(() => {
-    setIsMindMapOpen(false);
+    closeMindMap();
     const nextMode: ViewMode = viewMode === "canvas" ? "flipbook" : "canvas";
     setViewMode(nextMode);
     const next = new URLSearchParams(searchParams);
@@ -97,7 +107,7 @@ const BloggPage = () => {
     else next.delete("view");
     next.delete("noteId");
     setSearchParams(next, { replace: true });
-  }, [searchParams, setSearchParams, viewMode]);
+  }, [closeMindMap, searchParams, setSearchParams, viewMode]);
 
   // Legacy flipbook note URLs should use the exact same Open note screen
   // as Blog Feed. Keep the selected stack/group so Back returns to this book.
@@ -255,7 +265,7 @@ const BloggPage = () => {
         window.alert("This blog could not be found or is private.");
         return;
       }
-      setIsMindMapOpen(false);
+      closeMindMap();
       setActiveForm({
         isOpen: true,
         stackId: fullBlogg.stack_id ?? null,
@@ -267,7 +277,7 @@ const BloggPage = () => {
       console.error("Could not open blog from Mind Map:", error);
       window.alert("Could not open this blog. Please try again.");
     }
-  }, [isAdmin]);
+  }, [closeMindMap, isAdmin]);
 
   const handleEditFromFlipBook = useCallback((blogg: BloggItem) => {
     if (!isAdmin) return;
@@ -312,7 +322,7 @@ const BloggPage = () => {
           </div>
         ) : isMindMapOpen ? (
           <BloggMindMap
-            onBack={() => setIsMindMapOpen(false)}
+            onBack={closeMindMap}
             canEdit={isAdmin}
             onOpenBlogg={(bloggId, edit) => void handleOpenMindMapBlogg(bloggId, edit)}
           />

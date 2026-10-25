@@ -16,6 +16,7 @@ import "./bloggShareSnapshotBootstrap.ts";
 import "./currentReadingBootstrap.tsx";
 import "./widgetVisibilityBootstrap.ts";
 import "./newsletterBootstrap.tsx";
+import "./bloggMindMapFeedBootstrap.tsx";
 import "./newsletterVisibilityBootstrap.ts";
 import "./responsiveHealthDashboard.css";
 import "./responsiveFeedWidgetFlow.css";
