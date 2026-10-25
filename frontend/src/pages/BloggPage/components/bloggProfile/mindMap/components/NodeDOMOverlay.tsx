@@ -19,6 +19,8 @@ const NodeDOMOverlay: React.FC<NodeDOMOverlayProps> = React.memo(({
   const focusedConnectionIds = new Set<string>();
   if (focusedBloggId) {
     focusedConnectionIds.add(String(focusedBloggId));
+
+    // Keep explicit blog-reference neighbors highlighted.
     processedGraph.links.forEach((link: any) => {
       const sourceId = String(link.sourceNode?.uniqueId || link.sourceNode?.id || link.source || "");
       const targetId = String(link.targetNode?.uniqueId || link.targetNode?.id || link.target || "");
@@ -27,6 +29,19 @@ const NodeDOMOverlay: React.FC<NodeDOMOverlayProps> = React.memo(({
         if (targetId) focusedConnectionIds.add(targetId);
       }
     });
+
+    // Ownership is a two-edge path: blog -> folder -> stack. Add both
+    // ancestors directly so the stack is spotlighted during title search.
+    const focusedBlog = processedGraph.nodes.find(
+      (node: any) => String(node.uniqueId || node.id) === String(focusedBloggId),
+    );
+    const folderId = String(focusedBlog?.groupId || "");
+    const folder = folderId
+      ? processedGraph.nodes.find((node: any) => String(node.uniqueId || node.id) === folderId)
+      : undefined;
+    const stackId = String(folder?.stackId || focusedBlog?.stackId || "");
+    if (folderId) focusedConnectionIds.add(folderId);
+    if (stackId) focusedConnectionIds.add(stackId);
   }
 
   return <div className="absolute inset-0 pointer-events-none">

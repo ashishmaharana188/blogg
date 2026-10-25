@@ -954,7 +954,9 @@ async function buildFeaturedLinksSection(): Promise<string> {
         const record = raw as Record<string, unknown>;
         const url = safeHttpUrl(record.url);
         const title =
-          typeof record.title === "string" ? record.title.trim().slice(0, 180) : "";
+          typeof record.title === "string"
+            ? record.title.trim().slice(0, 180)
+            : "";
         if (!url || !title) return [];
         const description =
           typeof record.description === "string"
@@ -1082,7 +1084,7 @@ async function buildHealthSection(): Promise<string> {
   const imageMarkup = tierImage
     ? `<img src="${htmlEscape(tierImage)}" alt="${tier} wellness mood" width="150" style="display:block;width:100%;max-width:150px;height:auto;margin:0 auto;border:1px solid #34383d;object-fit:cover" />`
     : `<div style="padding:25px 8px;border:1px dashed #454a50;color:#8c98a4;font-family:Consolas,'Courier New',monospace;font-size:10px;text-align:center">NO<br>MOOD IMAGE</div>`;
-  return `<tr><td style="padding:20px 16px;border-bottom:1px dashed #35383c"><p style="margin:0 0 5px;color:#80b6f4;font-family:Consolas,'Courier New',monospace;font-size:10px;letter-spacing:1.2px">[ SENDER TELEMETRY · 7 DAYS ]</p><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td width="65%" valign="top" style="padding-right:14px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${metricMarkup}</table></td><td width="35%" valign="middle" style="padding-left:12px;border-left:1px dashed #35383c">${imageMarkup}<p style="margin:12px 0 2px;color:#80b6f4;text-align:center;font-family:Consolas,'Courier New',monospace;font-size:19px;font-weight:bold">${score === null ? "N/A" : `${score}%`}</p><p style="margin:0;color:#d8e0e9;text-align:center;font-family:Consolas,'Courier New',monospace;font-size:9px;line-height:1.5;letter-spacing:.3px">${htmlEscape(tierTitle)}</p></td></tr></table></td></tr>`;
+  return `<tr><td style="padding:20px 16px;border-bottom:1px dashed #35383c"><p style="margin:0 0 5px;color:#80b6f4;font-family:Consolas,'Courier New',monospace;font-size:10px;letter-spacing:1.2px">[ SENDER TELEMETRY · 7 DAYS ]</p><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td width="65%" valign="top" style="padding-right:14px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${metricMarkup}</table></td><td width="35%" valign="middle" style="padding-left:12px;border-left:1px dashed #35383c">${imageMarkup}<p style="margin:12px 0 2px;color:#80b6f4;text-align:center;font-family:Consolas,'Courier New',monospace;font-size:19px;font-weight:bold">${score === null ? "N/A" : `${score}%`}</p></td></tr></table></td></tr>`;
 }
 
 async function buildSongsSection(): Promise<string> {
@@ -1297,7 +1299,12 @@ async function buildNewsletter(filters: NewsletterFilters): Promise<{
     matching.length > articles.length
       ? `<tr><td style="padding:14px 16px;border-bottom:1px dashed #35383c;color:#aeb8c2;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6">Showing the latest ${articles.length} of ${matching.length} matching notes.</td></tr>`
       : "";
-  const [healthSection, songsSection, booksForYouSection, featuredLinksSection] = await Promise.all([
+  const [
+    healthSection,
+    songsSection,
+    booksForYouSection,
+    featuredLinksSection,
+  ] = await Promise.all([
     buildHealthSection(),
     buildSongsSection(),
     buildBooksForYouSection(),
