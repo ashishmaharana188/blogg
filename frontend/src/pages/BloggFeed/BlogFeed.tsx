@@ -13,6 +13,7 @@ import BloggHeader from "../BloggPage/components/bloggHeader/BloggHeader";
 import ShareBloggButton from "../BloggPage/components/ShareBloggButton";
 import { bloggEditorSchema } from "../BloggPage/components/bloggForm/bloggEditorSchema";
 import FeedNoteWindow from "./FeedNoteWindow";
+import CopyrightNotice from "../../components/CopyrightNotice";
 import "@blocknote/mantine/style.css";
 import "./blogFeed.css";
 import "./blogFeedBackground.css";
@@ -184,6 +185,7 @@ function FeedPost({ blogg, stackName, groupName, onOpenWindow }: {
         </div>
         <ShareBloggButton blogg={blogg} stackName={stackName} groupName={groupName} />
       </footer>
+      <CopyrightNotice enabled={blogg.showCopyright} holder={blogg.copyrightHolder} author={blogg.author} createdAt={blogg.createdAt} />
     </article>
   );
 }
@@ -208,6 +210,7 @@ const HomePage = () => {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [cursorHistory, setCursorHistory] = useState<Array<string | null>>([null]);
   const [nowPlayingTrack, setNowPlayingTrack] = useState<FeedNowPlayingTrack | null>(null);
+  const [feedBackgroundUrl, setFeedBackgroundUrl] = useState("/feed-background.jpg");
   const [feedBackgroundEnabled, setFeedBackgroundEnabled] = useState<boolean>(() => {
     try {
       const storedPreference = window.localStorage.getItem(FEED_BACKGROUND_PREFERENCE_KEY);
@@ -268,6 +271,14 @@ const HomePage = () => {
 
   useEffect(() => {
     let cancelled = false;
+    fetchPublicJson<{ url?: string | null }>("/api/showcase/feed-background")
+      .then((setting) => { if (!cancelled && typeof setting?.url === "string" && setting.url.trim()) setFeedBackgroundUrl(setting.url); })
+      .catch(() => { /* Keep the bundled starter background when no upload has been saved yet. */ });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
     fetchStackAndGroup({ publicReadOnly: true })
       .then((data) => {
         if (cancelled) return;
@@ -311,9 +322,12 @@ const HomePage = () => {
   const currentCursor = cursorHistory[cursorHistory.length - 1] ?? null;
 
   return (
-    <div className="blog-feed-page typewriter-font">
+    <div
+      className={`blog-feed-page typewriter-font${feedBackgroundEnabled ? " has-feed-background" : ""}`}
+      style={{ "--blog-feed-background-image": `url(${JSON.stringify(feedBackgroundUrl)})` } as CSSProperties}
+    >
       <BloggHeader page="feed" onNewNote={() => navigate("/blog?newNote=1")} />
-      <main className={`blog-feed-content${feedBackgroundEnabled ? " has-feed-background" : ""}`}>
+      <main className="blog-feed-content">
         <button
           type="button"
           className={`blog-feed-background-toggle${feedBackgroundEnabled ? " is-on" : ""}`}

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { BloggItem } from "../../types/pageTypes";
 import AssetStateBox from "../../components/AssetStateBox";
+import CopyrightNotice from "../../components/CopyrightNotice";
 import { fetchBloggByIdRequest, fetchStackAndGroup } from "../BloggPage/services/canvasViewService";
 import { ReadOnlyBloggContent } from "../BloggPage/components/bloggProfile/flipBook/readOnlyBloggContent";
 import "./bloggEmbed.css";
@@ -90,6 +91,7 @@ export default function BloggEmbedPage() {
             </div>
           )}
           <footer>Open full note ↗</footer>
+          <CopyrightNotice enabled={blogg.showCopyright} holder={blogg.copyrightHolder} author={blogg.author} createdAt={blogg.createdAt} />
         </article>
       </a>
       <p className="blogg-embed-brand"><Link to="/feed">Blogg</Link></p>

@@ -13,6 +13,7 @@ import { useCreateBlockNote } from "@blocknote/react";
 import { createPortal } from "react-dom";
 import { BlockNoteView } from "@blocknote/mantine";
 import { bloggEditorSchema } from "./bloggEditorSchema";
+import CopyrightNotice from "../../../../components/CopyrightNotice";
 import "./bloggReferenceNoteWindow.css";
 import "./bloggReferencesMobileSheet.css";
 
@@ -26,7 +27,7 @@ type Props = {
   /** Close button shown for the read-only/public footnotes panel. */
   onClose?: () => void;
 };
-type TargetBlogContent = MindMapBlogg & { content?: unknown };
+type TargetBlogContent = MindMapBlogg & { content?: unknown; showCopyright?: boolean; copyrightHolder?: string; createdAt?: string | Date };
 
 function textFromInlineContent(value: unknown): string {
   if (typeof value === "string") return value;
@@ -148,6 +149,7 @@ function ReferenceNoteWindow({
               <div className="blogg-reference-note-window-body">
                 <BlockNoteView editor={editor} editable={false} theme="dark" />
               </div>
+              <CopyrightNotice enabled={note.showCopyright} holder={note.copyrightHolder} author={note.author} createdAt={note.createdAt} />
             </article>
           ) : (
             <p className="blogg-reference-note-window-state">No note content is available.</p>

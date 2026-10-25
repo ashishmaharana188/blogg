@@ -1,0 +1,12 @@
+.blogg-copyright-notice {
+  margin: 14px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #7b8492;
+  font: inherit;
+  font-size: 0.68rem;
+  line-height: 1.55;
+  text-align: right;
+  overflow-wrap: anywhere;
+}

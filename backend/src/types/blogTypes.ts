@@ -7,16 +7,15 @@ export type BlogInput = {
   group_id: string;
   blogg_id?: string;
   document_type: BlogDocumentType;
-
   author?: string;
   title?: string;
   subtitle?: string;
   tags?: string[];
   /** False restricts this document to the configured administrator. */
   isPublic?: boolean;
-
+  showCopyright?: boolean;
+  copyrightHolder?: string;
   content?: unknown[];
-
   source_url?: string;
   external_article?: {
     html: string;

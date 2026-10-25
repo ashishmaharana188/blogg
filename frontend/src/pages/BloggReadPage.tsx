@@ -8,6 +8,7 @@ import { fetchBloggReferences, type BloggReference } from "./BloggPage/services/
 import { fetchBloggByIdRequest, fetchStackAndGroup } from "./BloggPage/services/canvasViewService";
 import BloggHeader from "./BloggPage/components/bloggHeader/BloggHeader";
 import ShareBloggButton from "./BloggPage/components/ShareBloggButton";
+import CopyrightNotice from "../components/CopyrightNotice";
 import { useAuth } from "../context/authContext";
 import AssetStateBox from "../components/AssetStateBox";
 import { bloggEditorSchema } from "./BloggPage/components/bloggForm/bloggEditorSchema";
@@ -218,6 +219,7 @@ export default function BloggReadPage() {
               {isAdmin && <Link to={buildBlockNoteUrl("editNote")}>Edit in BlockNote</Link>}
               <ShareBloggButton blogg={blogg} stackName={stack?.stack_name || "Unsorted stack"} groupName={group?.group_name || "Others"} />
             </footer>
+            <CopyrightNotice enabled={blogg.showCopyright} holder={blogg.copyrightHolder} author={blogg.author} createdAt={blogg.createdAt} />
           </article>
         )}
       </main>

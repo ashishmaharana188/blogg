@@ -1,23 +1,17 @@
-/* Optional feed-only wallpaper. The shared page header and floating widgets stay untouched. */
-.blog-feed-content.has-feed-background {
-  isolation: isolate;
-}
-
-.blog-feed-content.has-feed-background::before {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  inset: 0 -12px;
-  border-radius: 18px;
+/* Full-viewport feed wallpaper. The shared header remains opaque white, while the
+   feed canvas behind the post column and both side rails extends edge to edge. */
+.blog-feed-page.has-feed-background {
+  background-color: #f7f5ef;
   background-image:
     linear-gradient(rgb(255 255 255 / 24%), rgb(255 255 255 / 24%)),
-    url("/feed-background.jpg");
+    var(--blog-feed-background-image, url("/feed-background.jpg"));
   background-repeat: no-repeat;
   background-position: center top;
   background-size: cover;
-  pointer-events: none;
+  background-attachment: fixed;
 }
 
+/* The toggle stays aligned with the main feed column rather than the viewport. */
 .blog-feed-background-toggle {
   position: absolute;
   top: 0;
@@ -61,11 +55,6 @@
 }
 
 @media (max-width: 640px) {
-  .blog-feed-content.has-feed-background::before {
-    inset-inline: -5px;
-    border-radius: 14px;
-  }
-
   .blog-feed-background-toggle {
     right: 0;
     font-size: 9px;

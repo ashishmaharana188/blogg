@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { BlockNoteView } from "@blocknote/mantine";
 import { useCreateBlockNote } from "@blocknote/react";
 import type { BloggItem } from "../../types/pageTypes";
+import CopyrightNotice from "../../components/CopyrightNotice";
 import { bloggEditorSchema } from "../BloggPage/components/bloggForm/bloggEditorSchema";
 import "../BloggPage/components/bloggForm/bloggReferenceNoteWindow.css";
 
@@ -38,6 +39,7 @@ function NoteWindowArticle({ blogg }: NoteWindowArticleProps) {
           <p className="blogg-reference-note-window-state">No body content yet.</p>
         )}
       </div>
+      <CopyrightNotice enabled={blogg.showCopyright} holder={blogg.copyrightHolder} author={blogg.author} createdAt={blogg.createdAt} />
     </article>
   );
 }

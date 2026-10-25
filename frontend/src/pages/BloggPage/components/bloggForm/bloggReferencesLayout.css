@@ -686,3 +686,13 @@
   width: 0 !important;
   height: 0 !important;
 }
+
+
+/* Optional, low-chrome copyright settings in the note form. */
+.blogg-copyright-editor-control { margin: 0 0 14px; padding: 0; border: 0; color: #364152; font-size: 11px; }
+.blogg-copyright-editor-toggle { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; }
+.blogg-copyright-editor-toggle input { width: 14px; height: 14px; margin: 0; accent-color: #263247; }
+.blogg-copyright-editor-details { margin: 8px 0 0 22px; max-width: 520px; }
+.blogg-copyright-editor-details input { box-sizing: border-box; width: 100%; min-height: 32px; padding: 6px 8px; border: 1px solid #d9dfe7; border-radius: 4px; background: #fff; color: #263247; font: inherit; }
+.blogg-copyright-editor-details p { margin: 5px 0 0; color: #7a8492; font-size: 10px; line-height: 1.5; }
+.blogg-copyright-editor-details a { color: #536174; text-decoration: underline; text-underline-offset: 2px; }

@@ -18,6 +18,7 @@ import "./flipBookEdgeActions.css";
 import { ReadOnlyBloggContent } from "./readOnlyBloggContent";
 import type { BlogFlipBookUIProps, FlipBookPageType } from "./flipBookTypes";
 import ShareBloggButton from "../../ShareBloggButton";
+import CopyrightNotice from "../../../../../components/CopyrightNotice";
 import FeedNoteWindow from "../../../../BloggFeed/FeedNoteWindow";
 
 type TurnDirection = "next" | "previous";
@@ -231,6 +232,7 @@ const PagePane = ({
               </p>
             )}
           </div>
+          {page.blogg && <CopyrightNotice enabled={page.blogg.showCopyright} holder={page.blogg.copyrightHolder} author={page.blogg.author} createdAt={page.blogg.createdAt} />}
         </article>
       ) : page.pageKind === "detail-cover" ? (
         <article className="flipbook-page-content flipbook-detail-cover">
@@ -253,8 +255,9 @@ const PagePane = ({
           <p className="flipbook-page-count">{page.pageNumber}</p>
         </article>
       ) : (
-        <article className="flipbook-page-content flipbook-detail-page">
+        <article className={`flipbook-page-content flipbook-detail-page${page.pageNumber === page.totalPages ? " has-copyright-footer" : ""}`}>
           <ReadOnlyBloggContent key={page.id} content={page.content} />
+          {page.pageNumber === page.totalPages && page.blogg && <CopyrightNotice enabled={page.blogg.showCopyright} holder={page.blogg.copyrightHolder} author={page.blogg.author} createdAt={page.blogg.createdAt} />}
           <p className="flipbook-page-count">{page.pageNumber}</p>
         </article>
       )}
