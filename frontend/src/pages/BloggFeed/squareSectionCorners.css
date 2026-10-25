@@ -1,0 +1,13 @@
+/* Square corners requested for Feed posts and the Newsletter / Mind Map widgets.
+   Intentionally does not target Now Playing, Health, or Reading widgets. */
+html body .blog-feed-page .blog-feed-content .blog-feed-post-card {
+  border-radius: 0 !important;
+}
+
+html body .blog-feed-page .blog-feed-content .blog-feed-newsletter-card {
+  border-radius: 0 !important;
+}
+
+html body .blog-feed-page .blog-feed-content .blog-feed-mindmap-card {
+  border-radius: 0 !important;
+}

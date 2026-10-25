@@ -18,7 +18,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  margin-bottom: 12px;
+  margin-bottom: 12px; /* Add bottom gap below the Appearance toggle row */
 }
 .feed-background-admin-title-copy {
   min-width: 0;
@@ -57,8 +57,8 @@
 }
 .feed-background-admin-switch > span {
   display: block;
-  width: 10px;
-  height: 10px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 1px 3px rgb(15 23 42 / 18%);

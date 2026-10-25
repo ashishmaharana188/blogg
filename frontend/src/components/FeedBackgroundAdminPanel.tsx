@@ -193,7 +193,7 @@ export default function FeedBackgroundAdminPanel() {
     >
       <div className="feed-background-admin-heading">
         <div className="feed-background-admin-title-copy">
-          <h3 id="feed-background-admin-title">APPEARANCE</h3>
+          <p className="feed-background-admin-eyebrow">APPEARANCE</p>
         </div>
         <button
           type="button"

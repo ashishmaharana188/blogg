@@ -17,6 +17,7 @@ import CopyrightNotice from "../../components/CopyrightNotice";
 import "@blocknote/mantine/style.css";
 import "./blogFeed.css";
 import "./blogFeedBackground.css";
+import "./squareSectionCorners.css";
 
 type CanvasStack = { stack_id: string; stack_name: string };
 type CanvasGroup = { group_id: string; group_name: string; stack_id: string };
