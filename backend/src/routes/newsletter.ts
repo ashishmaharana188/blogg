@@ -180,6 +180,12 @@ function getTags(value: unknown): string[] {
     .slice(0, 30);
 }
 
+// Bibliography notes remain public and referenceable, but are excluded from feed/newsletter listings.
+const BIBLIOGRAPHY_TAGS = new Set(["bibilography", "bibliography"]);
+function isBibliographyTag(value: string): boolean {
+  return BIBLIOGRAPHY_TAGS.has(value.trim().toLocaleLowerCase());
+}
+
 function inlinePlainText(value: unknown): string {
   if (typeof value === "string") return value;
   if (!Array.isArray(value)) return "";
@@ -746,7 +752,6 @@ async function collectHealthMetrics(): Promise<HealthMetrics> {
     client?.release();
   }
 }
-
 async function getSongsForNewsletter(): Promise<
   Array<{ title: string; artists: string[]; url: string; thumbnail: string }>
 > {
@@ -1109,7 +1114,7 @@ function htmlEscape(value: string): string {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
+    .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
 
@@ -1159,6 +1164,7 @@ async function getAvailableTopics(): Promise<string[]> {
   for (const row of rows) {
     for (const tag of getTags(row.tags)) {
       const key = tag.toLocaleLowerCase();
+      if (isBibliographyTag(tag)) continue;
       if (!topics.has(key)) topics.set(key, tag);
     }
   }
@@ -1206,6 +1212,7 @@ async function buildNewsletter(filters: NewsletterFilters): Promise<{
       const date = getCreatedDate(row.createdAt);
       if (!date || date < filters.fromDate || date >= filters.toDate) return [];
       const tags = getTags(row.tags);
+      if (tags.some(isBibliographyTag)) return [];
       if (
         topicKey !== "all" &&
         !tags.some((tag) => tag.toLocaleLowerCase() === topicKey)
@@ -1341,13 +1348,7 @@ function getGmailCredentials(): GmailOAuthCredentials | null {
   const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
   const refreshToken = process.env.GOOGLE_REFRESH_TOKEN?.trim();
-  if (
-    !user ||
-    !emailIsValid(user) ||
-    !clientId ||
-    !clientSecret ||
-    !refreshToken
-  )
+  if (!user || !emailIsValid(user) || !clientId || !clientSecret || !refreshToken)
     return null;
   return { user, clientId, clientSecret, refreshToken };
 }
@@ -1368,16 +1369,8 @@ function errorText(value: unknown): string {
       item.error && typeof item.error === "object"
         ? (item.error as { message?: unknown }).message
         : item.error;
-    return [
-      item.error_description,
-      item.message,
-      item.errorMessage,
-      nestedError,
-    ]
-      .filter(
-        (part): part is string =>
-          typeof part === "string" && Boolean(part.trim()),
-      )
+    return [item.error_description, item.message, item.errorMessage, nestedError]
+      .filter((part): part is string => typeof part === "string" && Boolean(part.trim()))
       .join(" ")
       .slice(0, 1200);
   }
@@ -1393,13 +1386,7 @@ function logGmailFailure(event: {
   recipient?: string;
 }): void {
   // Never log OAuth secrets, access tokens, refresh tokens, or message content.
-  console.error(
-    "[newsletter:gmail]",
-    JSON.stringify({
-      timestamp: new Date().toISOString(),
-      ...event,
-    }),
-  );
+  console.error("[newsletter:gmail]", JSON.stringify({ timestamp: new Date().toISOString(), ...event }));
 }
 
 function googleErrorCode(payload: unknown): string {
@@ -1411,15 +1398,11 @@ function googleErrorCode(payload: unknown): string {
     if (typeof nested.status === "string") return nested.status;
     if (typeof nested.code === "number") return String(nested.code);
     if (Array.isArray(nested.errors)) {
-      const first = nested.errors.find(
-        (entry) => entry && typeof entry === "object",
-      ) as Record<string, unknown> | undefined;
+      const first = nested.errors.find((entry) => entry && typeof entry === "object") as Record<string, unknown> | undefined;
       if (first && typeof first.reason === "string") return first.reason;
     }
   }
-  return typeof item.error_description === "string"
-    ? item.error_description
-    : "unknown_error";
+  return typeof item.error_description === "string" ? item.error_description : "unknown_error";
 }
 
 function publicGmailError(
@@ -1438,11 +1421,7 @@ function publicGmailError(
   if (/access_denied|unauthorized_client/.test(normalized)) {
     return "Google denied OAuth access. Check the OAuth app's audience/test-user settings and authorize the intended Gmail account again.";
   }
-  if (
-    /insufficientpermissions|insufficient authentication scopes|insufficient_permission/.test(
-      normalized,
-    )
-  ) {
+  if (/insufficientpermissions|insufficient authentication scopes|insufficient_permission/.test(normalized)) {
     return "The Gmail access token lacks permission to send mail. Reauthorize with https://www.googleapis.com/auth/gmail.send and replace GOOGLE_REFRESH_TOKEN.";
   }
   if (status === 403 && phase === "gmail-send") {

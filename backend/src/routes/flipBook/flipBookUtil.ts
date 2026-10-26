@@ -40,6 +40,9 @@ function cursorCreatedAt(cursor: FeedCursor): Date | string | number | null {
 export async function getBloggFeedPage(includePrivate = false, requestedLimit = 12, rawCursor?: string) {
   const limit = Math.max(1, Math.min(24, Math.floor(requestedLimit) || 12));
   const filter: Record<string, any> = includePrivate ? {} : { isPublic: { $ne: false } };
+  // A bibliography tag hides a note from the feed for everyone, including admins.
+  // It deliberately remains in getAllBloggs and the folder/reference endpoints.
+  filter.tags = { $nin: [/^bibilography$/i, /^bibliography$/i] };
   const cursor = decodeFeedCursor(rawCursor);
   if (cursor) {
     const id = new ObjectId(cursor.id);
