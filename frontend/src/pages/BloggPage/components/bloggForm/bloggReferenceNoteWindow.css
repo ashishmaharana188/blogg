@@ -272,3 +272,43 @@
 .blogg-reference-note-window-body pre {
   outline-offset: 0;
 }
+
+
+/* Thin, always-visible desktop scrollbar for both expanded and minimized note windows. */
+.blogg-reference-note-window-content {
+  scrollbar-width: thin !important;
+  scrollbar-color: #aeb7c3 transparent !important;
+  -ms-overflow-style: auto !important;
+}
+
+.blogg-reference-note-window-content::-webkit-scrollbar {
+  display: block !important;
+  width: 6px !important;
+  height: 6px !important;
+}
+
+.blogg-reference-note-window-content::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.blogg-reference-note-window-content::-webkit-scrollbar-thumb {
+  border-radius: 6px;
+  background: #aeb7c3 !important;
+}
+
+.blogg-reference-note-window-content::-webkit-scrollbar-thumb:hover {
+  background: #7f8a99 !important;
+}
+
+@media (max-width: 640px) {
+  .blogg-reference-note-window-content {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .blogg-reference-note-window-content::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+}

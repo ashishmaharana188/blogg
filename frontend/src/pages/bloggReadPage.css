@@ -252,3 +252,43 @@
   position: relative;
   background: transparent;
 }
+
+
+/* Desktop: show a narrow scrollbar for the open-note reading viewport. */
+@media (min-width: 641px) {
+  .blogg-reader-scroll,
+  .blogg-reader-body,
+  .blogg-reader-body .bn-container,
+  .blogg-reader-body .bn-editor {
+    scrollbar-width: thin !important;
+    scrollbar-color: #aeb7c3 transparent !important;
+    -ms-overflow-style: auto !important;
+  }
+
+  .blogg-reader-scroll::-webkit-scrollbar,
+  .blogg-reader-body::-webkit-scrollbar,
+  .blogg-reader-body *::-webkit-scrollbar {
+    display: block !important;
+    width: 6px !important;
+    height: 6px !important;
+  }
+
+  .blogg-reader-scroll::-webkit-scrollbar-track,
+  .blogg-reader-body::-webkit-scrollbar-track,
+  .blogg-reader-body *::-webkit-scrollbar-track {
+    background: transparent !important;
+  }
+
+  .blogg-reader-scroll::-webkit-scrollbar-thumb,
+  .blogg-reader-body::-webkit-scrollbar-thumb,
+  .blogg-reader-body *::-webkit-scrollbar-thumb {
+    border-radius: 6px;
+    background: #aeb7c3 !important;
+  }
+
+  .blogg-reader-scroll::-webkit-scrollbar-thumb:hover,
+  .blogg-reader-body::-webkit-scrollbar-thumb:hover,
+  .blogg-reader-body *::-webkit-scrollbar-thumb:hover {
+    background: #7f8a99 !important;
+  }
+}

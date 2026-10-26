@@ -1,4 +1,3 @@
-
 /*
  * Lock every ancestor to the space below the shared page header. The editor
  * and references pane must scroll internally instead of growing the page.
@@ -773,5 +772,44 @@
   .blogg-editor-bottom-area > div.mt-4.flex.flex-wrap.items-center.justify-between.gap-3.border-t.border-slate-200.pt-4 > button {
     padding: 8px 7px !important;
     font-size: 9px !important;
+  }
+}
+
+
+/* Desktop only: show the editor and reference-pane scrollbars as thin, quiet controls. */
+@media (min-width: 1200px) {
+  .blogg-editor-form-main,
+  .blogg-ref-scroll,
+  .blogg-ref-passage {
+    scrollbar-width: thin !important;
+    scrollbar-color: #aeb7c3 transparent !important;
+    -ms-overflow-style: auto !important;
+  }
+
+  .blogg-editor-form-main::-webkit-scrollbar,
+  .blogg-ref-scroll::-webkit-scrollbar,
+  .blogg-ref-passage::-webkit-scrollbar {
+    display: block !important;
+    width: 6px !important;
+    height: 6px !important;
+  }
+
+  .blogg-editor-form-main::-webkit-scrollbar-track,
+  .blogg-ref-scroll::-webkit-scrollbar-track,
+  .blogg-ref-passage::-webkit-scrollbar-track {
+    background: transparent !important;
+  }
+
+  .blogg-editor-form-main::-webkit-scrollbar-thumb,
+  .blogg-ref-scroll::-webkit-scrollbar-thumb,
+  .blogg-ref-passage::-webkit-scrollbar-thumb {
+    border-radius: 6px;
+    background: #aeb7c3 !important;
+  }
+
+  .blogg-editor-form-main::-webkit-scrollbar-thumb:hover,
+  .blogg-ref-scroll::-webkit-scrollbar-thumb:hover,
+  .blogg-ref-passage::-webkit-scrollbar-thumb:hover {
+    background: #7f8a99 !important;
   }
 }
