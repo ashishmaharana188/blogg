@@ -24,6 +24,8 @@ type NoteRow = Partial<BloggSummary> & {
 
 type Props = {
   canEdit: boolean;
+  /** Accepted for compatibility with BloggPage; request handling is driven by newNoteRequestKey. */
+  onNewNote?: () => void;
   newNoteRequestKey?: number;
   initialBlogg?: BloggItem | null;
   initialEditMode?: boolean;

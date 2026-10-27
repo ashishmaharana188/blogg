@@ -574,7 +574,7 @@ export default function BloggMindMap({
           <button
             type="button"
             onClick={onBack}
-            className="inline-flex items-center gap-2 border border-gray-300 bg-surface/90 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-gray-700 transition-colors hover:bg-canvas"
+            className="inline-flex items-center gap-2 border border-gray-300 bg-surface/90 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-black transition-colors hover:bg-canvas"
           >
             <svg
               aria-hidden="true"
@@ -592,7 +592,7 @@ export default function BloggMindMap({
           <button
             type="button"
             onClick={resetCamera}
-            className="border border-gray-300 bg-surface/90 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-gray-700 transition-colors hover:bg-canvas"
+            className="border border-black bg-surface/90 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-black transition-colors hover:bg-canvas"
             title="Reset map zoom and position"
           >
             Reset View
