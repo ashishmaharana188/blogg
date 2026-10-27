@@ -11,17 +11,24 @@
   font-family: "Courier New", Courier, monospace;
 }
 
+.blogg-filesystem-view.is-resizing-sidebar,
+.blogg-filesystem-view.is-resizing-sidebar * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
 .bfe-sidebar {
+  box-sizing: border-box;
   display: flex;
-  flex: 0 0 min(460px, 78vw);
+  flex: 0 0 320px;
   flex-direction: column;
-  width: min(460px, 78vw);
-  min-width: 235px;
-  max-width: 460px;
+  width: 320px;
+  min-width: 0;
+  max-width: none;
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  border-right: 1px solid #3a3a3a;
+  border-right: 0;
   background: #262626;
 }
 
@@ -62,6 +69,78 @@
   background: #373737;
   color: #e2e2e2;
   outline: none;
+}
+
+.bfe-restore-sidebar-button {
+  margin: 0 auto;
+}
+
+.blogg-filesystem-view.is-sidebar-collapsed .bfe-sidebar {
+  flex-basis: 38px !important;
+  width: 38px !important;
+  min-width: 38px !important;
+}
+
+.blogg-filesystem-view.is-sidebar-collapsed .bfe-toolbar {
+  flex-direction: column;
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 4px 3px;
+}
+
+.blogg-filesystem-view.is-sidebar-collapsed .bfe-toolbar-button {
+  flex-basis: 30px;
+  width: 30px;
+  height: 30px;
+}
+
+.blogg-filesystem-view.is-sidebar-collapsed .bfe-tree-scroll {
+  display: none;
+}
+
+.blogg-filesystem-view.is-sidebar-collapsed .bfe-resize-handle {
+  flex-basis: 3px;
+  width: 3px;
+  min-width: 3px;
+  background: #303030;
+}
+
+.bfe-resize-handle {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 5px;
+  width: 5px;
+  min-width: 5px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: #353535;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.bfe-resize-handle::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 2px;
+  width: 1px;
+  background: #454545;
+  content: "";
+  transition: background-color 100ms ease, width 100ms ease, left 100ms ease;
+}
+
+.bfe-resize-handle:hover::after,
+.bfe-resize-handle:focus-visible::after,
+.bfe-resize-handle.is-active::after {
+  left: 1px;
+  width: 3px;
+  background: #9a9a9a;
+}
+
+.bfe-resize-handle:focus-visible {
+  box-shadow: inset 0 0 0 1px #9a9a9a;
 }
 
 .bfe-tree-scroll {
@@ -263,9 +342,13 @@
 
 @media (max-width: 540px) {
   .bfe-sidebar {
-    flex-basis: min(460px, 82vw);
-    width: min(460px, 82vw);
-    min-width: min(220px, 82vw);
+    min-width: 0;
+  }
+
+  .bfe-resize-handle {
+    flex-basis: 6px;
+    width: 6px;
+    min-width: 6px;
   }
 
   .bfe-toolbar {
@@ -275,7 +358,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .bfe-toolbar-button,
-  .bfe-chevron {
+  .bfe-chevron,
+  .bfe-resize-handle::after {
     transition: none;
   }
 }

@@ -1,0 +1,65 @@
+/* Compact icon action aligned with the start of the BlockNote editor. */
+.blogg-editor-tags-toolbar-row {
+  box-sizing: border-box;
+}
+
+.blogg-editor-tags-list {
+  align-content: center;
+}
+
+.blogg-editor-top-action {
+  display: inline-flex;
+  flex: 0 0 34px;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  margin-left: auto;
+  padding: 0;
+  border: 1px solid #d4d9e0;
+  border-radius: 0;
+  background: #fff;
+  color: #475569;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.blogg-editor-top-action svg {
+  display: block;
+  width: 17px;
+  height: 17px;
+}
+
+.blogg-editor-top-action:hover:not(:disabled) {
+  border-color: #94a3b8;
+  background: #f3f5f7;
+  color: #172033;
+}
+
+.blogg-editor-top-action:focus-visible {
+  outline: 2px solid #64748b;
+  outline-offset: 2px;
+}
+
+.blogg-editor-top-action:disabled {
+  cursor: wait;
+  opacity: .45;
+}
+
+@media (max-width: 540px) {
+  .blogg-editor-tags-toolbar-row {
+    align-items: flex-start;
+  }
+
+  .blogg-editor-top-action {
+    flex-basis: 32px;
+    width: 32px;
+    height: 32px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blogg-editor-top-action {
+    transition: none;
+  }
+}

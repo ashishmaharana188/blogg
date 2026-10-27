@@ -59,7 +59,7 @@ function NoteIcon() {
   );
 }
 
-function ToolbarIcon({ kind }: { kind: "note" | "folder" | "sort" | "collapse" }) {
+function ToolbarIcon({ kind }: { kind: "note" | "folder" | "sort" | "collapse" | "minimize" | "expand" }) {
   if (kind === "note") return (
     <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M11.8 3.2H4.2c-.7 0-1.2.5-1.2 1.2v11.4c0 .7.5 1.2 1.2 1.2h11.4c.7 0 1.2-.5 1.2-1.2V9.4M7.1 13l.5-3.1 7.8-7.8a1.6 1.6 0 0 1 2.3 2.3l-7.8 7.8z" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" /></svg>
   );
@@ -68,6 +68,12 @@ function ToolbarIcon({ kind }: { kind: "note" | "folder" | "sort" | "collapse" }
   );
   if (kind === "sort") return (
     <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.2 4.2h7.5M4.2 7.4h5.6M4.2 10.6h3.8M13.8 4v11M10.8 12l3 3 3-3" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" /></svg>
+  );
+  if (kind === "minimize") return (
+    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 4h14M3 8h14M3 12h9M3 16h9M15 11v6M12 14h6" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" /></svg>
+  );
+  if (kind === "expand") return (
+    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 4h14M3 8h6M3 12h6M3 16h6M13 11v6M10 14h6" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" /></svg>
   );
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5.2h14M3 9.8h14M3 14.4h14M5.5 3v4.4M14.5 12.2v4.4" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -100,6 +106,55 @@ export default function BloggFileExplorer({
   const [isBlankNoteOpen, setIsBlankNoteOpen] = useState(false);
   const [selectedNoteLoading, setSelectedNoteLoading] = useState(false);
   const [selectedNoteError, setSelectedNoteError] = useState("");
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const viewportWidth = typeof window === "undefined" ? 1200 : window.innerWidth;
+    const maxWidth = Math.max(190, Math.min(700, viewportWidth * 0.72));
+    const defaultWidth = viewportWidth <= 540 ? Math.min(260, maxWidth) : 320;
+    try {
+      const savedWidth = Number(window.localStorage.getItem("blogg-file-explorer-sidebar-width"));
+      return Number.isFinite(savedWidth) && savedWidth > 0
+        ? Math.min(Math.max(savedWidth, 190), maxWidth)
+        : defaultWidth;
+    } catch {
+      return defaultWidth;
+    }
+  });
+  const [isResizingSidebar, setIsResizingSidebar] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        "blogg-file-explorer-sidebar-width",
+        String(Math.round(sidebarWidth)),
+      );
+    } catch {
+      // Keep resizing available when local storage is blocked.
+    }
+  }, [sidebarWidth]);
+
+  const resizeSidebar = (event: React.PointerEvent<HTMLDivElement>) => {
+    const root = event.currentTarget.parentElement;
+    if (!root) return;
+    const bounds = root.getBoundingClientRect();
+    const maxWidth = Math.max(190, Math.min(700, window.innerWidth * 0.72));
+    setSidebarWidth(Math.min(Math.max(event.clientX - bounds.left, 190), maxWidth));
+  };
+
+  const changeSidebarWidthByKeyboard = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+      event.preventDefault();
+      const delta = event.key === "ArrowLeft" ? -16 : 16;
+      const maxWidth = Math.max(190, Math.min(700, window.innerWidth * 0.72));
+      setSidebarWidth((current) => Math.min(Math.max(current + delta, 190), maxWidth));
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      setSidebarWidth(190);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      setSidebarWidth(Math.max(190, Math.min(700, window.innerWidth * 0.72)));
+    }
+  };
 
   useEffect(() => {
     if (!initialBlogg) return;
@@ -281,9 +336,29 @@ export default function BloggFileExplorer({
   };
 
   return (
-    <div className="blogg-filesystem-view">
-      <aside className="bfe-sidebar" aria-label="File explorer">
+    <div className={`blogg-filesystem-view${isResizingSidebar ? " is-resizing-sidebar" : ""}${isSidebarCollapsed ? " is-sidebar-collapsed" : ""}`}>
+      <aside
+        className="bfe-sidebar"
+        aria-label="File explorer"
+        style={{
+          flexBasis: isSidebarCollapsed ? "38px" : `${sidebarWidth}px`,
+          width: isSidebarCollapsed ? "38px" : `${sidebarWidth}px`,
+        }}
+      >
         <div className="bfe-toolbar" role="toolbar" aria-label="File explorer actions">
+          {isSidebarCollapsed ? (
+            <button
+              type="button"
+              className="bfe-toolbar-button bfe-restore-sidebar-button"
+              title="Restore file explorer"
+              aria-label="Restore file explorer"
+              aria-expanded={false}
+              onClick={() => setIsSidebarCollapsed(false)}
+            >
+              <ToolbarIcon kind="expand" />
+            </button>
+          ) : (
+          <>
           {canEdit && (
             <button type="button" className="bfe-toolbar-button" title="New note" aria-label="New note" onClick={onNewNote}>
               <ToolbarIcon kind="note" />
@@ -306,6 +381,18 @@ export default function BloggFileExplorer({
           <button type="button" className="bfe-toolbar-button" title="Collapse all folders" aria-label="Collapse all folders" onClick={collapseAll}>
             <ToolbarIcon kind="collapse" />
           </button>
+          <button
+            type="button"
+            className="bfe-toolbar-button bfe-minimize-sidebar-button"
+            title="Minimize file explorer"
+            aria-label="Minimize file explorer"
+            aria-expanded={true}
+            onClick={() => setIsSidebarCollapsed(true)}
+          >
+            <ToolbarIcon kind="minimize" />
+          </button>
+          </>
+          )}
         </div>
 
         <div className="bfe-tree-scroll">
@@ -404,6 +491,36 @@ export default function BloggFileExplorer({
           )}
         </div>
       </aside>
+      <div
+        className={`bfe-resize-handle${isResizingSidebar ? " is-active" : ""}`}
+        role="separator"
+        aria-label="Resize file explorer sidebar"
+        aria-orientation="vertical"
+        aria-valuemin={190}
+        aria-valuemax={Math.max(190, Math.min(700, typeof window === "undefined" ? 700 : window.innerWidth * 0.72))}
+        aria-valuenow={Math.round(sidebarWidth)}
+        tabIndex={0}
+        title="Drag to resize the file tree. Use ← and → to adjust; Home/End for min/max. Double-click to reset."
+        onPointerDown={(event) => {
+          event.preventDefault();
+          event.currentTarget.setPointerCapture(event.pointerId);
+          setIsResizingSidebar(true);
+          resizeSidebar(event);
+        }}
+        onPointerMove={(event) => {
+          if (isResizingSidebar && event.buttons !== 0) resizeSidebar(event);
+        }}
+        onPointerUp={(event) => {
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+          }
+          setIsResizingSidebar(false);
+        }}
+        onPointerCancel={() => setIsResizingSidebar(false)}
+        onLostPointerCapture={() => setIsResizingSidebar(false)}
+        onKeyDown={changeSidebarWidthByKeyboard}
+        onDoubleClick={() => setSidebarWidth(typeof window !== "undefined" && window.innerWidth <= 540 ? 250 : 320)}
+      />
       <main className={`bfe-workspace${selectedBlogg || isBlankNoteOpen ? " has-note" : ""}`} aria-label="File workspace">
         {selectedNoteLoading ? (
           <div className="bfe-workspace-state" role="status">Opening note…</div>

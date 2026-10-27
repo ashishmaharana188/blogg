@@ -12,6 +12,7 @@ import { fetchLinkPreview } from "./linkPreviewService";
 import BloggReferencesSidebar from "./bloggReferencesSidebar";
 import "../../../bloggReferenceHighlight.css";
 import "./bloggReferencesLayout.css";
+import "./bloggFormActions.css";
 
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
@@ -555,44 +556,77 @@ const UserForm = ({
                 />
               </div>
 
-              <div className="flex flex-wrap items-center justify-center gap-2 mt-4 min-h-[32px]">
-                {tags.map((tag, index) => (
-                  <div
-                    key={index}
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border transition-all ${tag.colorClass}`}
-                  >
-                    <span>{tag.text}</span>
-                    {isEditable && (
+              <div className="blogg-editor-tags-toolbar-row mt-4 flex w-full min-w-0 items-center gap-3">
+                <div className="blogg-editor-tags-list flex min-w-0 flex-1 flex-wrap items-center justify-center gap-2">
+                  {tags.map((tag, index) => (
+                    <div
+                      key={index}
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border transition-all ${tag.colorClass}`}
+                    >
+                      <span>{tag.text}</span>
+                      {isEditable && (
+                        <button
+                          onClick={() => removeTag(index)}
+                          className="hover:text-black opacity-50 hover:opacity-100 transition-opacity focus:outline-none"
+                          title="Remove tag"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {isEditable &&
+                    (isAddingTag ? (
+                      <input
+                        autoFocus
+                        type="text"
+                        value={tagInput}
+                        onChange={(event) => setTagInput(event.target.value)}
+                        onKeyDown={handleTagKeyDown}
+                        onBlur={confirmTag}
+                        placeholder="Type & Enter..."
+                        className="w-32 px-3 py-1 text-xs font-bold border border-gray-300 rounded-full focus:outline-none focus:border-slate-800 text-center bg-white shadow-sm"
+                      />
+                    ) : (
                       <button
-                        onClick={() => removeTag(index)}
-                        className="hover:text-black opacity-50 hover:opacity-100 transition-opacity focus:outline-none"
-                        title="Remove tag"
+                        type="button"
+                        onClick={() => setIsAddingTag(true)}
+                        className="px-4 py-1 text-xs border border-gray-300 rounded-full font-bold text-gray-600 hover:bg-gray-100 transition-colors shadow-sm"
                       >
-                        ×
+                        + Add Tag
                       </button>
-                    )}
-                  </div>
-                ))}
-                {isEditable &&
-                  (isAddingTag ? (
-                    <input
-                      autoFocus
-                      type="text"
-                      value={tagInput}
-                      onChange={(event) => setTagInput(event.target.value)}
-                      onKeyDown={handleTagKeyDown}
-                      onBlur={confirmTag}
-                      placeholder="Type & Enter..."
-                      className="w-32 px-3 py-1 text-xs font-bold border border-gray-300 rounded-full focus:outline-none focus:border-slate-800 text-center bg-white shadow-sm"
-                    />
+                    ))}
+                </div>
+
+                {canEdit && (
+                  isReadOnly ? (
+                    <button
+                      type="button"
+                      className="blogg-editor-top-action"
+                      onClick={() => setIsReadOnly(false)}
+                      aria-label="Edit note"
+                      title="Edit note"
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </button>
                   ) : (
                     <button
-                      onClick={() => setIsAddingTag(true)}
-                      className="px-4 py-1 text-xs border border-gray-300 rounded-full font-bold text-gray-600 hover:bg-gray-100 transition-colors shadow-sm"
+                      type="button"
+                      className="blogg-editor-top-action"
+                      onClick={() => void saveForm(false)}
+                      disabled={saveStatus === "saving"}
+                      aria-label="Save note"
+                      title={saveStatus === "saving" ? "Saving…" : "Save note"}
                     >
-                      + Add Tag
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M5 3.5h12l3.5 3.5V20.5H3.5V3.5Z" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+                        <path d="M7.5 3.5v6h9v-6M7 20.5v-7h10v7" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+                      </svg>
                     </button>
-                  ))}
+                  )
+                )}
               </div>
 
               <div
@@ -654,16 +688,7 @@ const UserForm = ({
                   </button>
                 </div>
               )}
-              {isReadOnly && canEdit && selectedBlogg && (
-                <div className="flex justify-end mt-4">
-                  <button
-                    className="px-5 py-1 text-l bg-white border border-gray-300 text-black rounded font-bold hover:bg-black hover:text-white transition-colors"
-                    onClick={() => setIsReadOnly(false)}
-                  >
-                    EDIT
-                  </button>
-                </div>
-              )}
+
               {isEditable && (
                 <div>
                   <section
@@ -757,12 +782,6 @@ const UserForm = ({
                         </p>
                       </label>
                     </div>
-                    <button
-                      className="px-5 py-2 text-sm bg-white border border-gray-300 text-black rounded font-bold hover:bg-black hover:text-white transition-colors"
-                      onClick={() => void saveForm(true)}
-                    >
-                      SAVE &amp; CLOSE
-                    </button>
                   </div>
                 </div>
               )}
