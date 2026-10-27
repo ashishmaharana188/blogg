@@ -90,10 +90,12 @@ export const saveBlog = async (blog: BlogInput): Promise<BlogDocument> => {
 
 export async function getBlogsByGroup(payload: { group_id: string }, includePrivate = false) {
   const filter = includePrivate ? { group_id: payload.group_id } : { group_id: payload.group_id, isPublic: { $ne: false } };
+  // Return every note in the selected group. The old limit(9) silently hid
+  // all subsequent notes in Folder View and File Explorer.
   return getDB().collection("bloggs").find(filter, { projection: {
     _id: 1, blogg_id: 1, stack_id: 1, group_id: 1, document_type: 1, author: 1, title: 1, subtitle: 1, tags: 1,
     isPublic: 1, showCopyright: 1, copyrightHolder: 1, createdAt: 1, updatedAt: 1,
-  } }).sort({ createdAt: -1 }).limit(9).toArray();
+  } }).sort({ createdAt: -1 }).toArray();
 }
 
 export async function getBloggContent(payload: { blogg_id: string }, includePrivate = false) {

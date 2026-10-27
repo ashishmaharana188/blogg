@@ -1,0 +1,846 @@
+/*
+ * Blogg warm-charcoal night mode.
+ * Base: #403826 with warm off-white text and restrained sepia-gold accents.
+ * The class is applied to <html>; the user's preference is saved locally.
+ */
+html.blogg-dark-mode {
+  color-scheme: dark;
+  --blogg-night-bg: #403826;
+  --blogg-night-surface: #49402f;
+  --blogg-night-surface-raised: #514735;
+  --blogg-night-surface-hover: #5a4d39;
+  --blogg-night-border: #74664e;
+  --blogg-night-text: #fbf8f1;
+  --blogg-night-muted: #d6cbb6;
+  --blogg-night-subtle: #bcae93;
+  --blogg-night-accent: #e2ca8e;
+  --blogg-night-accent-hover: #f0dba7;
+  --blogg-night-danger: #f0aaa0;
+  background: var(--blogg-night-bg);
+  color: var(--blogg-night-text);
+}
+
+html.blogg-dark-mode body,
+html.blogg-dark-mode #root {
+  background-color: var(--blogg-night-bg) !important;
+  color: var(--blogg-night-text) !important;
+}
+
+html.blogg-dark-mode :is(
+  .bg-white,
+  .bg-slate-50,
+  .bg-gray-50,
+  .bg-gray-100,
+  .bg-slate-100,
+  .bg-zinc-50,
+  .bg-neutral-50
+) {
+  background-color: var(--blogg-night-surface) !important;
+}
+
+html.blogg-dark-mode :is(.bg-slate-200, .bg-gray-200, .bg-zinc-200) {
+  background-color: var(--blogg-night-surface-raised) !important;
+}
+
+html.blogg-dark-mode :is(
+  .text-black,
+  .text-gray-950,
+  .text-gray-900,
+  .text-slate-950,
+  .text-slate-900,
+  .text-zinc-900,
+  .text-neutral-900,
+  .text-gray-800,
+  .text-slate-800,
+  .text-zinc-800,
+  .text-gray-700,
+  .text-slate-700,
+  .text-zinc-700,
+  .text-gray-600,
+  .text-slate-600,
+  .text-zinc-600
+) {
+  color: var(--blogg-night-text) !important;
+}
+
+html.blogg-dark-mode :is(
+  .text-gray-500,
+  .text-slate-500,
+  .text-zinc-500,
+  .text-gray-400,
+  .text-slate-400,
+  .text-zinc-400,
+  .text-neutral-500
+) {
+  color: var(--blogg-night-muted) !important;
+}
+
+html.blogg-dark-mode :is(
+  .border-white,
+  .border-slate-50,
+  .border-slate-100,
+  .border-gray-100,
+  .border-slate-200,
+  .border-gray-200,
+  .border-slate-300,
+  .border-gray-300,
+  .border-zinc-200
+) {
+  border-color: var(--blogg-night-border) !important;
+}
+
+/* Main page canvases. */
+html.blogg-dark-mode :is(
+  .blogg-profile-root,
+  .blogg-main-viewport,
+  .blogg-form-host,
+  .blogg-editor-form,
+  .blogg-editor-layout,
+  .blogg-editor-form-main,
+  .blogg-editor-form-inner,
+  .blogg-reader-page,
+  .blogg-reader-scroll,
+  .blog-feed-page,
+  .account-page,
+  .account-page-shell,
+  .flipbook-page-shell,
+  .flipbook-content-area,
+  .blogg-filesystem-view
+) {
+  background-color: var(--blogg-night-bg) !important;
+  color: var(--blogg-night-text) !important;
+}
+
+html.blogg-dark-mode .blogg-shared-header {
+  background-color: var(--blogg-night-bg) !important;
+  color: var(--blogg-night-text) !important;
+  border-color: var(--blogg-night-border) !important;
+}
+
+html.blogg-dark-mode .blogg-shared-header a,
+html.blogg-dark-mode .blogg-shared-header button {
+  color: var(--blogg-night-text) !important;
+}
+
+html.blogg-dark-mode .blogg-shared-header a:hover,
+html.blogg-dark-mode .blogg-shared-header button:hover {
+  color: var(--blogg-night-accent-hover) !important;
+}
+
+html.blogg-dark-mode .blogg-shared-header-rule {
+  border-color: var(--blogg-night-accent) !important;
+  background-color: var(--blogg-night-accent) !important;
+}
+
+/* Feed cards and widgets. */
+html.blogg-dark-mode .blog-feed-page.has-feed-background {
+  background-color: var(--blogg-night-bg) !important;
+  background-image: none !important;
+}
+
+html.blogg-dark-mode :is(
+  .blog-feed-post-card,
+  .blog-feed-state,
+  .blog-feed-health-widget,
+  .blog-feed-mindmap-card,
+  .blog-feed-newsletter-card,
+  .blog-feed-newsletter-panel
+) {
+  background-color: var(--blogg-night-surface) !important;
+  border-color: var(--blogg-night-border) !important;
+  color: var(--blogg-night-text) !important;
+  box-shadow: 0 3px 14px rgb(0 0 0 / 12%) !important;
+}
+
+html.blogg-dark-mode :is(
+  .blog-feed-post-title,
+  .blog-feed-post-title a,
+  .blog-feed-author,
+  .blog-feed-post-description,
+  .blog-feed-page h1,
+  .blog-feed-page h2,
+  .blog-feed-page h3,
+  .blog-feed-page strong,
+  .blog-feed-health-primary strong,
+  .blog-feed-health-secondary strong,
+  .blog-feed-health-run strong,
+  .blog-feed-health-exercise-metric strong,
+  .blog-feed-mindmap-heading,
+  .blog-feed-state h2
+) {
+  color: var(--blogg-night-text) !important;
+}
+
+html.blogg-dark-mode :is(
+  .blog-feed-time,
+  .blog-feed-location,
+  .blog-feed-dot,
+  .blog-feed-breadcrumb-separator,
+  .blog-feed-health-primary > span,
+  .blog-feed-health-secondary > div > span,
+  .blog-feed-health-secondary small,
+  .blog-feed-health-run small,
+  .blog-feed-health-run > div:last-child > span,
+  .blog-feed-health-exercise-metric > span,
+  .blog-feed-health-empty,
+  .blog-feed-mindmap-kicker,
+  .blog-feed-mindmap-stats,
+  .blog-feed-empty-body
+) {
+  color: var(--blogg-night-muted) !important;
+}
+
+html.blogg-dark-mode :is(
+  .blog-feed-tags,
+  .blog-feed-post-actions,
+  .blog-feed-health-secondary,
+  .blog-feed-health-step-chart,
+  .blog-feed-health-exercises,
+  .blog-feed-health-sleep,
+  .blog-feed-health-run
+) {
+  border-color: rgb(226 202 142 / 24%) !important;
+}
+
+html.blogg-dark-mode .blog-feed-tag,
+html.blogg-dark-mode .blogg-reader-tags span {
+  background-color: #5a4d39 !important;
+  color: #fbf5e8 !important;
+  border-color: #82704e !important;
+}
+
+html.blogg-dark-mode .blog-feed-now-playing-artwork-frame {
+  background-color: var(--blogg-night-surface-raised) !important;
+  border-color: var(--blogg-night-border) !important;
+}
+
+html.blogg-dark-mode .blog-feed-now-playing-marquee,
+html.blogg-dark-mode .blog-feed-now-playing-sr-only {
+  color: var(--blogg-night-muted) !important;
+}
+
+html.blogg-dark-mode .blog-feed-mindmap-rings circle,
+html.blogg-dark-mode .blog-feed-mindmap-preview line {
+  stroke: var(--blogg-night-border) !important;
+}
+
+html.blogg-dark-mode .blog-feed-mindmap-center {
+  fill: var(--blogg-night-accent) !important;
+}
+
+/* Public note reader. */
+html.blogg-dark-mode .blogg-reader-page.has-reader-background {
+  background-color: var(--blogg-night-bg) !important;
+  background-image: none !important;
+}
+
+html.blogg-dark-mode .blogg-reader-card {
+  background-color: var(--blogg-night-surface) !important;
+  border-color: var(--blogg-night-border) !important;
+  box-shadow: 0 4px 18px rgb(0 0 0 / 14%) !important;
+  color: var(--blogg-night-text) !important;
+}
+
+html.blogg-dark-mode :is(
+  .blogg-reader-title,
+  .blogg-reader-author,
+  .blogg-reader-state h1
+) {
+  color: var(--blogg-night-text) !important;
+}
+
+html.blogg-dark-mode :is(
+  .blogg-reader-subtitle,
+  .blogg-reader-breadcrumb,
+  .blogg-reader-meta time,
+  .blogg-reader-state,
+  .blogg-reader-actions > a
+) {
+  color: var(--blogg-night-muted) !important;
+}
+
+html.blogg-dark-mode :is(
+  .blogg-reader-meta,
+  .blogg-reader-content,
+  .blogg-reader-actions
+) {
+  border-color: rgb(226 202 142 / 24%) !important;
+}
+
+html.blogg-dark-mode .blogg-reader-body,
+html.blogg-dark-mode .blogg-reader-body .bn-container,
+html.blogg-dark-mode .blogg-reader-body .bn-editor,
+html.blogg-dark-mode .blog-feed-note-body,
+html.blogg-dark-mode .blog-feed-note-body .bn-container,
+html.blogg-dark-mode .blog-feed-note-body .bn-editor {
+  background: transparent !important;
+  color: var(--blogg-night-text) !important;
+  --bn-colors-editor-text: var(--blogg-night-text);
+}
+
+/* Account dashboard and showcase. */
+html.blogg-dark-mode :is(
+  .account-status-card,
+  .account-showcase-section,
+  .showcase-link-card,
+  .health-admin-panel,
+  .health-admin-card,
+  .account-dashboard-card
+) {
+  background-color: var(--blogg-night-surface) !important;
+  color: var(--blogg-night-text) !important;
+  border-color: var(--blogg-night-border) !important;
+  box-shadow: 0 3px 14px rgb(0 0 0 / 12%) !important;
+}
+
+html.blogg-dark-mode :is(
+  .account-page-header,
+  .account-card-footer,
+  .showcase-track,
+  .showcase-link-actions,
+  .account-dashboard-status
+) {
+  border-color: rgb(226 202 142 / 24%) !important;
+}
+
+html.blogg-dark-mode :is(
+  .account-page-nav-link,
+  .account-status-title,
+  .showcase-section-heading h2,
+  .showcase-now-copy h3,
+  .showcase-track-copy strong,
+  .showcase-link-title,
+  .showcase-link-actions button,
+  .account-field-label
+) {
+  color: var(--blogg-night-text) !important;
+}
+
+html.blogg-dark-mode :is(
+  .account-eyebrow,
+  .account-description,
+  .account-message,
+  .account-footnote,
+  .showcase-section-heading p,
+  .showcase-now-copy p,
+  .showcase-now-copy span,
+  .showcase-track-copy span,
+  .showcase-card-provider,
+  .showcase-link-description,
+  .showcase-empty,
+  .showcase-admin-hint
+) {
+  color: var(--blogg-night-muted) !important;
+}
+
+html.blogg-dark-mode :is(
+  .account-activity-select,
+  .showcase-add-link-row input,
+  .showcase-track-list input,
+  .showcase-add-link-form,
+  .current-reading-search-form input,
+  .current-reading-admin input
+) {
+  background-color: #393123 !important;
+  color: var(--blogg-night-text) !important;
+  border-color: var(--blogg-night-border) !important;
+}
+
+html.blogg-dark-mode :is(
+  .account-secondary-button,
+  .showcase-outline-button,
+  .showcase-link-actions button
+) {
+  background-color: var(--blogg-night-surface-raised) !important;
+  color: var(--blogg-night-text) !important;
+  border-color: var(--blogg-night-border) !important;
+}
+
+html.blogg-dark-mode .account-primary-link,
+html.blogg-dark-mode .showcase-add-link-row button {
+  background-color: var(--blogg-night-accent) !important;
+  border-color: var(--blogg-night-accent) !important;
+  color: #292316 !important;
+}
+
+/* Warm the existing File Explorer dark layout to match this palette. */
+html.blogg-dark-mode .blogg-filesystem-view {
+  background: var(--blogg-night-bg) !important;
+  color: var(--blogg-night-text) !important;
+}
+
+html.blogg-dark-mode :is(
+  .bfe-sidebar,
+  .bfe-workspace,
+  .bfe-workspace.has-note,
+  .bfe-note-pane,
+  .bfe-note-form
+) {
+  background: var(--blogg-night-bg) !important;
+  color: var(--blogg-night-text) !important;
+}
+
+html.blogg-dark-mode .bfe-sidebar {
+  background: #352f23 !important;
+  border-color: var(--blogg-night-border) !important;
+}
+
+html.blogg-dark-mode :is(.bfe-toolbar, .bfe-note-pane-toolbar) {
+  background: #393123 !important;
+  border-color: var(--blogg-night-border) !important;
+  color: var(--blogg-night-text) !important;
+}
+
+html.blogg-dark-mode :is(.bfe-row, .bfe-note-open-button, .bfe-toolbar-button) {
+  color: var(--blogg-night-muted) !important;
+}
+
+html.blogg-dark-mode .bfe-row:hover,
+html.blogg-dark-mode .bfe-row.is-selected,
+html.blogg-dark-mode .bfe-toolbar-button:hover,
+html.blogg-dark-mode .bfe-toolbar-button:focus-visible {
+  background: var(--blogg-night-surface-hover) !important;
+  color: var(--blogg-night-text) !important;
+}
+
+html.blogg-dark-mode :is(
+  .bfe-empty-folder,
+  .bfe-status,
+  .bfe-workspace-empty,
+  .bfe-workspace-state,
+  .bfe-note-pane-title
+) {
+  color: var(--blogg-night-muted) !important;
+}
+
+html.blogg-dark-mode .bfe-note-pane-close {
+  color: var(--blogg-night-muted) !important;
+}
+
+html.blogg-dark-mode .bfe-note-pane-close:hover {
+  background: var(--blogg-night-surface-hover) !important;
+  color: var(--blogg-night-text) !important;
+}
+
+/* Editor surfaces, reference panels and common form controls. */
+html.blogg-dark-mode :is(
+  .blogg-editor-form,
+  .blogg-editor-form-main,
+  .blogg-editor-layout,
+  .blogg-editor-form-inner,
+  .blogg-editor-reference-panel,
+  .blogg-editor-references,
+  .blogg-reference-note-window,
+  .blogg-reference-note-panel,
+  .blogg-link-preview-anchor
+) {
+  background-color: var(--blogg-night-surface) !important;
+  color: var(--blogg-night-text) !important;
+  border-color: var(--blogg-night-border) !important;
+}
+
+html.blogg-dark-mode :is(
+  .blogg-editor-author,
+  .blogg-editor-title,
+  .blogg-editor-description,
+  .blogg-editor-form input,
+  .blogg-editor-form textarea,
+  .blogg-editor-form select,
+  .blogg-editor-form button
+) {
+  color: var(--blogg-night-text);
+}
+
+html.blogg-dark-mode :is(
+  .blogg-editor-form input,
+  .blogg-editor-form textarea,
+  .blogg-editor-form select
+) {
+  background-color: #393123 !important;
+  border-color: var(--blogg-night-border) !important;
+}
+
+html.blogg-dark-mode .bn-container,
+html.blogg-dark-mode .bn-editor {
+  color: var(--blogg-night-text);
+  --bn-colors-editor-text: var(--blogg-night-text);
+}
+
+html.blogg-dark-mode .bn-container [data-node-type="blockContainer"],
+html.blogg-dark-mode .bn-editor {
+  background-color: transparent;
+}
+
+html.blogg-dark-mode :is(input, textarea, select) {
+  accent-color: var(--blogg-night-accent);
+}
+
+html.blogg-dark-mode input::placeholder,
+html.blogg-dark-mode textarea::placeholder {
+  color: var(--blogg-night-subtle) !important;
+  opacity: 1;
+}
+
+html.blogg-dark-mode :is(input, textarea, select):focus-visible,
+html.blogg-dark-mode button:focus-visible,
+html.blogg-dark-mode a:focus-visible {
+  outline-color: var(--blogg-night-accent) !important;
+}
+
+html.blogg-dark-mode .asset-state-stage,
+html.blogg-dark-mode .blog-feed-widget-loading-slot {
+  color: var(--blogg-night-text);
+}
+
+/* Persistent, keyboard-accessible toggle. */
+.blogg-theme-toggle {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 10000;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 8px 13px;
+  border: 1px solid #867656;
+  border-radius: 999px;
+  background: #403826;
+  color: #fbf8f1;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 20%);
+  font: 600 12px/1.2 "Courier New", Courier, monospace;
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+}
+
+.blogg-theme-toggle:hover {
+  background: #514735;
+  box-shadow: 0 5px 18px rgb(0 0 0 / 25%);
+}
+
+.blogg-theme-toggle:focus-visible {
+  outline: 2px solid #d9c38e;
+  outline-offset: 3px;
+}
+
+.blogg-theme-toggle-icon {
+  font-size: 17px;
+  line-height: 1;
+}
+
+@media (max-width: 540px) {
+  .blogg-theme-toggle {
+    right: 10px;
+    bottom: 10px;
+    min-height: 36px;
+    padding: 7px 11px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blogg-theme-toggle {
+    transition: none;
+  }
+}
+
+
+/* Complete Obsidian-inspired surface system: fields, menus, dialogs, tables,
+   editors, metadata and empty/error states all use the same warm night palette. */
+html.blogg-dark-mode {
+  --background-primary: #403826;
+  --background-primary-alt: #49402f;
+  --background-secondary: #352f23;
+  --background-secondary-alt: #302a20;
+  --background-modifier-border: #74664e;
+  --background-modifier-hover: #5a4d39;
+  --background-modifier-active-hover: #64563f;
+  --background-modifier-form-field: #302a20;
+  --interactive-normal: #514735;
+  --interactive-hover: #62543c;
+  --interactive-accent: #d4bd82;
+  --interactive-accent-hover: #e6d19b;
+  --text-normal: #fbf8f1;
+  --text-muted: #d6cbb6;
+  --text-faint: #bcae93;
+  --text-on-accent: #292316;
+  --text-error: #f0aaa0;
+  --text-success: #b9d8ad;
+  --scrollbar-thumb-bg: #75664d;
+}
+
+/* App-wide page backgrounds and card/container defaults. */
+html.blogg-dark-mode :is(
+  .auth-page, .auth-main, .auth-card,
+  .blogg-editor-form, .blogg-editor-form-main, .blogg-editor-form-inner,
+  .blogg-editor-layout, .blogg-form-host, .blogg-main-viewport,
+  .blogg-reference-note-window, .blogg-reference-note-window-content,
+  .blogg-reference-note-window-article, .blogg-reference-note-window-state,
+  .blogg-ref-header, .blogg-ref-scroll, .blogg-ref-passage-section,
+  .blogg-ref-item, .blogg-reference-panel-slot,
+  .blogg-link-preview-anchor, .blogg-link-preview-copy,
+  .flipbook-filter-bar, .flipbook-filter-field,
+  .flipbook-detail-cover, .flipbook-detail-page, .flipbook-overview-page,
+  .flipbook-footer, .flipbook-thumbnails, .flipbook-help,
+  .health-admin-panel, .health-metric-card, .health-sleep-summary-card,
+  .health-admin-subsection, .health-activity-group,
+  .current-reading-panel, .current-reading-admin, .current-reading-result,
+  .current-reading-other-section,
+  .blog-feed-newsletter-card, .blog-feed-newsletter-fields,
+  .newsletter-admin-panel, .newsletter-admin-health-config,
+  .newsletter-admin-health-field, .blog-feed-mindmap-card,
+  .blog-feed-state, .blogg-reader-state
+) {
+  background-color: var(--blogg-night-surface) !important;
+  color: var(--blogg-night-text) !important;
+  border-color: var(--blogg-night-border) !important;
+}
+
+/* All form fields, including unclassed fields in admin panels and dialogs. */
+html.blogg-dark-mode :is(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea, select,
+  .auth-field input, .flipbook-filter-field input,
+  .flipbook-filter-field select, .blogg-ref-select,
+  .blogg-editor-tags-input, .blogg-editor-tag-input,
+  .blog-feed-newsletter-input, .newsletter-admin-input,
+  .newsletter-admin-health-field input, .newsletter-admin-health-field select,
+  .newsletter-admin-health-field textarea,
+  .current-reading-search-row input, .current-reading-search-form input,
+  .blogg-reference-note-window input, .blogg-reference-note-window textarea,
+  .blogg-reference-note-window select,
+  .blogg-editor-form input, .blogg-editor-form textarea, .blogg-editor-form select,
+  .showcase-add-link-row input, .health-import-form input,
+  .health-import-form select, .health-import-form textarea
+) {
+  background-color: #302a20 !important;
+  color: #fbf8f1 !important;
+  border-color: #74664e !important;
+  caret-color: #f0dba7 !important;
+  color-scheme: dark;
+  box-shadow: none;
+}
+
+html.blogg-dark-mode :is(input, textarea, select, button):disabled {
+  opacity: .62;
+  cursor: not-allowed;
+}
+
+html.blogg-dark-mode :is(input, textarea, select, button):focus-visible {
+  outline: 2px solid #d4bd82 !important;
+  outline-offset: 2px;
+  border-color: #d4bd82 !important;
+}
+
+html.blogg-dark-mode :is(input, textarea)::placeholder {
+  color: #bcae93 !important;
+  opacity: 1;
+}
+
+html.blogg-dark-mode input[type="checkbox"],
+html.blogg-dark-mode input[type="radio"],
+html.blogg-dark-mode input[type="range"] {
+  accent-color: #d4bd82;
+}
+
+/* Buttons: neutral controls become dark surfaces; high-emphasis buttons use gold. */
+html.blogg-dark-mode :is(
+  .auth-submit, .blogg-ref-save-button,
+  .blogg-editor-top-action, .blogg-editor-references-toggle-row button,
+  .flipbook-controls button, .flipbook-mode-actions button,
+  .current-reading-clear, .current-reading-result-actions button,
+  .health-import-button, .health-feedback button,
+  .blog-feed-newsletter-primary, .newsletter-admin-primary,
+  .blog-feed-state button, .blogg-reader-state button,
+  .blogg-reader-state a, .blogg-reference-note-window-controls button,
+  .blogg-ref-open-note-button, .blogg-link-preview-open,
+  .account-primary-link, .showcase-add-link-row button
+) {
+  background-color: #d4bd82 !important;
+  color: #292316 !important;
+  border-color: #d4bd82 !important;
+}
+
+html.blogg-dark-mode :is(
+  .auth-submit, .blogg-ref-save-button, .blogg-editor-top-action,
+  .flipbook-controls button, .flipbook-mode-actions button,
+  .current-reading-clear, .health-import-button,
+  .blog-feed-newsletter-primary, .newsletter-admin-primary,
+  .blog-feed-state button, .blogg-reader-state button,
+  .account-primary-link, .showcase-add-link-row button
+):hover:not(:disabled) {
+  background-color: #e6d19b !important;
+  color: #292316 !important;
+}
+
+html.blogg-dark-mode :is(
+  .auth-card button, .blogg-editor-form button,
+  .blogg-reference-note-window button, .blogg-ref-actions button,
+  .flipbook-filter-bar button, .flipbook-thumbnails button,
+  .current-reading-panel button, .current-reading-result button,
+  .account-showcase-section button, .health-admin-panel button,
+  .newsletter-admin-panel button, .blog-feed-newsletter-card button
+):not(.blogg-theme-toggle):not(.auth-submit):not(.blogg-ref-save-button):not(.blogg-editor-top-action):not(.flipbook-controls button):not(.flipbook-mode-actions button):not(.account-primary-link):not(.showcase-add-link-row button) {
+  background-color: #514735;
+  color: #fbf8f1;
+  border-color: #74664e;
+}
+
+/* Menus, popovers, tooltips, portals and floating windows. */
+html.blogg-dark-mode :is(
+  [role="dialog"], [role="menu"], [role="listbox"], [role="tooltip"],
+  [data-radix-popper-content-wrapper] > *,
+  .bn-suggestion-menu, .bn-slash-menu, .bn-grid-suggestion-menu,
+  .bn-side-menu, .bn-formatting-toolbar, .bn-toolbar,
+  .bn-popover, .bn-drag-handle-menu, .bn-file-panel,
+  .bn-link-preview, .bn-comment-editor, .bn-inline-content,
+  .blogg-reference-note-window, .blogg-ref-filter-list,
+  .current-reading-results, .current-reading-status,
+  .showcase-outline-button + div, .health-metric-settings,
+  .health-metric-settings-body, .health-metric-settings-footer
+) {
+  background-color: #393123 !important;
+  color: #fbf8f1 !important;
+  border-color: #74664e !important;
+  box-shadow: 0 8px 28px rgb(0 0 0 / 30%);
+}
+
+html.blogg-dark-mode :is(
+  [role="menu"] *, [role="listbox"] *,
+  .bn-suggestion-menu *, .bn-slash-menu *, .bn-side-menu *,
+  .bn-formatting-toolbar *, .bn-toolbar *, .bn-popover *,
+  .bn-drag-handle-menu *, .bn-file-panel *, .bn-link-preview *
+) {
+  color: inherit;
+}
+
+html.blogg-dark-mode :is(
+  [role="menu"] [aria-selected="true"],
+  [role="option"][aria-selected="true"],
+  .bn-suggestion-menu [data-hovered="true"],
+  .bn-slash-menu [data-hovered="true"],
+  .bn-side-menu button:hover,
+  .bn-formatting-toolbar button:hover
+) {
+  background-color: #5a4d39 !important;
+  color: #fffaf0 !important;
+}
+
+/* Text legibility across captions, helper copy, labels, metadata and statuses. */
+html.blogg-dark-mode :is(
+  label, legend, .auth-field label, .blogg-editor-tags-toolbar-row,
+  .blogg-editor-tags-list, .blogg-ref-eyebrow, .blogg-ref-footer,
+  .blogg-ref-message, .blogg-reference-note-window-eyebrow,
+  .blogg-reference-note-window-author, .blogg-reference-note-window-subtitle,
+  .blogg-reference-note-window-state, .blogg-link-preview-provider,
+  .blogg-link-preview-description, .blogg-link-preview-url,
+  .flipbook-caption, .flipbook-help, .flipbook-page-count,
+  .flipbook-blogg-author, .flipbook-blogg-subtitle,
+  .current-reading-muted, .current-reading-book-copy p,
+  .current-reading-book-copy span, .current-reading-source,
+  .health-muted, .health-import-hint, .health-last-import,
+  .newsletter-admin-label, .newsletter-admin-eyebrow,
+  .blog-feed-newsletter-label, .blog-feed-newsletter-message,
+  .blog-feed-mindmap-status, .blogg-reader-empty, .blogg-reader-subtitle,
+  .blogg-reader-breadcrumb, .blogg-reader-meta time,
+  .account-description, .account-message, .account-footnote,
+  .showcase-empty, .showcase-admin-hint
+) {
+  color: #d6cbb6 !important;
+}
+
+html.blogg-dark-mode :is(
+  .auth-title, .auth-card h1, .auth-card h2,
+  .blogg-reference-note-window-heading,
+  .blogg-ref-item-title, .blogg-ref-selected-passage,
+  .blogg-link-preview-title, .flipbook-blogg-title,
+  .flipbook-page-content h1, .flipbook-page-content h2,
+  .current-reading-title, .current-reading-result strong,
+  .health-admin-subheading, .health-column-heading,
+  .health-metric-card strong, .newsletter-admin-heading,
+  .newsletter-admin-health-heading, .newsletter-admin-count,
+  .blog-feed-newsletter-heading, .blog-feed-mindmap-heading,
+  .account-status-title, .account-page h1, .account-page h2
+) {
+  color: #fbf8f1 !important;
+}
+
+/* Tables, separators, code blocks, quotes and rich note content. */
+html.blogg-dark-mode :is(table, thead, tbody, tfoot, tr, th, td) {
+  color: #fbf8f1;
+  border-color: #74664e !important;
+}
+
+html.blogg-dark-mode th {
+  background-color: #49402f !important;
+}
+
+html.blogg-dark-mode :is(pre, code, kbd, samp) {
+  background-color: #302a20 !important;
+  color: #f2e4c4 !important;
+  border-color: #74664e !important;
+}
+
+html.blogg-dark-mode blockquote {
+  border-left-color: #c9b47d !important;
+  color: #e7decd !important;
+}
+
+html.blogg-dark-mode hr,
+html.blogg-dark-mode :is(.border-t, .border-b, .border-l, .border-r) {
+  border-color: rgb(226 202 142 / 24%) !important;
+}
+
+html.blogg-dark-mode a {
+  color: #e2ca8e;
+}
+
+html.blogg-dark-mode a:hover {
+  color: #f0dba7;
+}
+
+/* BlockNote may define color/background directly on nested blocks and menus. */
+html.blogg-dark-mode :is(
+  .bn-container, .bn-editor, .bn-editor [contenteditable="true"],
+  .bn-block-content, .bn-block-outer, .bn-inline-content,
+  .bn-table-cell, .bn-table-header, .bn-block-group
+) {
+  color: #fbf8f1;
+  --bn-colors-editor-text: #fbf8f1;
+}
+
+html.blogg-dark-mode .bn-editor [contenteditable="true"]::selection,
+html.blogg-dark-mode .bn-editor ::selection {
+  background: rgb(212 189 130 / 32%);
+}
+
+/* Scrollbars blend into the dark workspace instead of retaining bright tracks. */
+html.blogg-dark-mode * {
+  scrollbar-color: #75664d #352f23;
+}
+
+html.blogg-dark-mode *::-webkit-scrollbar-track {
+  background: #352f23;
+}
+
+html.blogg-dark-mode *::-webkit-scrollbar-thumb {
+  background: #75664d;
+  border-color: #352f23;
+}
+
+html.blogg-dark-mode .blogg-filesystem-view .bfe-tree-scroll {
+  scrollbar-color: #75664d transparent;
+}
+
+/* Alert/error and success panels remain distinguishable without bright white cards. */
+html.blogg-dark-mode :is(.is-error, .auth-error, .health-feedback.is-error, .blogg-ref-message.is-error) {
+  background-color: #4a2d29 !important;
+  color: #ffd9d2 !important;
+  border-color: #8f5149 !important;
+}
+
+html.blogg-dark-mode :is(.is-success, .health-feedback.is-success) {
+  background-color: #2d3b2b !important;
+  color: #d8f0cd !important;
+  border-color: #526c48 !important;
+}
