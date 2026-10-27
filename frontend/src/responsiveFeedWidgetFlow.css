@@ -308,22 +308,3 @@
     animation-iteration-count: infinite !important;
   }
 }
-
-
-/* Loading artwork must not inherit the taller card dimensions while the real
-   widget is waiting for data. Restore the compact placeholder's natural height. */
-@media (max-width: 1248px) {
-  .blog-feed-page .blog-feed-widget-rail > .blog-feed-now-playing-teaser.blog-feed-widget-loading-slot {
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    justify-content: center !important;
-    align-self: flex-start !important;
-  }
-
-  .blog-feed-page .blog-feed-widget-rail > .blog-feed-health-widget-root:has(> .blog-feed-widget-loading-slot) {
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-  }
-}

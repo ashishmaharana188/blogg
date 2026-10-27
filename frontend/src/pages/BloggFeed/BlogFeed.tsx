@@ -211,7 +211,6 @@ const HomePage = () => {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [cursorHistory, setCursorHistory] = useState<Array<string | null>>([null]);
   const [nowPlayingTrack, setNowPlayingTrack] = useState<FeedNowPlayingTrack | null>(null);
-  const [nowPlayingLoaded, setNowPlayingLoaded] = useState(false);
   const [feedBackgroundUrl, setFeedBackgroundUrl] = useState("/feed-background.jpg");
   const [feedBackgroundEnabled] = useState<boolean>(() => {
     try {
@@ -243,7 +242,6 @@ const HomePage = () => {
     const spotifyTrack = integrations?.spotify?.playing ? validMusicTrack(integrations.spotify.track, "spotify", "NOW PLAYING") : null;
     const likedMusicFallback = validMusicTrack(ytmusic?.fallbackTrack, "ytmusic", "LIKED TRACK");
     setNowPlayingTrack(selectedTrack || spotifyTrack || likedMusicFallback);
-    setNowPlayingLoaded(true);
   }, []);
 
   const loadFeed = useCallback(async (cursor: string | null = null): Promise<boolean> => {
@@ -325,16 +323,7 @@ const HomePage = () => {
       <BloggHeader page="feed" onNewNote={() => navigate("/blog?newNote=1")} />
       <main className="blog-feed-content">
         <div className="blog-feed-widget-rail" aria-label="Music and status widgets">
-          {nowPlayingLoaded ? (
-            <NowPlayingTeaser track={nowPlayingTrack} />
-          ) : (
-            <div
-              className="blog-feed-now-playing-teaser blog-feed-widget-loading-slot"
-              aria-label="Loading now playing widget"
-            >
-              <AssetStateBox status="loading" compact />
-            </div>
-          )}
+          <NowPlayingTeaser track={nowPlayingTrack} />
         </div>
         {isLoading ? <AssetStateBox status="loading" /> : loadError ? <AssetStateBox status="error" onRetry={() => void loadFeed(currentCursor)} /> : bloggs.length === 0 ? (
           <div className="blog-feed-state"><h2>No blogs yet</h2><p>Notes published to the site will appear here.</p><Link to="/blog">Open Blog Profile</Link></div>
