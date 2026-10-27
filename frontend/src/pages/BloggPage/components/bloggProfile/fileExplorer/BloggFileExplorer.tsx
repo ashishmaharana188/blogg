@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BloggSummary } from "../canvasView/bloggCanvasType";
 import {
   createGroup,
@@ -24,7 +24,6 @@ type NoteRow = Partial<BloggSummary> & {
 
 type Props = {
   canEdit: boolean;
-  onNewNote: () => void;
   newNoteRequestKey?: number;
   initialBlogg?: BloggItem | null;
   initialEditMode?: boolean;
@@ -60,9 +59,12 @@ function NoteIcon() {
   );
 }
 
-function ToolbarIcon({ kind }: { kind: "note" | "folder" | "sort" | "collapse" | "minimize" | "expand" }) {
+function ToolbarIcon({ kind }: { kind: "note" | "stack" | "folder" | "sort" | "collapse" | "minimize" | "expand" }) {
   if (kind === "note") return (
     <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M11.8 3.2H4.2c-.7 0-1.2.5-1.2 1.2v11.4c0 .7.5 1.2 1.2 1.2h11.4c.7 0 1.2-.5 1.2-1.2V9.4M7.1 13l.5-3.1 7.8-7.8a1.6 1.6 0 0 1 2.3 2.3l-7.8 7.8z" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" /></svg>
+  );
+  if (kind === "stack") return (
+    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m10 2.7 7 3.6-7 3.6-7-3.6zM3 10l7 3.6 7-3.6M3 13.7l7 3.6 7-3.6" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" /></svg>
   );
   if (kind === "folder") return (
     <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 5.2c0-.7.5-1.2 1.2-1.2h4l1.6 1.7h7c.7 0 1.2.5 1.2 1.2v8c0 .7-.5 1.2-1.2 1.2H3.7c-.7 0-1.2-.5-1.2-1.2zM10 8v5M7.5 10.5h5" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -83,7 +85,6 @@ function ToolbarIcon({ kind }: { kind: "note" | "folder" | "sort" | "collapse" |
 
 export default function BloggFileExplorer({
   canEdit,
-  onNewNote,
   newNoteRequestKey = 0,
   initialBlogg = null,
   initialEditMode = false,
@@ -123,6 +124,7 @@ export default function BloggFileExplorer({
   });
   const [isResizingSidebar, setIsResizingSidebar] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const handledNewNoteRequestKey = useRef(0);
 
   useEffect(() => {
     try {
@@ -158,6 +160,60 @@ export default function BloggFileExplorer({
     }
   };
 
+  const beginNewNote = useCallback(() => {
+    if (!canEdit) return;
+
+    const selectedGroup = groups.find(
+      (group) => String(group.group_id) === String(selectedGroupId),
+    );
+    let destination = selectedGroup;
+
+    if (!destination) {
+      const candidates = (selectedStackId
+        ? groups.filter((group) => String(group.stack_id) === String(selectedStackId))
+        : [...groups]
+      ).sort((a, b) => a.group_name.localeCompare(b.group_name));
+
+      if (candidates.length === 1) {
+        destination = candidates[0];
+      } else if (candidates.length > 1) {
+        const choices = candidates.map((group, index) => {
+          const stackName = stacks.find(
+            (stack) => String(stack.stack_id) === String(group.stack_id),
+          )?.stack_name || "Unknown stack";
+          return `${index + 1}. ${stackName} / ${group.group_name}`;
+        }).join("; ");
+        const answer = window.prompt(
+          "Choose the folder for the new note by number: " + choices,
+        );
+        if (answer === null) return;
+        const choice = Number(answer);
+        if (!Number.isInteger(choice) || choice < 1 || choice > candidates.length) {
+          window.alert("Enter one of the folder numbers shown.");
+          return;
+        }
+        destination = candidates[choice - 1];
+      }
+    }
+
+    if (!destination) {
+      window.alert("Create a stack and folder first, or select an existing folder.");
+      return;
+    }
+
+    const group = destination;
+    setSelectedStackId(group.stack_id);
+    setSelectedGroupId(group.group_id);
+    setExpandedStacks((current) => ({ ...current, [group.stack_id]: true }));
+    setExpandedGroups((current) => ({ ...current, [group.group_id]: true }));
+    setSelectedNoteId("");
+    setSelectedBlogg(null);
+    setSelectedEditMode(true);
+    setIsBlankNoteOpen(true);
+    setSelectedNoteLoading(false);
+    setSelectedNoteError("");
+  }, [canEdit, groups, selectedGroupId, selectedStackId, stacks]);
+
   useEffect(() => {
     if (!initialBlogg) return;
     setSelectedBlogg(initialBlogg);
@@ -176,13 +232,14 @@ export default function BloggFileExplorer({
   }, [initialBlogg, initialEditMode, canEdit, onExternalNoteHandled]);
 
   useEffect(() => {
-    if (newNoteRequestKey <= 0) return;
-    setSelectedBlogg(null);
-    setSelectedEditMode(canEdit);
-    setIsBlankNoteOpen(true);
-    setSelectedNoteLoading(false);
-    setSelectedNoteError("");
-  }, [newNoteRequestKey, canEdit]);
+    if (
+      newNoteRequestKey <= 0 ||
+      loading ||
+      handledNewNoteRequestKey.current === newNoteRequestKey
+    ) return;
+    handledNewNoteRequestKey.current = newNoteRequestKey;
+    beginNewNote();
+  }, [newNoteRequestKey, beginNewNote, loading]);
 
   const openNoteInWorkspace = useCallback(async (
     noteId: string,
@@ -325,35 +382,74 @@ export default function BloggFileExplorer({
     if (willOpen) void loadGroupNotes(group.group_id);
   };
 
+  const handleCreateStack = async () => {
+    if (!canEdit) return;
+    const stackName = window.prompt("New stack name");
+    if (!stackName?.trim()) return;
+
+    const draft: Stack = {
+      stack_id: crypto.randomUUID(),
+      stack_name: stackName.trim(),
+    };
+    try {
+      const saved = await createStack(draft);
+      const created = (saved || draft) as Stack;
+      setStacks((current) => [...current, created]);
+      setSelectedStackId(created.stack_id);
+      setSelectedGroupId("");
+      setExpandedStacks((current) => ({ ...current, [created.stack_id]: true }));
+    } catch (error) {
+      console.error("Could not create file explorer stack:", error);
+      window.alert(error instanceof Error ? error.message : "Could not create stack.");
+    }
+  };
+
   const handleCreateFolder = async () => {
     if (!canEdit) return;
+    if (!selectedStackId) {
+      window.alert("Select a stack first, or create a new stack.");
+      return;
+    }
+
+    const groupName = window.prompt("New folder name");
+    if (!groupName?.trim()) return;
+    const draft: Group = {
+      group_id: crypto.randomUUID(),
+      stack_id: selectedStackId,
+      group_name: groupName.trim(),
+    };
     try {
-      if (selectedStackId) {
-        const groupName = window.prompt("New folder name");
-        if (!groupName?.trim()) return;
-        const draft: Group = {
-          group_id: crypto.randomUUID(),
-          stack_id: selectedStackId,
-          group_name: groupName.trim(),
-        };
-        const saved = await createGroup(draft);
-        setGroups((current) => [...current, (saved || draft) as Group]);
-        setExpandedStacks((current) => ({ ...current, [selectedStackId]: true }));
-      } else {
-        const stackName = window.prompt("New top-level folder name");
-        if (!stackName?.trim()) return;
-        const draft: Stack = { stack_id: crypto.randomUUID(), stack_name: stackName.trim() };
-        const saved = await createStack(draft);
-        const created = (saved || draft) as Stack;
-        setStacks((current) => [...current, created]);
-        setSelectedStackId(created.stack_id);
-        setExpandedStacks((current) => ({ ...current, [created.stack_id]: true }));
-      }
+      const saved = await createGroup(draft);
+      const created = (saved || draft) as Group;
+      setGroups((current) => [...current, created]);
+      setSelectedGroupId(created.group_id);
+      setExpandedStacks((current) => ({ ...current, [selectedStackId]: true }));
+      setExpandedGroups((current) => ({ ...current, [created.group_id]: true }));
+      setNotesByGroup((current) => ({ ...current, [created.group_id]: [] }));
     } catch (error) {
       console.error("Could not create file explorer folder:", error);
       window.alert(error instanceof Error ? error.message : "Could not create folder.");
     }
   };
+
+  const refreshGroupNotes = useCallback(async (groupId: string) => {
+    try {
+      const result = await fetchBloggByGroupRequest({ group_id: groupId });
+      setNotesByGroup((current) => ({
+        ...current,
+        [groupId]: Array.isArray(result) ? result as NoteRow[] : [],
+      }));
+      setFailedGroups((current) => ({ ...current, [groupId]: false }));
+    } catch (error) {
+      console.error("Could not refresh notes after save:", error);
+      setFailedGroups((current) => ({ ...current, [groupId]: true }));
+    }
+  }, []);
+
+  const handleWorkspaceAutoSaved = useCallback(() => {
+    const groupId = String(selectedBlogg?.group_id || selectedGroupId || "");
+    if (groupId) void refreshGroupNotes(groupId);
+  }, [refreshGroupNotes, selectedBlogg?.group_id, selectedGroupId]);
 
   const collapseAll = () => {
     setExpandedStacks({});
@@ -392,12 +488,17 @@ export default function BloggFileExplorer({
           ) : (
           <>
           {canEdit && (
-            <button type="button" className="bfe-toolbar-button" title="New note" aria-label="New note" onClick={onNewNote}>
+            <button type="button" className="bfe-toolbar-button" title="New note" aria-label="New note" onClick={beginNewNote}>
               <ToolbarIcon kind="note" />
             </button>
           )}
           {canEdit && (
-            <button type="button" className="bfe-toolbar-button" title={selectedStackId ? "New folder in selected stack" : "New top-level folder"} aria-label="New folder" onClick={() => void handleCreateFolder()}>
+            <button type="button" className="bfe-toolbar-button" title="New stack" aria-label="New stack" onClick={() => void handleCreateStack()}>
+              <ToolbarIcon kind="stack" />
+            </button>
+          )}
+          {canEdit && (
+            <button type="button" className="bfe-toolbar-button" title={selectedStackId ? "New folder in selected stack" : "Select a stack to create a folder"} aria-label="New folder" onClick={() => void handleCreateFolder()}>
               <ToolbarIcon kind="folder" />
             </button>
           )}
@@ -611,6 +712,7 @@ export default function BloggFileExplorer({
                 initialEditMode={Boolean(canEdit && selectedEditMode)}
                 canEdit={canEdit}
                 onSaved={closeWorkspaceNote}
+                onAutoSaved={handleWorkspaceAutoSaved}
               />
             </div>
           </div>
