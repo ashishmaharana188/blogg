@@ -880,3 +880,544 @@ html.blogg-dark-mode :is(
   color: #dadada;
   caret-color: #dadada;
 }
+
+/* -------------------------------------------------------------------------
+   Final dark-mode legibility pass: mini reader, folder canvas, flipbook,
+   mind map, account integrations, and native upload controls.
+   These rules are deliberately scoped to dark mode and retain image content.
+   ------------------------------------------------------------------------- */
+
+/* Mini-window note title and its surrounding reading surface. */
+html.blogg-dark-mode .blogg-reference-note-window,
+html.blogg-dark-mode .blogg-reference-note-window-header,
+html.blogg-dark-mode .blogg-reference-note-window-content,
+html.blogg-dark-mode .blogg-reference-note-window-article,
+html.blogg-dark-mode .blogg-reference-note-window-body {
+  background-color: #222222 !important;
+  color: #dadada !important;
+  border-color: #484848 !important;
+}
+
+html.blogg-dark-mode .blogg-reference-note-window-heading h2,
+html.blogg-dark-mode .blogg-reference-note-window-article > h3 {
+  color: #f0f0f0 !important;
+}
+
+html.blogg-dark-mode .blogg-reference-note-window-author,
+html.blogg-dark-mode .blogg-reference-note-window-eyebrow,
+html.blogg-dark-mode .blogg-reference-note-window-subtitle,
+html.blogg-dark-mode .blogg-reference-note-window-state,
+html.blogg-dark-mode .blogg-reference-note-window-body,
+html.blogg-dark-mode .blogg-reference-note-window-body .bn-container,
+html.blogg-dark-mode .blogg-reference-note-window-body .bn-editor,
+html.blogg-dark-mode .blogg-reference-note-window-body .bn-editor :where(*) {
+  color: #dadada !important;
+  --bn-colors-editor-text: #dadada;
+}
+
+html.blogg-dark-mode .blogg-reference-note-window-controls button {
+  background: #333333 !important;
+  color: #eeeeee !important;
+  border-color: #555555 !important;
+}
+
+html.blogg-dark-mode .blogg-reference-note-window-controls button:hover {
+  background: #414141 !important;
+  color: #ffffff !important;
+  border-color: #777777 !important;
+}
+
+/* Folder View canvas: the opened folder list and stack cards used hard-coded
+   pale fills, so white text utilities became unreadable on their light paper. */
+html.blogg-dark-mode .blogg-main-viewport [class~="bg-white/95"],
+html.blogg-dark-mode .blogg-main-viewport [class~="bg-[#F3F4F6]"],
+html.blogg-dark-mode .canvas-heavy-shell,
+html.blogg-dark-mode .canvas-heavy-shell [class~="bg-white"],
+html.blogg-dark-mode .canvas-heavy-shell [class~="bg-[#F3F4F6]"] {
+  background-color: #282828 !important;
+  color: #dadada !important;
+  border-color: #4a4a4a !important;
+}
+
+html.blogg-dark-mode .canvas-heavy-shadow path[fill="#F3F4F6"] {
+  fill: #282828 !important;
+  stroke: #4a4a4a !important;
+}
+
+html.blogg-dark-mode .canvas-heavy-shell h2,
+html.blogg-dark-mode .canvas-heavy-shell h3,
+html.blogg-dark-mode .canvas-heavy-shell h4,
+html.blogg-dark-mode .canvas-heavy-shell p,
+html.blogg-dark-mode .canvas-heavy-shell span,
+html.blogg-dark-mode .canvas-heavy-shell label,
+html.blogg-dark-mode .canvas-heavy-shell button,
+html.blogg-dark-mode .canvas-heavy-shell input,
+html.blogg-dark-mode .canvas-heavy-shell textarea,
+html.blogg-dark-mode .canvas-heavy-shell select {
+  color: #dadada !important;
+}
+
+html.blogg-dark-mode .canvas-heavy-shell input,
+html.blogg-dark-mode .canvas-heavy-shell textarea,
+html.blogg-dark-mode .canvas-heavy-shell select {
+  background-color: #222222 !important;
+  border-color: #555555 !important;
+}
+
+html.blogg-dark-mode .canvas-heavy-shell button[class*="bg-black"],
+html.blogg-dark-mode .canvas-heavy-shell button[class*="bg-gray-900"],
+html.blogg-dark-mode .canvas-heavy-shell button[class*="bg-gray-100"] {
+  background-color: #333333 !important;
+  color: #eeeeee !important;
+  border-color: #555555 !important;
+}
+
+html.blogg-dark-mode .canvas-heavy-shell button[class*="bg-black"]:hover,
+html.blogg-dark-mode .canvas-heavy-shell button[class*="bg-gray-900"]:hover,
+html.blogg-dark-mode .canvas-heavy-shell button[class*="bg-gray-100"]:hover {
+  background-color: #414141 !important;
+  color: #ffffff !important;
+}
+
+html.blogg-dark-mode .canvas-heavy-shell [class*="hover:bg-gray-200/50"] {
+  color: #dadada !important;
+  border-color: #454545 !important;
+}
+
+html.blogg-dark-mode .canvas-heavy-shell [class*="hover:bg-gray-200/50"]:hover {
+  background-color: #363636 !important;
+}
+
+html.blogg-dark-mode .canvas-heavy-shell [class*="border-gray-300"],
+html.blogg-dark-mode .canvas-heavy-shell [class*="border-gray-900"],
+html.blogg-dark-mode .canvas-heavy-shell [class*="border-slate-300"] {
+  border-color: #4a4a4a !important;
+}
+
+/* Make folder-note list scrollbars hairline-thin but still visible. */
+html.blogg-dark-mode .canvas-heavy-shell .hide-scrollbar {
+  scrollbar-width: thin !important;
+  scrollbar-color: #555555 transparent !important;
+  -ms-overflow-style: auto !important;
+}
+
+html.blogg-dark-mode .canvas-heavy-shell .hide-scrollbar::-webkit-scrollbar,
+html.blogg-dark-mode .blogg-filesystem-view .bfe-tree-scroll::-webkit-scrollbar {
+  display: block !important;
+  width: 2px !important;
+  height: 2px !important;
+}
+
+html.blogg-dark-mode .canvas-heavy-shell .hide-scrollbar::-webkit-scrollbar-track,
+html.blogg-dark-mode .blogg-filesystem-view .bfe-tree-scroll::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+html.blogg-dark-mode .canvas-heavy-shell .hide-scrollbar::-webkit-scrollbar-thumb,
+html.blogg-dark-mode .blogg-filesystem-view .bfe-tree-scroll::-webkit-scrollbar-thumb {
+  background: #555555 !important;
+  border: 0 !important;
+  border-radius: 2px !important;
+}
+
+html.blogg-dark-mode .blogg-filesystem-view .bfe-tree-scroll {
+  scrollbar-width: thin !important;
+  scrollbar-color: #555555 transparent !important;
+}
+
+/* Flipbook: force both stationary paper and both animated sheet faces dark.
+   The existing flip animation stylesheet uses white backgrounds with !important. */
+html.blogg-dark-mode .flipbook-page-shell,
+html.blogg-dark-mode .flipbook-profile,
+html.blogg-dark-mode .flipbook-stage,
+html.blogg-dark-mode .flipbook-book,
+html.blogg-dark-mode .flipbook-footer,
+html.blogg-dark-mode .flipbook-controls,
+html.blogg-dark-mode .flipbook-thumbnails,
+html.blogg-dark-mode .flipbook-help,
+html.blogg-dark-mode .flipbook-mode-actions {
+  background-color: #1c1c1c !important;
+  color: #dadada !important;
+}
+
+html.blogg-dark-mode .flipbook-page,
+html.blogg-dark-mode .flipbook-page-content,
+html.blogg-dark-mode .flipbook-page-blank,
+html.blogg-dark-mode .flipbook-detail-page,
+html.blogg-dark-mode .flipbook-overview-page,
+html.blogg-dark-mode .flipbook-detail-cover,
+html.blogg-dark-mode .flipbook-turning-sheet,
+html.blogg-dark-mode .flipbook-sheet-face,
+html.blogg-dark-mode .flipbook-sheet-face > .flipbook-page,
+html.blogg-dark-mode .flipbook-sheet-face > .flipbook-page > .flipbook-page-content {
+  background: #282828 !important;
+  background-color: #282828 !important;
+  color: #dadada !important;
+  border-color: #4a4a4a !important;
+}
+
+html.blogg-dark-mode .flipbook-page-content .bn-container,
+html.blogg-dark-mode .flipbook-page-content .bn-editor,
+html.blogg-dark-mode .flipbook-page-content .bn-editor :where(*) {
+  background-color: transparent !important;
+  color: #dadada !important;
+  --bn-colors-editor-text: #dadada;
+}
+
+html.blogg-dark-mode .flipbook-blogg-title,
+html.blogg-dark-mode .flipbook-page-content h1,
+html.blogg-dark-mode .flipbook-page-content h2,
+html.blogg-dark-mode .flipbook-page-content h3,
+html.blogg-dark-mode .flipbook-page-content h4,
+html.blogg-dark-mode .flipbook-page-content p,
+html.blogg-dark-mode .flipbook-page-content li,
+html.blogg-dark-mode .flipbook-page-content blockquote,
+html.blogg-dark-mode .flipbook-page-content td,
+html.blogg-dark-mode .flipbook-page-content th {
+  color: #dadada !important;
+}
+
+html.blogg-dark-mode .flipbook-blogg-author,
+html.blogg-dark-mode .flipbook-blogg-subtitle,
+html.blogg-dark-mode .flipbook-page-count,
+html.blogg-dark-mode .flipbook-caption,
+html.blogg-dark-mode .flipbook-help,
+html.blogg-dark-mode .flipbook-signature {
+  color: #b5b5b5 !important;
+}
+
+html.blogg-dark-mode .flipbook-blogg-tag,
+html.blogg-dark-mode .flipbook-profile .blogg-editor-tag,
+html.blogg-dark-mode .flipbook-profile [class*="tag-chip"] {
+  background: #363636 !important;
+  color: #e0e0e0 !important;
+  border-color: #555555 !important;
+  box-shadow: none !important;
+}
+
+html.blogg-dark-mode .flipbook-filter-bar {
+  background: #282828 !important;
+  color: #dadada !important;
+  border-color: #363636 !important;
+}
+
+html.blogg-dark-mode .flipbook-filter-field label {
+  color: #b5b5b5 !important;
+}
+
+html.blogg-dark-mode .flipbook-filter-field select,
+html.blogg-dark-mode .flipbook-filter-empty button {
+  background: #222222 !important;
+  color: #dadada !important;
+  border-color: #555555 !important;
+}
+
+html.blogg-dark-mode .flipbook-filter-field select:hover,
+html.blogg-dark-mode .flipbook-filter-empty button:hover {
+  background: #363636 !important;
+  color: #ffffff !important;
+}
+
+html.blogg-dark-mode .flipbook-controls button,
+html.blogg-dark-mode .flipbook-mode-actions button {
+  background: #333333 !important;
+  color: #eeeeee !important;
+  border-color: #555555 !important;
+  text-shadow: none !important;
+}
+
+html.blogg-dark-mode .flipbook-controls button:hover:not(:disabled),
+html.blogg-dark-mode .flipbook-mode-actions button:hover:not(:disabled) {
+  background: #414141 !important;
+  color: #ffffff !important;
+  border-color: #777777 !important;
+}
+
+html.blogg-dark-mode .flipbook-controls button:disabled {
+  color: #777777 !important;
+  opacity: .65 !important;
+}
+
+/* Mind Map: dark canvas, legible text, consistent button surfaces, and dark
+   inspector/legend/search fields. Keep colored graph nodes and node images intact. */
+html.blogg-dark-mode .blogg-radial-map {
+  background: #1c1c1c !important;
+  color: #dadada !important;
+  border-color: #363636 !important;
+}
+
+html.blogg-dark-mode .blogg-radial-map > .absolute.inset-0.opacity-40 {
+  background-image: radial-gradient(#555555 1px, transparent 1px) !important;
+  opacity: .28 !important;
+}
+
+html.blogg-dark-mode .blogg-radial-map [class~="bg-surface/90"],
+html.blogg-dark-mode .blogg-radial-map [class~="bg-surface/95"],
+html.blogg-dark-mode .blogg-radial-map [class*="bg-white"],
+html.blogg-dark-mode .blogg-radial-map [class*="bg-[#fdfdfd]"] {
+  background-color: #282828 !important;
+  color: #dadada !important;
+  border-color: #484848 !important;
+}
+
+html.blogg-dark-mode .blogg-radial-map button {
+  background-color: #333333 !important;
+  color: #eeeeee !important;
+  border-color: #555555 !important;
+  box-shadow: none !important;
+}
+
+html.blogg-dark-mode .blogg-radial-map button:hover:not(:disabled),
+html.blogg-dark-mode .blogg-radial-map button:focus-visible {
+  background-color: #414141 !important;
+  color: #ffffff !important;
+  border-color: #777777 !important;
+}
+
+html.blogg-dark-mode .blogg-radial-map button:disabled {
+  color: #8a8a8a !important;
+}
+
+html.blogg-dark-mode .blogg-radial-map .mindmap-title-search {
+  background: #222222 !important;
+  color: #dadada !important;
+  border-color: #484848 !important;
+  box-shadow: 0 3px 12px rgb(0 0 0 / 24%) !important;
+}
+
+html.blogg-dark-mode .blogg-radial-map .mindmap-title-search input {
+  background: #1c1c1c !important;
+  color: #f0f0f0 !important;
+  border-color: #555555 !important;
+}
+
+html.blogg-dark-mode .blogg-radial-map .mindmap-title-search input::placeholder {
+  color: #8a8a8a !important;
+}
+
+html.blogg-dark-mode .blogg-radial-map .mindmap-title-search .mindmap-title-search-hint {
+  color: #b5b5b5 !important;
+}
+
+html.blogg-dark-mode .blogg-radial-map .mindmap-title-search p.is-success {
+  color: #a9d8b2 !important;
+}
+
+html.blogg-dark-mode .blogg-radial-map .mindmap-title-search p.is-error {
+  color: #f0aaa0 !important;
+}
+
+html.blogg-dark-mode .blogg-radial-map .fill-gray-900 {
+  fill: #dadada !important;
+}
+
+html.blogg-dark-mode .blogg-radial-map .text-blue-700,
+html.blogg-dark-mode .blogg-radial-map .text-blue-900 {
+  color: #9ec5ff !important;
+}
+
+html.blogg-dark-mode .blogg-radial-map .text-red-700 {
+  color: #f0aaa0 !important;
+}
+
+html.blogg-dark-mode .blogg-radial-map [class*="border-gray-300"],
+html.blogg-dark-mode .blogg-radial-map [class*="border-slate-200"],
+html.blogg-dark-mode .blogg-radial-map [class*="border-slate-300"] {
+  border-color: #484848 !important;
+}
+
+/* Account integrations and health cards: remove remaining light mini-panels,
+   playlist tiles, metric boxes, and native file chooser surfaces. */
+html.blogg-dark-mode .account-page :is(
+  .showcase-mini-music,
+  .showcase-mini-music-copy,
+  .showcase-mini-music-card,
+  .showcase-youtube-playlist-card,
+  .showcase-ytmusic-public-block,
+  .showcase-track-feature,
+  .health-metric-card,
+  .health-metric-tile,
+  .health-sleep-summary-card,
+  .health-activity-group,
+  .health-admin-subsection
+),
+html.blogg-dark-mode .blog-feed-health-widget .blog-feed-health-exercise-metric {
+  background-color: #333333 !important;
+  color: #dadada !important;
+  border-color: #484848 !important;
+  box-shadow: none !important;
+}
+
+html.blogg-dark-mode .account-page :is(
+  .showcase-mini-music-copy strong,
+  .showcase-mini-music-copy span,
+  .showcase-youtube-playlist-card strong,
+  .showcase-youtube-playlist-card span,
+  .showcase-youtube-playlist-card p,
+  .showcase-youtube-playlist-card small,
+  .showcase-ytmusic-public-block,
+  .health-metric-card strong,
+  .health-metric-card span,
+  .health-metric-tile strong,
+  .health-metric-tile span
+),
+html.blogg-dark-mode .blog-feed-health-widget .blog-feed-health-exercise-metric > span,
+html.blogg-dark-mode .blog-feed-health-widget .blog-feed-health-exercise-metric strong {
+  color: #dadada !important;
+}
+
+html.blogg-dark-mode .account-page .showcase-youtube-playlist-card:hover,
+html.blogg-dark-mode .account-page .showcase-track-feature:hover {
+  background-color: #414141 !important;
+  color: #ffffff !important;
+  border-color: #666666 !important;
+}
+
+html.blogg-dark-mode :is(
+  input[type="file"],
+  .feed-background-admin-upload input[type="file"],
+  .health-import-form input[type="file"],
+  .current-reading-admin input[type="file"]
+) {
+  color: #dadada !important;
+  background-color: #222222 !important;
+  border-color: #484848 !important;
+  color-scheme: dark;
+}
+
+html.blogg-dark-mode input[type="file"]::file-selector-button {
+  margin-right: 10px;
+  padding: 6px 10px;
+  border: 1px solid #555555;
+  background: #333333;
+  color: #eeeeee;
+  cursor: pointer;
+}
+
+html.blogg-dark-mode input[type="file"]::file-selector-button:hover {
+  background: #414141;
+  color: #ffffff;
+}
+
+/* Keep tags and low-emphasis action chips consistent instead of allowing some
+   badges to inherit nearly-black text against arbitrary dark utilities. */
+html.blogg-dark-mode :is(
+  .blogg-editor-tag,
+  .blogg-editor-tag-chip,
+  .blogg-reader-tags span,
+  .blog-feed-tag,
+  .flipbook-blogg-tag
+) {
+  background-color: #363636 !important;
+  color: #e0e0e0 !important;
+  border-color: #555555 !important;
+}
+
+/* -------------------------------------------------------------------------
+   Contrast corrections from the latest screenshots.
+   Folder View has hard-coded canvas colors/SVG text; the share and Mind Map
+   actions also have component CSS that keeps their light-mode colors.
+   ------------------------------------------------------------------------- */
+
+/* Folder View: replace the pale canvas and low-contrast grid with charcoal. */
+html.blogg-dark-mode .blogg-main-viewport > div.absolute.inset-0 > div.absolute.inset-0,
+html.blogg-dark-mode .blogg-main-viewport [class~="bg-[#f8f9fa]"],
+html.blogg-dark-mode .blogg-main-viewport [class*="bg-[#f8f9fa]"] {
+  background-color: #1c1c1c !important;
+  color: #dadada !important;
+}
+
+html.blogg-dark-mode .blogg-main-viewport [style*="radial-gradient(#d1d5db"] {
+  background-image: radial-gradient(#3b3b3b 1px, transparent 1px) !important;
+  opacity: .48 !important;
+}
+
+/* SVG tab labels use fill-gray-900, which a text-color override cannot fix. */
+html.blogg-dark-mode .blogg-main-viewport .canvas-heavy-shadow text,
+html.blogg-dark-mode .blogg-main-viewport .canvas-heavy-shadow text[class*="fill-gray-900"] {
+  fill: #e0e0e0 !important;
+}
+
+/* Stack headings and Folder View labels use theme utility classes that resolve
+   to near-black in light mode. Force readable foreground only in this canvas. */
+html.blogg-dark-mode .blogg-main-viewport .typewriter-font.text-primary,
+html.blogg-dark-mode .blogg-main-viewport h2[class*="text-primary"],
+html.blogg-dark-mode .blogg-main-viewport h3[class*="text-primary"],
+html.blogg-dark-mode .blogg-main-viewport h4[class*="text-primary"],
+html.blogg-dark-mode .blogg-main-viewport [class*="text-slate-800"],
+html.blogg-dark-mode .blogg-main-viewport [class*="text-gray-900"] {
+  color: #dadada !important;
+}
+
+html.blogg-dark-mode .blogg-main-viewport .canvas-heavy-shell [class*="text-gray-400"],
+html.blogg-dark-mode .blogg-main-viewport .canvas-heavy-shell [class*="text-slate-500"],
+html.blogg-dark-mode .blogg-main-viewport .canvas-heavy-shell [class*="text-gray-500"] {
+  color: #b5b5b5 !important;
+}
+
+/* Feed header: the component stylesheet hard-codes a white share pill. */
+html.blogg-dark-mode .blogg-shared-header .feed-share-trigger,
+html.blogg-dark-mode .blogg-shared-header-nav .feed-share-trigger,
+html.blogg-dark-mode .feed-share-trigger.account-share-trigger {
+  background: #333333 !important;
+  color: #f0f0f0 !important;
+  border: 1px solid #555555 !important;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 22%) !important;
+}
+
+html.blogg-dark-mode .blogg-shared-header .feed-share-trigger svg,
+html.blogg-dark-mode .feed-share-trigger.account-share-trigger svg {
+  color: #e0e0e0 !important;
+  stroke: currentColor !important;
+}
+
+html.blogg-dark-mode .blogg-shared-header .feed-share-trigger:hover,
+html.blogg-dark-mode .feed-share-trigger.account-share-trigger:hover {
+  background: #414141 !important;
+  color: #ffffff !important;
+  border-color: #777777 !important;
+}
+
+/* The open Mind Map link has a transparent background and a muted light-mode
+   color. Give it a visible dark control surface and a clear foreground. */
+html.blogg-dark-mode .blogg-main-viewport > div.absolute.inset-0 > button[aria-label="Open Mind Map"],
+html.blogg-dark-mode .blogg-main-viewport button[title="Open Mind Map"] {
+  background: #333333 !important;
+  color: #f0f0f0 !important;
+  border: 1px solid #555555 !important;
+  border-radius: 4px !important;
+  padding: 8px 11px !important;
+  text-decoration: none !important;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 22%) !important;
+}
+
+html.blogg-dark-mode .blogg-main-viewport > div.absolute.inset-0 > button[aria-label="Open Mind Map"]:hover,
+html.blogg-dark-mode .blogg-main-viewport button[title="Open Mind Map"]:hover {
+  background: #414141 !important;
+  color: #ffffff !important;
+  border-color: #777777 !important;
+  text-decoration: underline !important;
+  text-underline-offset: 4px;
+}
+
+/* The feed card's Open full Mind Map action is also readable on its dark card. */
+html.blogg-dark-mode .blog-feed-mindmap-open {
+  background-color: #333333 !important;
+  color: #f0f0f0 !important;
+  border-color: #484848 !important;
+  padding: 9px 10px !important;
+  text-decoration: none !important;
+}
+
+html.blogg-dark-mode .blog-feed-mindmap-open span {
+  color: #d0d0d0 !important;
+}
+
+html.blogg-dark-mode .blog-feed-mindmap-open:hover {
+  background-color: #414141 !important;
+  color: #ffffff !important;
+}
+
+html.blogg-dark-mode .blog-feed-mindmap-open:hover span {
+  color: #ffffff !important;
+}
