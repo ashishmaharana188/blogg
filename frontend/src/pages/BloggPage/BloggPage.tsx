@@ -39,6 +39,17 @@ const BloggPage = () => {
     searchParams.get("view") === "flipbook" ? "flipbook" : searchParams.get("view") === "filesystem" ? "filesystem" : "canvas",
   );
   const [canvasRefreshKey, setCanvasRefreshKey] = useState(0);
+  const [fileExplorerNewNoteKey, setFileExplorerNewNoteKey] = useState(0);
+  const [fileExplorerRouteNote, setFileExplorerRouteNote] = useState<{
+    blogg: BloggItem;
+    initialEditMode: boolean;
+  } | null>(null);
+  const requestExplorerNewNote = useCallback(() => {
+    setFileExplorerNewNoteKey((key) => key + 1);
+  }, []);
+  const clearExplorerRouteNote = useCallback(() => {
+    setFileExplorerRouteNote(null);
+  }, []);
   const [isMindMapOpen, setIsMindMapOpen] = useState(
     () => searchParams.get("view") === "mindmap",
   );
@@ -185,6 +196,13 @@ const BloggPage = () => {
       setSearchParams(next, { replace: true });
       return;
     }
+    if (searchParams.get("view") === "filesystem") {
+      requestExplorerNewNote();
+      const next = new URLSearchParams(searchParams);
+      next.delete("newNote");
+      setSearchParams(next, { replace: true });
+      return;
+    }
     setActiveForm({
       isOpen: true,
       stackId: null,
@@ -195,7 +213,7 @@ const BloggPage = () => {
     const next = new URLSearchParams(searchParams);
     next.delete("newNote");
     setSearchParams(next, { replace: true });
-  }, [isAdmin, searchParams, setSearchParams]);
+  }, [isAdmin, requestExplorerNewNote, searchParams, setSearchParams]);
 
   // Reuse the Folder/Canvas BlockNote form for both readable view and direct
   // editing. Edit mode is enabled only for an authenticated administrator.
@@ -219,18 +237,29 @@ const BloggPage = () => {
           return;
         }
 
-        setViewMode("canvas");
-        setActiveForm({
-          isOpen: true,
-          stackId: note.stack_id ?? null,
-          groupId: note.group_id ?? null,
-          selectedBlogg: note as BloggItem,
-          initialEditMode: openInEditMode,
-        });
+        if (searchParams.get("returnTo") === "filesystem") {
+          setViewMode("filesystem");
+          setFileExplorerRouteNote({
+            blogg: note as BloggItem,
+            initialEditMode: openInEditMode,
+          });
+        } else {
+          setViewMode("canvas");
+          setActiveForm({
+            isOpen: true,
+            stackId: note.stack_id ?? null,
+            groupId: note.group_id ?? null,
+            selectedBlogg: note as BloggItem,
+            initialEditMode: openInEditMode,
+          });
+        }
 
         const next = new URLSearchParams(searchParams);
         next.delete("readNote");
         next.delete("editNote");
+        if (searchParams.get("returnTo") === "filesystem") {
+          next.set("view", "filesystem");
+        }
         setSearchParams(next, { replace: true });
       } catch (error) {
         console.error("Could not open note in BlockNote view:", error);
@@ -242,10 +271,37 @@ const BloggPage = () => {
     return () => { cancelled = true; };
   }, [authLoading, isAdmin, searchParams, setSearchParams]);
 
+  useEffect(() => {
+    const selectedNoteId = searchParams.get("selectedNoteId");
+    if (searchParams.get("view") !== "filesystem" || !selectedNoteId) return;
+    let cancelled = false;
+    const restoreSelectedExplorerNote = async () => {
+      try {
+        const note = await fetchBloggByIdRequest({ blogg_id: selectedNoteId });
+        if (cancelled || !note) return;
+        setFileExplorerRouteNote({
+          blogg: note as BloggItem,
+          initialEditMode: false,
+        });
+      } catch (error) {
+        console.error("Could not restore the selected File Explorer note:", error);
+      } finally {
+        if (!cancelled) {
+          const next = new URLSearchParams(searchParams);
+          next.delete("selectedNoteId");
+          setSearchParams(next, { replace: true });
+        }
+      }
+    };
+    void restoreSelectedExplorerNote();
+    return () => { cancelled = true; };
+  }, [searchParams, setSearchParams]);
+
   const handleOpenFormFromCanvas = async (
     stackId: string,
     groupId: string,
     blogg?: BloggSummary,
+    editForAdmin = false,
   ) => {
     if (!blogg) {
       if (!isAdmin) return;
@@ -266,7 +322,9 @@ const BloggPage = () => {
       stackId: fullBlogg.stack_id,
       groupId: fullBlogg.group_id,
       selectedBlogg: fullBlogg,
-      initialEditMode: false,
+      // The filesystem view opens saved notes in edit mode only for admins.
+      // Public visitors remain in the read-only form.
+      initialEditMode: editForAdmin && isAdmin,
     });
   };
 
@@ -310,7 +368,7 @@ const BloggPage = () => {
         isFormOpen={Boolean(activeForm.isOpen)}
         onToggleViewMode={toggleViewMode}
         onToggleFileExplorer={toggleFileExplorer}
-        onNewNote={toggleNote}
+        onNewNote={viewMode === "filesystem" && !activeForm.isOpen ? requestExplorerNewNote : toggleNote}
       />
 
       <div
@@ -362,10 +420,11 @@ const BloggPage = () => {
             <BloggFileExplorer
               key={canvasRefreshKey}
               canEdit={isAdmin}
-              onNewNote={toggleNote}
-              onOpenNote={(blogg) => {
-                void handleOpenFormFromCanvas(blogg.stack_id, blogg.group_id, blogg);
-              }}
+              onNewNote={requestExplorerNewNote}
+              newNoteRequestKey={fileExplorerNewNoteKey}
+              initialBlogg={fileExplorerRouteNote?.blogg ?? null}
+              initialEditMode={fileExplorerRouteNote?.initialEditMode ?? false}
+              onExternalNoteHandled={clearExplorerRouteNote}
             />
           </div>
         ) : (

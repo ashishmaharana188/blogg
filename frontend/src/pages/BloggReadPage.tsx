@@ -131,22 +131,33 @@ export default function BloggReadPage() {
     };
   }, []);
 
-  const returnToFlipbook = searchParams.get("returnTo") === "flipbook";
+  const returnContext = searchParams.get("returnTo") || "";
+  const returnToFlipbook = returnContext === "flipbook";
+  const returnToFileExplorer = returnContext === "filesystem";
+  const returnToFolderView = returnContext === "folder" || returnContext === "canvas";
   const requestedExcerpt = searchParams.get("excerpt")?.trim() || "";
   const returnHref = useMemo(() => {
-    if (!returnToFlipbook) return "/feed";
-    const params = new URLSearchParams({ view: "flipbook" });
-    const stackId = searchParams.get("stackId");
-    const groupId = searchParams.get("groupId");
-    if (stackId) params.set("stackId", stackId);
-    if (groupId) params.set("groupId", groupId);
-    return `/blog?${params.toString()}`;
-  }, [returnToFlipbook, searchParams]);
+    if (returnToFlipbook) {
+      const params = new URLSearchParams({ view: "flipbook" });
+      const stackId = searchParams.get("stackId");
+      const groupId = searchParams.get("groupId");
+      if (stackId) params.set("stackId", stackId);
+      if (groupId) params.set("groupId", groupId);
+      return `/blog?${params.toString()}`;
+    }
+    if (returnToFileExplorer) {
+      const params = new URLSearchParams({ view: "filesystem" });
+      if (bloggId) params.set("selectedNoteId", bloggId);
+      return `/blog?${params.toString()}`;
+    }
+    if (returnToFolderView) return "/blog";
+    return "/feed";
+  }, [returnToFlipbook, returnToFileExplorer, returnToFolderView, searchParams, bloggId]);
 
   const buildBlockNoteUrl = (action: "readNote" | "editNote") => {
     const params = new URLSearchParams({ [action]: bloggId });
-    if (returnToFlipbook) {
-      params.set("returnTo", "flipbook");
+    if (returnContext) {
+      params.set("returnTo", returnContext);
       const stackId = searchParams.get("stackId");
       const groupId = searchParams.get("groupId");
       if (stackId) params.set("stackId", stackId);
@@ -288,6 +299,18 @@ export default function BloggReadPage() {
     setFootnotesOpen(true);
   };
 
+  const backLabel = returnToFlipbook
+    ? "Back to Flipbook"
+    : returnToFileExplorer
+      ? "Back to File Explorer"
+      : returnToFolderView
+        ? "Back to Folder View"
+        : "Back to feed";
+
+  const breadcrumbHref = returnToFlipbook || returnToFileExplorer
+    ? returnHref
+    : "/blog";
+
   return (
     <div
       className={`blogg-reader-page${readerBackgroundEnabled ? " has-reader-background" : ""}`}
@@ -310,7 +333,7 @@ export default function BloggReadPage() {
           <div className="blogg-reader-state" role="status">
             <h1>Note not found</h1>
             <p>This link may be invalid or the note may have been removed.</p>
-            <Link to="/feed">Back to Blog Feed</Link>
+            <Link to={returnHref}>{backLabel}</Link>
           </div>
         ) : (
           <article className="blogg-reader-card">
@@ -320,7 +343,7 @@ export default function BloggReadPage() {
                   {blogg.author?.trim() || "Unknown author"}
                 </p>
                 <p className="blogg-reader-breadcrumb">
-                  <Link to="/blog">
+                  <Link to={breadcrumbHref}>
                     {stack?.stack_name || "Unsorted stack"}
                   </Link>
                   <span aria-hidden="true">›</span>
@@ -379,9 +402,7 @@ export default function BloggReadPage() {
               </div>
             )}
             <footer className="blogg-reader-actions">
-              <Link to={returnHref}>
-                {returnToFlipbook ? "Back to Flipbook" : "Back to feed"}
-              </Link>
+              <Link to={returnHref}>{backLabel}</Link>
               <Link to={buildBlockNoteUrl("readNote")}>Open in Note View</Link>
               {isAdmin && (
                 <Link to={buildBlockNoteUrl("editNote")}>
@@ -481,7 +502,7 @@ export default function BloggReadPage() {
                         )}
                         <blockquote>{reference.target_excerpt}</blockquote>
                         <Link
-                          to={`/read/${encodeURIComponent(reference.target_blogg_id)}?excerpt=${encodeURIComponent(reference.target_excerpt)}`}
+                          to={`/read/${encodeURIComponent(reference.target_blogg_id)}?excerpt=${encodeURIComponent(reference.target_excerpt)}${returnContext ? `&returnTo=${encodeURIComponent(returnContext)}` : ""}${searchParams.get("stackId") ? `&stackId=${encodeURIComponent(searchParams.get("stackId") || "")}` : ""}${searchParams.get("groupId") ? `&groupId=${encodeURIComponent(searchParams.get("groupId") || "")}` : ""}`}
                           onClick={() => setFootnotesOpen(false)}
                           className="blogg-footnote-open-target"
                         >

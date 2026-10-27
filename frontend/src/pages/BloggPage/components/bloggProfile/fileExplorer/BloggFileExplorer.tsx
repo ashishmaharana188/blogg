@@ -4,8 +4,11 @@ import {
   createGroup,
   createStack,
   fetchBloggByGroupRequest,
+  fetchBloggByIdRequest,
   fetchStackAndGroup,
 } from "../../../services/canvasViewService";
+import BloggPageContainer from "../../bloggForm/bloggPageContainer";
+import type { BloggItem } from "../../../../../types/pageTypes";
 import "./bloggFileExplorer.css";
 
 type Stack = { stack_id: string; stack_name: string };
@@ -21,7 +24,10 @@ type NoteRow = Partial<BloggSummary> & {
 type Props = {
   canEdit: boolean;
   onNewNote: () => void;
-  onOpenNote: (blogg: BloggSummary) => void;
+  newNoteRequestKey?: number;
+  initialBlogg?: BloggItem | null;
+  initialEditMode?: boolean;
+  onExternalNoteHandled?: () => void;
 };
 
 function Chevron({ open }: { open: boolean }) {
@@ -68,7 +74,14 @@ function ToolbarIcon({ kind }: { kind: "note" | "folder" | "sort" | "collapse" }
   );
 }
 
-export default function BloggFileExplorer({ canEdit, onNewNote, onOpenNote }: Props) {
+export default function BloggFileExplorer({
+  canEdit,
+  onNewNote,
+  newNoteRequestKey = 0,
+  initialBlogg = null,
+  initialEditMode = false,
+  onExternalNoteHandled,
+}: Props) {
   const [stacks, setStacks] = useState<Stack[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [expandedStacks, setExpandedStacks] = useState<Record<string, boolean>>({});
@@ -82,6 +95,82 @@ export default function BloggFileExplorer({ canEdit, onNewNote, onOpenNote }: Pr
   const [selectedStackId, setSelectedStackId] = useState("");
   const [selectedGroupId, setSelectedGroupId] = useState("");
   const [selectedNoteId, setSelectedNoteId] = useState("");
+  const [selectedBlogg, setSelectedBlogg] = useState<BloggItem | null>(null);
+  const [selectedEditMode, setSelectedEditMode] = useState(false);
+  const [isBlankNoteOpen, setIsBlankNoteOpen] = useState(false);
+  const [selectedNoteLoading, setSelectedNoteLoading] = useState(false);
+  const [selectedNoteError, setSelectedNoteError] = useState("");
+
+  useEffect(() => {
+    if (!initialBlogg) return;
+    setSelectedBlogg(initialBlogg);
+    setSelectedEditMode(Boolean(canEdit && initialEditMode));
+    setIsBlankNoteOpen(false);
+    setSelectedNoteId(String(initialBlogg.blogg_id || initialBlogg._id || ""));
+    if (initialBlogg.stack_id) {
+      setSelectedStackId(initialBlogg.stack_id);
+      setExpandedStacks((current) => ({ ...current, [initialBlogg.stack_id]: true }));
+    }
+    if (initialBlogg.group_id) {
+      setSelectedGroupId(initialBlogg.group_id);
+      setExpandedGroups((current) => ({ ...current, [initialBlogg.group_id]: true }));
+    }
+    onExternalNoteHandled?.();
+  }, [initialBlogg, initialEditMode, canEdit, onExternalNoteHandled]);
+
+  useEffect(() => {
+    if (newNoteRequestKey <= 0) return;
+    setSelectedBlogg(null);
+    setSelectedEditMode(canEdit);
+    setIsBlankNoteOpen(true);
+    setSelectedNoteLoading(false);
+    setSelectedNoteError("");
+  }, [newNoteRequestKey, canEdit]);
+
+  const openNoteInWorkspace = useCallback(async (
+    noteId: string,
+    stackId: string,
+    groupId: string,
+    editMode = canEdit,
+  ) => {
+    if (!noteId) return;
+    setSelectedNoteLoading(true);
+    setSelectedNoteError("");
+    setSelectedBlogg(null);
+    setIsBlankNoteOpen(false);
+    try {
+      const note = await fetchBloggByIdRequest({ blogg_id: noteId });
+      if (!note) {
+        setSelectedNoteError("This note could not be found or is private.");
+        return;
+      }
+      const fullNote = {
+        ...note,
+        blogg_id: String(note.blogg_id || note._id || noteId),
+        stack_id: String(note.stack_id || stackId),
+        group_id: String(note.group_id || groupId),
+        title: note.title || "Untitled note",
+      } as BloggItem;
+      setSelectedBlogg(fullNote);
+      setSelectedEditMode(Boolean(canEdit && editMode));
+      setIsBlankNoteOpen(false);
+      setSelectedStackId(fullNote.stack_id);
+      setSelectedGroupId(fullNote.group_id);
+    } catch (error) {
+      console.error("Could not open note in File Explorer workspace:", error);
+      setSelectedNoteError(error instanceof Error ? error.message : "Could not open this note.");
+    } finally {
+      setSelectedNoteLoading(false);
+    }
+  }, [canEdit]);
+
+  const closeWorkspaceNote = useCallback(() => {
+    setSelectedBlogg(null);
+    setSelectedEditMode(false);
+    setIsBlankNoteOpen(false);
+    setSelectedNoteLoading(false);
+    setSelectedNoteError("");
+  }, []);
 
   const reloadTree = useCallback(async () => {
     setLoading(true);
@@ -287,13 +376,12 @@ export default function BloggFileExplorer({ canEdit, onNewNote, onOpenNote }: Pr
                                         title={note.title || "Untitled note"}
                                         onClick={() => {
                                           setSelectedNoteId(noteId);
-                                          onOpenNote({
-                                            ...note,
-                                            blogg_id: String(note.blogg_id || note._id || ""),
-                                            stack_id: String(note.stack_id || stack.stack_id),
-                                            group_id: String(note.group_id || group.group_id),
-                                            title: note.title || "Untitled note",
-                                          } as BloggSummary);
+                                          void openNoteInWorkspace(
+                                            noteId,
+                                            String(note.stack_id || stack.stack_id),
+                                            String(note.group_id || group.group_id),
+                                            canEdit,
+                                          );
                                         }}
                                       >
                                         <span className="bfe-file-spacer" aria-hidden="true" />
@@ -316,7 +404,50 @@ export default function BloggFileExplorer({ canEdit, onNewNote, onOpenNote }: Pr
           )}
         </div>
       </aside>
-      <main className="bfe-workspace" aria-label="File workspace" />
+      <main className={`bfe-workspace${selectedBlogg || isBlankNoteOpen ? " has-note" : ""}`} aria-label="File workspace">
+        {selectedNoteLoading ? (
+          <div className="bfe-workspace-state" role="status">Opening note…</div>
+        ) : selectedNoteError ? (
+          <div className="bfe-workspace-state" role="status">
+            <span>{selectedNoteError}</span>
+            <button type="button" onClick={closeWorkspaceNote}>Back to files</button>
+          </div>
+        ) : selectedBlogg || isBlankNoteOpen ? (
+          <div className="bfe-note-pane">
+            <div className="bfe-note-pane-toolbar">
+              <span className="bfe-note-pane-title">
+                {selectedBlogg?.title || "New note"}
+              </span>
+              <button
+                type="button"
+                className="bfe-note-pane-close"
+                onClick={closeWorkspaceNote}
+                aria-label="Close note and return to files"
+                title="Back to File Explorer"
+              >
+                ×
+              </button>
+            </div>
+            <div className="bfe-note-form">
+              <BloggPageContainer
+                key={String(selectedBlogg?.blogg_id || selectedBlogg?._id || "new-file-explorer-note")}
+                stackId={selectedBlogg?.stack_id || selectedStackId || null}
+                groupId={selectedBlogg?.group_id || selectedGroupId || null}
+                selectedBlogg={selectedBlogg}
+                initialEditMode={Boolean(canEdit && selectedEditMode)}
+                canEdit={canEdit}
+                onSaved={closeWorkspaceNote}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="bfe-workspace-empty">
+            <span className="bfe-workspace-empty-mark" aria-hidden="true">↖</span>
+            <p>Select a note to open it here</p>
+            {canEdit && <span>New notes open in this workspace too.</span>}
+          </div>
+        )}
+      </main>
     </div>
   );
 }
