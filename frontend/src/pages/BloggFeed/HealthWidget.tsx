@@ -413,6 +413,17 @@ export default function HealthWidget() {
     );
   const hasRecords =
     hasHealthRecords || hasExerciseRecords || selectedMetrics.includes("sleep");
+
+  // Keep the loading artwork in the widget rail without drawing the Health card
+  // around it. The full card replaces this placeholder after the first load.
+  if (!loaded) {
+    return (
+      <div className="blog-feed-widget-loading-slot blog-feed-health-loading-slot">
+        <AssetStateBox status="loading" compact />
+      </div>
+    );
+  }
+
   //const totalSessionCount =
   //  allExerciseAggregates?.history?.sessionCount ??
   //  finiteNumber(exerciseData?.sessionCount) ??
@@ -433,9 +444,7 @@ export default function HealthWidget() {
         </span>
       </div>
 
-      {!loaded ? (
-        <AssetStateBox status="loading" compact />
-      ) : !hasRecords &&
+      {!hasRecords &&
         (loadFailed ||
           exerciseFailed ||
           (sleepFailed && selectedMetrics.includes("sleep"))) ? (
