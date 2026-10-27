@@ -1421,3 +1421,42 @@ html.blogg-dark-mode .blog-feed-mindmap-open:hover {
 html.blogg-dark-mode .blog-feed-mindmap-open:hover span {
   color: #ffffff !important;
 }
+
+
+/* Tag chips: the global dark-mode button rule was painting the small × button
+   as a separate dark rectangle. Keep the remove control transparent so the
+   tag's own pastel background remains continuous. */
+html.blogg-dark-mode .blogg-editor-tags-list > div > button {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: 0 !important;
+  border-color: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  color: inherit !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+  text-shadow: none !important;
+}
+
+html.blogg-dark-mode .blogg-editor-tags-list > div > button:hover:not(:disabled) {
+  background: transparent !important;
+  background-color: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  color: inherit !important;
+  opacity: 1 !important;
+}
+
+html.blogg-dark-mode .blogg-editor-tags-list > div > button:focus-visible {
+  background: transparent !important;
+  background-color: transparent !important;
+  outline: 1px solid currentColor !important;
+  outline-offset: 2px !important;
+  box-shadow: none !important;
+}
