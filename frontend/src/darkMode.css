@@ -1,20 +1,20 @@
 /*
- * Blogg warm-charcoal night mode.
- * Base: #403826 with warm off-white text and restrained sepia-gold accents.
+ * Blogg Obsidian-style dark mode, matched to the supplied screenshot.
+ * Main canvas/text: #1c1c1c / #dadada. Sidebar: #282828. Toolbar: #333333.
  * The class is applied to <html>; the user's preference is saved locally.
  */
 html.blogg-dark-mode {
   color-scheme: dark;
-  --blogg-night-bg: #403826;
-  --blogg-night-surface: #49402f;
-  --blogg-night-surface-raised: #514735;
-  --blogg-night-surface-hover: #5a4d39;
-  --blogg-night-border: #74664e;
-  --blogg-night-text: #fbf8f1;
-  --blogg-night-muted: #d6cbb6;
-  --blogg-night-subtle: #bcae93;
-  --blogg-night-accent: #e2ca8e;
-  --blogg-night-accent-hover: #f0dba7;
+  --blogg-night-bg: #1c1c1c;
+  --blogg-night-surface: #282828;
+  --blogg-night-surface-raised: #333333;
+  --blogg-night-surface-hover: #363636;
+  --blogg-night-border: #363636;
+  --blogg-night-text: #dadada;
+  --blogg-night-muted: #b5b5b5;
+  --blogg-night-subtle: #8a8a8a;
+  --blogg-night-accent: #bdbdbd;
+  --blogg-night-accent-hover: #dedede;
   --blogg-night-danger: #f0aaa0;
   background: var(--blogg-night-bg);
   color: var(--blogg-night-text);
@@ -199,14 +199,14 @@ html.blogg-dark-mode :is(
   .blog-feed-health-sleep,
   .blog-feed-health-run
 ) {
-  border-color: rgb(226 202 142 / 24%) !important;
+  border-color: var(--blogg-night-border) !important;
 }
 
 html.blogg-dark-mode .blog-feed-tag,
 html.blogg-dark-mode .blogg-reader-tags span {
-  background-color: #5a4d39 !important;
-  color: #fbf5e8 !important;
-  border-color: #82704e !important;
+  background-color: #363636 !important;
+  color: #dadada !important;
+  border-color: #4a4a4a !important;
 }
 
 html.blogg-dark-mode .blog-feed-now-playing-artwork-frame {
@@ -264,7 +264,7 @@ html.blogg-dark-mode :is(
   .blogg-reader-content,
   .blogg-reader-actions
 ) {
-  border-color: rgb(226 202 142 / 24%) !important;
+  border-color: var(--blogg-night-border) !important;
 }
 
 html.blogg-dark-mode .blogg-reader-body,
@@ -300,7 +300,7 @@ html.blogg-dark-mode :is(
   .showcase-link-actions,
   .account-dashboard-status
 ) {
-  border-color: rgb(226 202 142 / 24%) !important;
+  border-color: var(--blogg-night-border) !important;
 }
 
 html.blogg-dark-mode :is(
@@ -341,7 +341,7 @@ html.blogg-dark-mode :is(
   .current-reading-search-form input,
   .current-reading-admin input
 ) {
-  background-color: #393123 !important;
+  background-color: #222222 !important;
   color: var(--blogg-night-text) !important;
   border-color: var(--blogg-night-border) !important;
 }
@@ -360,10 +360,10 @@ html.blogg-dark-mode .account-primary-link,
 html.blogg-dark-mode .showcase-add-link-row button {
   background-color: var(--blogg-night-accent) !important;
   border-color: var(--blogg-night-accent) !important;
-  color: #292316 !important;
+  color: #1c1c1c !important;
 }
 
-/* Warm the existing File Explorer dark layout to match this palette. */
+/* Match the File Explorer layout to the screenshot palette. */
 html.blogg-dark-mode .blogg-filesystem-view {
   background: var(--blogg-night-bg) !important;
   color: var(--blogg-night-text) !important;
@@ -381,12 +381,12 @@ html.blogg-dark-mode :is(
 }
 
 html.blogg-dark-mode .bfe-sidebar {
-  background: #352f23 !important;
+  background: #282828 !important;
   border-color: var(--blogg-night-border) !important;
 }
 
 html.blogg-dark-mode :is(.bfe-toolbar, .bfe-note-pane-toolbar) {
-  background: #393123 !important;
+  background: #333333 !important;
   border-color: var(--blogg-night-border) !important;
   color: var(--blogg-night-text) !important;
 }
@@ -456,7 +456,7 @@ html.blogg-dark-mode :is(
   .blogg-editor-form textarea,
   .blogg-editor-form select
 ) {
-  background-color: #393123 !important;
+  background-color: #222222 !important;
   border-color: var(--blogg-night-border) !important;
 }
 
@@ -504,10 +504,10 @@ html.blogg-dark-mode .blog-feed-widget-loading-slot {
   gap: 8px;
   min-height: 38px;
   padding: 8px 13px;
-  border: 1px solid #867656;
+  border: 1px solid #555555;
   border-radius: 999px;
-  background: #403826;
-  color: #fbf8f1;
+  background: #1c1c1c;
+  color: #dadada;
   box-shadow: 0 4px 16px rgb(0 0 0 / 20%);
   font: 600 12px/1.2 "Courier New", Courier, monospace;
   cursor: pointer;
@@ -515,12 +515,12 @@ html.blogg-dark-mode .blog-feed-widget-loading-slot {
 }
 
 .blogg-theme-toggle:hover {
-  background: #514735;
+  background: #333333;
   box-shadow: 0 5px 18px rgb(0 0 0 / 25%);
 }
 
 .blogg-theme-toggle:focus-visible {
-  outline: 2px solid #d9c38e;
+  outline: 2px solid #dadada;
   outline-offset: 3px;
 }
 
@@ -545,28 +545,27 @@ html.blogg-dark-mode .blog-feed-widget-loading-slot {
 }
 
 
-/* Complete Obsidian-inspired surface system: fields, menus, dialogs, tables,
-   editors, metadata and empty/error states all use the same warm night palette. */
+/* Obsidian-style monochrome tokens for surfaces, controls, and typography. */
 html.blogg-dark-mode {
-  --background-primary: #403826;
-  --background-primary-alt: #49402f;
-  --background-secondary: #352f23;
-  --background-secondary-alt: #302a20;
-  --background-modifier-border: #74664e;
-  --background-modifier-hover: #5a4d39;
-  --background-modifier-active-hover: #64563f;
-  --background-modifier-form-field: #302a20;
-  --interactive-normal: #514735;
-  --interactive-hover: #62543c;
-  --interactive-accent: #d4bd82;
-  --interactive-accent-hover: #e6d19b;
-  --text-normal: #fbf8f1;
-  --text-muted: #d6cbb6;
-  --text-faint: #bcae93;
-  --text-on-accent: #292316;
+  --background-primary: #1c1c1c;
+  --background-primary-alt: #222222;
+  --background-secondary: #282828;
+  --background-secondary-alt: #333333;
+  --background-modifier-border: #363636;
+  --background-modifier-hover: #333333;
+  --background-modifier-active-hover: #363636;
+  --background-modifier-form-field: #222222;
+  --interactive-normal: #333333;
+  --interactive-hover: #3a3a3a;
+  --interactive-accent: #bdbdbd;
+  --interactive-accent-hover: #dedede;
+  --text-normal: #dadada;
+  --text-muted: #b5b5b5;
+  --text-faint: #8a8a8a;
+  --text-on-accent: #1c1c1c;
   --text-error: #f0aaa0;
   --text-success: #b9d8ad;
-  --scrollbar-thumb-bg: #75664d;
+  --scrollbar-thumb-bg: #4a4a4a;
 }
 
 /* App-wide page backgrounds and card/container defaults. */
@@ -613,10 +612,10 @@ html.blogg-dark-mode :is(
   .showcase-add-link-row input, .health-import-form input,
   .health-import-form select, .health-import-form textarea
 ) {
-  background-color: #302a20 !important;
-  color: #fbf8f1 !important;
-  border-color: #74664e !important;
-  caret-color: #f0dba7 !important;
+  background-color: #222222 !important;
+  color: #dadada !important;
+  border-color: #363636 !important;
+  caret-color: #dedede !important;
   color-scheme: dark;
   box-shadow: none;
 }
@@ -627,20 +626,20 @@ html.blogg-dark-mode :is(input, textarea, select, button):disabled {
 }
 
 html.blogg-dark-mode :is(input, textarea, select, button):focus-visible {
-  outline: 2px solid #d4bd82 !important;
+  outline: 2px solid #bdbdbd !important;
   outline-offset: 2px;
-  border-color: #d4bd82 !important;
+  border-color: #bdbdbd !important;
 }
 
 html.blogg-dark-mode :is(input, textarea)::placeholder {
-  color: #bcae93 !important;
+  color: #8a8a8a !important;
   opacity: 1;
 }
 
 html.blogg-dark-mode input[type="checkbox"],
 html.blogg-dark-mode input[type="radio"],
 html.blogg-dark-mode input[type="range"] {
-  accent-color: #d4bd82;
+  accent-color: #bdbdbd;
 }
 
 /* Buttons: neutral controls become dark surfaces; high-emphasis buttons use gold. */
@@ -656,9 +655,9 @@ html.blogg-dark-mode :is(
   .blogg-ref-open-note-button, .blogg-link-preview-open,
   .account-primary-link, .showcase-add-link-row button
 ) {
-  background-color: #d4bd82 !important;
-  color: #292316 !important;
-  border-color: #d4bd82 !important;
+  background-color: #bdbdbd !important;
+  color: #1c1c1c !important;
+  border-color: #bdbdbd !important;
 }
 
 html.blogg-dark-mode :is(
@@ -669,8 +668,8 @@ html.blogg-dark-mode :is(
   .blog-feed-state button, .blogg-reader-state button,
   .account-primary-link, .showcase-add-link-row button
 ):hover:not(:disabled) {
-  background-color: #e6d19b !important;
-  color: #292316 !important;
+  background-color: #dedede !important;
+  color: #1c1c1c !important;
 }
 
 html.blogg-dark-mode :is(
@@ -681,9 +680,9 @@ html.blogg-dark-mode :is(
   .account-showcase-section button, .health-admin-panel button,
   .newsletter-admin-panel button, .blog-feed-newsletter-card button
 ):not(.blogg-theme-toggle):not(.auth-submit):not(.blogg-ref-save-button):not(.blogg-editor-top-action):not(.flipbook-controls button):not(.flipbook-mode-actions button):not(.account-primary-link):not(.showcase-add-link-row button) {
-  background-color: #514735;
-  color: #fbf8f1;
-  border-color: #74664e;
+  background-color: #333333;
+  color: #dadada;
+  border-color: #363636;
 }
 
 /* Menus, popovers, tooltips, portals and floating windows. */
@@ -699,9 +698,9 @@ html.blogg-dark-mode :is(
   .showcase-outline-button + div, .health-metric-settings,
   .health-metric-settings-body, .health-metric-settings-footer
 ) {
-  background-color: #393123 !important;
-  color: #fbf8f1 !important;
-  border-color: #74664e !important;
+  background-color: #222222 !important;
+  color: #dadada !important;
+  border-color: #363636 !important;
   box-shadow: 0 8px 28px rgb(0 0 0 / 30%);
 }
 
@@ -722,8 +721,8 @@ html.blogg-dark-mode :is(
   .bn-side-menu button:hover,
   .bn-formatting-toolbar button:hover
 ) {
-  background-color: #5a4d39 !important;
-  color: #fffaf0 !important;
+  background-color: #363636 !important;
+  color: #e5e5e5 !important;
 }
 
 /* Text legibility across captions, helper copy, labels, metadata and statuses. */
@@ -746,7 +745,7 @@ html.blogg-dark-mode :is(
   .account-description, .account-message, .account-footnote,
   .showcase-empty, .showcase-admin-hint
 ) {
-  color: #d6cbb6 !important;
+  color: #b5b5b5 !important;
 }
 
 html.blogg-dark-mode :is(
@@ -762,41 +761,41 @@ html.blogg-dark-mode :is(
   .blog-feed-newsletter-heading, .blog-feed-mindmap-heading,
   .account-status-title, .account-page h1, .account-page h2
 ) {
-  color: #fbf8f1 !important;
+  color: #dadada !important;
 }
 
 /* Tables, separators, code blocks, quotes and rich note content. */
 html.blogg-dark-mode :is(table, thead, tbody, tfoot, tr, th, td) {
-  color: #fbf8f1;
-  border-color: #74664e !important;
+  color: #dadada;
+  border-color: #363636 !important;
 }
 
 html.blogg-dark-mode th {
-  background-color: #49402f !important;
+  background-color: #282828 !important;
 }
 
 html.blogg-dark-mode :is(pre, code, kbd, samp) {
-  background-color: #302a20 !important;
-  color: #f2e4c4 !important;
-  border-color: #74664e !important;
+  background-color: #222222 !important;
+  color: #dadada !important;
+  border-color: #363636 !important;
 }
 
 html.blogg-dark-mode blockquote {
-  border-left-color: #c9b47d !important;
-  color: #e7decd !important;
+  border-left-color: #bdbdbd !important;
+  color: #dadada !important;
 }
 
 html.blogg-dark-mode hr,
 html.blogg-dark-mode :is(.border-t, .border-b, .border-l, .border-r) {
-  border-color: rgb(226 202 142 / 24%) !important;
+  border-color: var(--blogg-night-border) !important;
 }
 
 html.blogg-dark-mode a {
-  color: #e2ca8e;
+  color: #bdbdbd;
 }
 
 html.blogg-dark-mode a:hover {
-  color: #f0dba7;
+  color: #dedede;
 }
 
 /* BlockNote may define color/background directly on nested blocks and menus. */
@@ -805,31 +804,31 @@ html.blogg-dark-mode :is(
   .bn-block-content, .bn-block-outer, .bn-inline-content,
   .bn-table-cell, .bn-table-header, .bn-block-group
 ) {
-  color: #fbf8f1;
-  --bn-colors-editor-text: #fbf8f1;
+  color: #dadada;
+  --bn-colors-editor-text: #dadada;
 }
 
 html.blogg-dark-mode .bn-editor [contenteditable="true"]::selection,
 html.blogg-dark-mode .bn-editor ::selection {
-  background: rgb(212 189 130 / 32%);
+  background: rgb(218 218 218 / 24%);
 }
 
 /* Scrollbars blend into the dark workspace instead of retaining bright tracks. */
 html.blogg-dark-mode * {
-  scrollbar-color: #75664d #352f23;
+  scrollbar-color: #4a4a4a #282828;
 }
 
 html.blogg-dark-mode *::-webkit-scrollbar-track {
-  background: #352f23;
+  background: #282828;
 }
 
 html.blogg-dark-mode *::-webkit-scrollbar-thumb {
-  background: #75664d;
-  border-color: #352f23;
+  background: #4a4a4a;
+  border-color: #282828;
 }
 
 html.blogg-dark-mode .blogg-filesystem-view .bfe-tree-scroll {
-  scrollbar-color: #75664d transparent;
+  scrollbar-color: #4a4a4a transparent;
 }
 
 /* Alert/error and success panels remain distinguishable without bright white cards. */
@@ -843,4 +842,41 @@ html.blogg-dark-mode :is(.is-success, .health-feedback.is-success) {
   background-color: #2d3b2b !important;
   color: #d8f0cd !important;
   border-color: #526c48 !important;
+}
+
+
+/* Final palette guard: neutralize leftover utility classes in all app surfaces. */
+html.blogg-dark-mode :is(
+  .text-white, .text-slate-50, .text-gray-50, .text-zinc-50, .text-neutral-50,
+  .text-slate-100, .text-gray-100, .text-zinc-100, .text-neutral-100
+) {
+  color: #dadada !important;
+}
+
+html.blogg-dark-mode :is(
+  .bg-black, .bg-gray-950, .bg-slate-950, .bg-zinc-950, .bg-neutral-950,
+  .bg-gray-900, .bg-slate-900, .bg-zinc-900, .bg-neutral-900
+) {
+  background-color: #282828 !important;
+}
+
+html.blogg-dark-mode :is(
+  .bg-gray-800, .bg-slate-800, .bg-zinc-800, .bg-neutral-800
+) {
+  background-color: #333333 !important;
+}
+
+html.blogg-dark-mode :is(
+  .border-gray-700, .border-slate-700, .border-zinc-700, .border-neutral-700,
+  .border-gray-800, .border-slate-800, .border-zinc-800, .border-neutral-800,
+  .border-gray-900, .border-slate-900, .border-zinc-900, .border-neutral-900
+) {
+  border-color: #363636 !important;
+}
+
+html.blogg-dark-mode :is(
+  input, textarea, select, [contenteditable="true"]
+) {
+  color: #dadada;
+  caret-color: #dadada;
 }
