@@ -487,3 +487,81 @@
     flex-basis: 34px;
   }
 }
+
+
+/* A note has its own open target and a separate admin-only delete control. */
+.bfe-note-row {
+  gap: 3px;
+  padding: 0 2px 0 0;
+}
+
+.bfe-note-open-button {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 6px;
+  width: 0;
+  min-width: 0;
+  height: 100%;
+  padding: 0 3px 0 5px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bfe-note-open-button:focus-visible {
+  outline: 1px solid #777;
+  outline-offset: -1px;
+}
+
+.bfe-note-delete-button {
+  display: inline-flex;
+  flex: 0 0 22px;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: #777;
+  cursor: pointer;
+}
+
+.bfe-note-delete-button svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
+.bfe-note-delete-button:hover:not(:disabled),
+.bfe-note-delete-button:focus-visible {
+  background: #4a2d2d;
+  color: #e5a09b;
+  outline: none;
+}
+
+.bfe-note-delete-button:disabled {
+  opacity: .35;
+  cursor: wait;
+}
+
+.bfe-note-row.is-selected .bfe-note-delete-button {
+  color: #aaa;
+}
+
+.bfe-note-row.is-selected .bfe-note-delete-button:hover:not(:disabled),
+.bfe-note-row.is-selected .bfe-note-delete-button:focus-visible {
+  color: #f0a6a0;
+}
+
+.blogg-filesystem-view.is-sidebar-collapsed .bfe-note-open-button,
+.blogg-filesystem-view.is-sidebar-collapsed .bfe-note-delete-button {
+  display: none;
+}

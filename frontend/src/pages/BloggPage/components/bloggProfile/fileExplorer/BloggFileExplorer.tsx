@@ -3,6 +3,7 @@ import type { BloggSummary } from "../canvasView/bloggCanvasType";
 import {
   createGroup,
   createStack,
+  deleteBloggRequest,
   fetchBloggByGroupRequest,
   fetchBloggByIdRequest,
   fetchStackAndGroup,
@@ -106,6 +107,7 @@ export default function BloggFileExplorer({
   const [isBlankNoteOpen, setIsBlankNoteOpen] = useState(false);
   const [selectedNoteLoading, setSelectedNoteLoading] = useState(false);
   const [selectedNoteError, setSelectedNoteError] = useState("");
+  const [deletingNoteIds, setDeletingNoteIds] = useState<Record<string, boolean>>({});
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const viewportWidth = typeof window === "undefined" ? 1200 : window.innerWidth;
     const maxWidth = Math.max(190, Math.min(700, viewportWidth * 0.72));
@@ -226,6 +228,36 @@ export default function BloggFileExplorer({
     setSelectedNoteLoading(false);
     setSelectedNoteError("");
   }, []);
+
+  const deleteNoteFromExplorer = useCallback(async (noteId: string, groupId: string) => {
+    if (!canEdit || !noteId || deletingNoteIds[noteId]) return;
+    const confirmed = window.confirm("Permanently delete this note? This cannot be undone.");
+    if (!confirmed) return;
+
+    setDeletingNoteIds((current) => ({ ...current, [noteId]: true }));
+    try {
+      await deleteBloggRequest({ blogg_id: noteId });
+      setNotesByGroup((current) => ({
+        ...current,
+        [groupId]: (current[groupId] || []).filter(
+          (note) => String(note.blogg_id || note._id || "") !== noteId,
+        ),
+      }));
+      if (selectedNoteId === noteId) {
+        closeWorkspaceNote();
+        setSelectedNoteId("");
+      }
+    } catch (error) {
+      console.error("Could not delete File Explorer note:", error);
+      window.alert(error instanceof Error ? error.message : "Could not delete note.");
+    } finally {
+      setDeletingNoteIds((current) => {
+        const next = { ...current };
+        delete next[noteId];
+        return next;
+      });
+    }
+  }, [canEdit, closeWorkspaceNote, deletingNoteIds, selectedNoteId]);
 
   const reloadTree = useCallback(async () => {
     setLoading(true);
@@ -455,26 +487,51 @@ export default function BloggFileExplorer({
                                   ) : notes.map((note, index) => {
                                     const noteId = String(note.blogg_id || note._id || `${group.group_id}-${index}`);
                                     return (
-                                      <button
+                                      <div
                                         key={noteId}
-                                        type="button"
                                         role="treeitem"
+                                        aria-selected={selectedNoteId === noteId}
                                         className={`bfe-row bfe-note-row${selectedNoteId === noteId ? " is-selected" : ""}`}
-                                        title={note.title || "Untitled note"}
-                                        onClick={() => {
-                                          setSelectedNoteId(noteId);
-                                          void openNoteInWorkspace(
-                                            noteId,
-                                            String(note.stack_id || stack.stack_id),
-                                            String(note.group_id || group.group_id),
-                                            canEdit,
-                                          );
-                                        }}
                                       >
-                                        <span className="bfe-file-spacer" aria-hidden="true" />
-                                        <NoteIcon />
-                                        <span className="bfe-row-label">{note.title || "Untitled note"}</span>
-                                      </button>
+                                        <button
+                                          type="button"
+                                          className="bfe-note-open-button"
+                                          title={note.title || "Untitled note"}
+                                          onClick={() => {
+                                            setSelectedNoteId(noteId);
+                                            void openNoteInWorkspace(
+                                              noteId,
+                                              String(note.stack_id || stack.stack_id),
+                                              String(note.group_id || group.group_id),
+                                              canEdit,
+                                            );
+                                          }}
+                                        >
+                                          <span className="bfe-file-spacer" aria-hidden="true" />
+                                          <NoteIcon />
+                                          <span className="bfe-row-label">{note.title || "Untitled note"}</span>
+                                        </button>
+                                        {canEdit && (
+                                          <button
+                                            type="button"
+                                            className="bfe-note-delete-button"
+                                            title={deletingNoteIds[noteId] ? "Deleting note…" : "Delete note"}
+                                            aria-label={`Delete note ${note.title || "Untitled note"}`}
+                                            disabled={Boolean(deletingNoteIds[noteId])}
+                                            onClick={(event) => {
+                                              event.stopPropagation();
+                                              void deleteNoteFromExplorer(
+                                                noteId,
+                                                String(note.group_id || group.group_id),
+                                              );
+                                            }}
+                                          >
+                                            <svg viewBox="0 0 20 20" aria-hidden="true">
+                                              <path d="M3.8 5.3h12.4M7.2 5.3V3.5h5.6v1.8m-7.6 0 .7 11.2h8.2l.7-11.2M8.1 8.1v5.7m3.8-5.7v5.7" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+                                            </svg>
+                                          </button>
+                                        )}
+                                      </div>
                                     );
                                   })}
                                 </div>
