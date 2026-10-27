@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import BloggPageContainer from "./components/bloggForm/bloggPageContainer";
 import BlogFlipBookUI from "./components/bloggProfile/flipBook/bloggFlipBookUI";
 import BloggCanvasUI from "./components/bloggProfile/canvasView/bloggCanvasUI";
+import BloggFileExplorer from "./components/bloggProfile/fileExplorer/BloggFileExplorer";
 import BloggMindMap from "./components/bloggProfile/mindMap/BloggMindMap";
 import BloggHeader from "./components/bloggHeader/BloggHeader";
 import type { BloggSummary } from "./components/bloggProfile/canvasView/bloggCanvasType";
@@ -12,7 +13,7 @@ import { useAuth } from "../../context/authContext";
 import "./components/bloggProfile/canvasView/canvasReadOnly.css";
 import "./components/bloggProfile/flipBook/flipBookFilters.css";
 
-type ViewMode = "canvas" | "flipbook";
+type ViewMode = "canvas" | "flipbook" | "filesystem";
 type FlipBookStack = { stack_id: string; stack_name: string };
 type FlipBookGroup = { group_id: string; group_name: string; stack_id: string };
 
@@ -35,7 +36,7 @@ const BloggPage = () => {
     initialEditMode: false,
   });
   const [viewMode, setViewMode] = useState<ViewMode>(
-    searchParams.get("view") === "flipbook" ? "flipbook" : "canvas",
+    searchParams.get("view") === "flipbook" ? "flipbook" : searchParams.get("view") === "filesystem" ? "filesystem" : "canvas",
   );
   const [canvasRefreshKey, setCanvasRefreshKey] = useState(0);
   const [isMindMapOpen, setIsMindMapOpen] = useState(
@@ -100,10 +101,21 @@ const BloggPage = () => {
 
   const toggleViewMode = useCallback(() => {
     closeMindMap();
-    const nextMode: ViewMode = viewMode === "canvas" ? "flipbook" : "canvas";
+    const nextMode: ViewMode = viewMode === "flipbook" ? "canvas" : "flipbook";
     setViewMode(nextMode);
     const next = new URLSearchParams(searchParams);
     if (nextMode === "flipbook") next.set("view", "flipbook");
+    else next.delete("view");
+    next.delete("noteId");
+    setSearchParams(next, { replace: true });
+  }, [closeMindMap, searchParams, setSearchParams, viewMode]);
+
+  const toggleFileExplorer = useCallback(() => {
+    closeMindMap();
+    const nextMode: ViewMode = viewMode === "filesystem" ? "canvas" : "filesystem";
+    setViewMode(nextMode);
+    const next = new URLSearchParams(searchParams);
+    if (nextMode === "filesystem") next.set("view", "filesystem");
     else next.delete("view");
     next.delete("noteId");
     setSearchParams(next, { replace: true });
@@ -297,6 +309,7 @@ const BloggPage = () => {
         viewMode={viewMode}
         isFormOpen={Boolean(activeForm.isOpen)}
         onToggleViewMode={toggleViewMode}
+        onToggleFileExplorer={toggleFileExplorer}
         onNewNote={toggleNote}
       />
 
@@ -343,6 +356,17 @@ const BloggPage = () => {
             >
               <span>Open Mind Map</span>
             </button>
+          </div>
+        ) : viewMode === "filesystem" ? (
+          <div className="absolute inset-0">
+            <BloggFileExplorer
+              key={canvasRefreshKey}
+              canEdit={isAdmin}
+              onNewNote={toggleNote}
+              onOpenNote={(blogg) => {
+                void handleOpenFormFromCanvas(blogg.stack_id, blogg.group_id, blogg);
+              }}
+            />
           </div>
         ) : (
           <div className="flipbook-page-shell">

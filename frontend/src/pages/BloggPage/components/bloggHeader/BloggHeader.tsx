@@ -6,9 +6,10 @@ import FeedShareButton from "../../../../components/FeedShareButton";
 
 type BloggHeaderProps = {
   page: "feed" | "profile";
-  viewMode?: "canvas" | "flipbook";
+  viewMode?: "canvas" | "flipbook" | "filesystem";
   isFormOpen?: boolean;
   onToggleViewMode?: () => void;
+  onToggleFileExplorer?: () => void;
   onNewNote?: () => void;
 };
 
@@ -18,6 +19,7 @@ export default function BloggHeader({
   viewMode = "canvas",
   isFormOpen = false,
   onToggleViewMode,
+  onToggleFileExplorer,
   onNewNote,
 }: BloggHeaderProps) {
   const isProfile = page === "profile";
@@ -55,7 +57,16 @@ export default function BloggHeader({
               onClick={onToggleViewMode}
               type="button"
             >
-              Switch to {viewMode === "canvas" ? "Flipbook" : "Folder"} View
+              Switch to {viewMode === "flipbook" ? "Folder" : "Flipbook"} View
+            </button>
+          )}
+          {isProfile && !isFormOpen && (
+            <button
+              className="text-sm text-gray-600 hover:text-black hover:font-bold ml-0 sm:ml-2"
+              onClick={onToggleFileExplorer}
+              type="button"
+            >
+              {viewMode === "filesystem" ? "Switch to Folder View" : "Switch to File Explorer"}
             </button>
           )}
         </div>
