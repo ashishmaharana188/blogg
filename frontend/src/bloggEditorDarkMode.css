@@ -1,0 +1,64 @@
+/*
+ * Blog editor dark-mode compatibility.
+ * Loaded after the global Obsidian palette so editor content cannot inherit
+ * dark foreground utility colors or disappear against the dark canvas.
+ */
+html.blogg-dark-mode .blogg-profile-root .blogg-main-viewport,
+html.blogg-dark-mode .blogg-profile-root .blogg-form-host,
+html.blogg-dark-mode .blogg-profile-root .blogg-form-host .blogg-editor-form,
+html.blogg-dark-mode .blogg-profile-root .blogg-form-host .blogg-editor-layout,
+html.blogg-dark-mode .blogg-profile-root .blogg-form-host .blogg-editor-form-main,
+html.blogg-dark-mode .blogg-profile-root .blogg-form-host .blogg-editor-form-inner {
+  color: #dadada !important;
+  background-color: #1c1c1c !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+html.blogg-dark-mode .blogg-profile-root .blogg-form-host .blogg-editor-author,
+html.blogg-dark-mode .blogg-profile-root .blogg-form-host .blogg-editor-title,
+html.blogg-dark-mode .blogg-profile-root .blogg-form-host .blogg-editor-description {
+  color: #f0f0f0 !important;
+  -webkit-text-fill-color: #f0f0f0 !important;
+  caret-color: #f0f0f0 !important;
+  background-color: #222222 !important;
+  border-color: #484848 !important;
+  opacity: 1 !important;
+}
+
+html.blogg-dark-mode .blogg-profile-root .blogg-form-host .blogg-editor-form .bn-container,
+html.blogg-dark-mode .blogg-profile-root .blogg-form-host .blogg-editor-form .bn-editor,
+html.blogg-dark-mode .blogg-profile-root .blogg-form-host .blogg-editor-form .bn-editor :where(*),
+html.blogg-dark-mode .blogg-profile-root .blogg-form-host .blogg-editor-form .bn-block-content,
+html.blogg-dark-mode .blogg-profile-root .blogg-form-host .blogg-editor-form .bn-block-outer,
+html.blogg-dark-mode .blogg-profile-root .blogg-form-host .blogg-editor-form .bn-block-group {
+  color: #dadada !important;
+  --bn-colors-editor-text: #dadada !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+html.blogg-dark-mode .blogg-profile-root .blogg-form-host .blogg-editor-form .bn-editor,
+html.blogg-dark-mode .blogg-profile-root .blogg-form-host .blogg-editor-form .bn-editor [contenteditable="true"] {
+  background-color: transparent !important;
+  -webkit-text-fill-color: #dadada !important;
+  caret-color: #dadada !important;
+}
+
+html.blogg-dark-mode .blogg-profile-root .blogg-form-host .blogg-editor-form .bn-container {
+  --bn-colors-editor-background: #1c1c1c;
+  --bn-colors-menu-background: #282828;
+  --bn-colors-tooltip-background: #333333;
+  background-color: transparent !important;
+}
+
+html.blogg-dark-mode .blogg-profile-root .blogg-form-host .blogg-mobile-header-toggle {
+  border-color: #555555 !important;
+  background: #333333 !important;
+  color: #eeeeee !important;
+}
+
+html.blogg-dark-mode .blogg-profile-root .blogg-form-host .blogg-mobile-header-toggle:hover {
+  background: #414141 !important;
+  color: #ffffff !important;
+}
