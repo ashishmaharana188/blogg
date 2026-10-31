@@ -26,6 +26,8 @@ import "./newsletterMinimizable.css";
 import "./darkMode.css";
 import "./bloggEditorDarkMode.css";
 import "./bloggDarkModeControls.css";
+import "./bloggFinalMobileDarkMode.css";
+import "./bloggMobileHeaderCollapse.ts";
 
 installUiConsoleDiagnostics();
 

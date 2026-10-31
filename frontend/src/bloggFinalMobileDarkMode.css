@@ -1,0 +1,72 @@
+/* Explicit final contrast rules for every Footnotes entry point in Blogg. */
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form .blogg-editor-references-toggle-row,
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form .blogg-editor-references-toggle-row .blogg-editor-references-toggle-label,
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form .blogg-editor-references-toggle-row > span {
+  color: #f5f5f5 !important;
+  -webkit-text-fill-color: #f5f5f5 !important;
+  opacity: 1 !important;
+}
+
+/* The read-only form has a separate Footnotes link below the note content. */
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form button[class~="text-slate-600"],
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form button[aria-label="Show Footnotes and References"] {
+  color: #f5f5f5 !important;
+  -webkit-text-fill-color: #f5f5f5 !important;
+  text-decoration-color: #bdbdbd !important;
+  opacity: 1 !important;
+}
+
+/* The Footnotes dock/header is a button containing several nested spans. */
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form .blogg-reference-panel-slot .blogg-ref-header-toggle,
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form .blogg-reference-panel-slot .blogg-ref-header-toggle :where(*) {
+  color: #f5f5f5 !important;
+  -webkit-text-fill-color: #f5f5f5 !important;
+  opacity: 1 !important;
+}
+
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form .blogg-reference-panel-slot .blogg-ref-count {
+  color: #bdbdbd !important;
+  -webkit-text-fill-color: #bdbdbd !important;
+}
+
+/* Close/minimise controls and text inside the Footnotes dock. */
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form .blogg-reference-panel-slot .blogg-ref-minimize-button,
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form .blogg-reference-panel-slot button[aria-label="Close footnotes"] {
+  background: #383838 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  border-color: #666666 !important;
+}
+
+/* Ensure the mobile header toggle is visible on narrow screens in read-only
+   and edit modes. The read-only case is inserted by bloggMobileHeaderCollapse. */
+@media (max-width: 760px) {
+  .blogg-mobile-header-toggle-row {
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-end;
+    width: 100%;
+    margin: -2px 0 -7px;
+  }
+
+  .blogg-mobile-header-toggle {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    padding: 5px 9px;
+    border: 1px solid #7c8795;
+    border-radius: 5px;
+    background: #f8fafc;
+    color: #273246;
+    font: 600 10px/1.2 system-ui, sans-serif;
+    cursor: pointer;
+  }
+
+  html.blogg-dark-mode .blogg-mobile-header-toggle {
+    border-color: #666666 !important;
+    background: #383838 !important;
+    color: #f4f4f4 !important;
+    -webkit-text-fill-color: #f4f4f4 !important;
+  }
+}
