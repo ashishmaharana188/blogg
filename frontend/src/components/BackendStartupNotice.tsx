@@ -7,6 +7,10 @@ const PROBE_TIMEOUT_MS = 4_500;
 const RETRY_DELAY_MS = 2_500;
 const HEALTHY_POLL_DELAY_MS = 15_000;
 
+type HealthResponse = {
+  status?: string;
+};
+
 /**
  * Shows a lightweight notice when the API cannot respond yet, such as while
  * the hosted backend is waking up after a restart. It does not block navigation
@@ -41,18 +45,18 @@ export default function BackendStartupNotice() {
 
       let responding = false;
       try {
-        const response = await fetch(
-          `${API_BASE_URL}/api/showcase/feed-background?startupProbe=${Date.now()}`,
-          {
-            method: "GET",
-            credentials: "omit",
-            cache: "no-store",
-            headers: { Accept: "application/json" },
-            signal: controller.signal,
-          },
-        );
-        const contentType = response.headers.get("content-type") || "";
-        responding = response.ok && contentType.toLowerCase().includes("application/json");
+        const response = await fetch(`${API_BASE_URL}/healthz`, {
+          method: "GET",
+          credentials: "omit",
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+          signal: controller.signal,
+        });
+
+        if (response.ok) {
+          const payload = (await response.json()) as HealthResponse;
+          responding = payload?.status === "ok";
+        }
       } catch {
         // Connection refused, host still waking, and timeout are all expected here.
       } finally {

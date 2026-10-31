@@ -50,6 +50,21 @@ app.use(middleware);
 await mongoConnectDB();
 await warmupPgPool();
 await initializePostgresSchema();
+
+// Liveness endpoint for Render and external uptime monitors. It is registered
+// only after MongoDB connects and PostgreSQL pool/schema initialization completes.
+// Keep this handler intentionally lightweight: it must not query application data.
+app.get("/healthz", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.status(200).json({
+    status: "ok",
+    service: "blogg-api",
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+  });
+});
+
 app.use(cookieParser());
 // Register fixed preview paths before dynamic note IDs; "feed" and "account" are share pages, not blogg IDs.
 app.use(accountSharePreviewRouter);
@@ -81,7 +96,7 @@ app.post("/api/link-preview", optionalAuthenticationMiddleware, async (req, res,
       return res.json({ preview: { url: url.toString(), title: "Private note on Blogg", description: "This note is private.", image: "", provider: "Blogg" } });
     }
     return next();
-  } catch (error) { return next(error); }
+  } catch (error) { next(error); }
 });
 
 app.use("/api", linkPreviewRouter);
