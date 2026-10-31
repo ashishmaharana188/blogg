@@ -4,122 +4,30 @@ import { API_BASE_URL } from "../services/apiBase";
 import "./backendStartupNotice.css";
 
 const PROBE_TIMEOUT_MS = 4_500;
-const RETRY_DELAY_MS = 2_500;
-const BLOCKED_RETRY_DELAY_MS = 60_000;
-const HEALTHY_POLL_DELAY_MS = 15_000;
 
 type ProbeStatus = "checking" | "reachable" | "blocked" | "unavailable";
-type NoSleepStatus = "checking" | "on" | "off" | "unsupported";
-
-type WakeLockSentinelLike = {
-  release: () => Promise<void>;
-  addEventListener: (type: "release", listener: () => void) => void;
-};
-
-type WakeLockApiLike = {
-  request: (type: "screen") => Promise<WakeLockSentinelLike>;
-};
-
-type NavigatorWithWakeLock = Navigator & {
-  wakeLock?: WakeLockApiLike;
-};
 
 /**
- * Explains when the optional health-check is blocked and reports whether the
- * browser has actually granted a screen wake lock. It never blocks navigation.
+ * Shows a compact, dismissible status for the optional backend health check.
+ * A blocked check is not treated as a backend failure and does not block the app.
  */
 export default function BackendStartupNotice() {
   const [probeStatus, setProbeStatus] = useState<ProbeStatus>("checking");
-  const [noSleepStatus, setNoSleepStatus] = useState<NoSleepStatus>("checking");
+  const [dismissed, setDismissed] = useState(false);
   const location = useLocation();
 
-  // Keep the current screen awake while this tab is visible. A screen wake lock
-  // does not send traffic to, or prevent idle shutdown of, the hosted backend.
+  // Run a single probe on initial load and after client-side navigation.
+  // Do not poll while healthy: repeated health checks could keep an idle hosted
+  // service active and defeat its configured 15-minute inactivity shutdown.
   useEffect(() => {
     let cancelled = false;
-    let requesting = false;
-    let wakeLock: WakeLockSentinelLike | null = null;
-
-    const requestNoSleep = async () => {
-      const api = (navigator as NavigatorWithWakeLock).wakeLock;
-      if (!api) {
-        setNoSleepStatus("unsupported");
-        return;
-      }
-      if (cancelled || requesting || wakeLock || document.visibilityState !== "visible") {
-        return;
-      }
-
-      requesting = true;
-      try {
-        const lock = await api.request("screen");
-        if (cancelled || document.visibilityState !== "visible") {
-          await lock.release();
-          if (!cancelled) setNoSleepStatus("off");
-          return;
-        }
-
-        wakeLock = lock;
-        setNoSleepStatus("on");
-        lock.addEventListener("release", () => {
-          if (wakeLock === lock) wakeLock = null;
-          if (!cancelled) setNoSleepStatus("off");
-        });
-      } catch {
-        if (!cancelled) setNoSleepStatus("off");
-      } finally {
-        requesting = false;
-      }
-    };
-
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        void requestNoSleep();
-      } else if (!cancelled && wakeLock) {
-        // Release explicitly so the visible-tab handler can request a fresh lock.
-        const currentLock = wakeLock;
-        wakeLock = null;
-        setNoSleepStatus("off");
-        void currentLock.release();
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibility);
-    void requestNoSleep();
-
-    return () => {
-      cancelled = true;
-      document.removeEventListener("visibilitychange", handleVisibility);
-      if (wakeLock) void wakeLock.release();
-      wakeLock = null;
-    };
-  }, []);
-
-  // The health endpoint is optional. Some ad blockers intentionally block it;
-  // that is reported separately from an HTTP response indicating backend trouble.
-  useEffect(() => {
-    let cancelled = false;
-    let checking = false;
-    let nextCheckTimer: number | null = null;
-    let timeoutTimer: number | null = null;
-    let activeController: AbortController | null = null;
-
-    const scheduleCheck = (delay: number) => {
-      if (cancelled) return;
-      if (nextCheckTimer !== null) window.clearTimeout(nextCheckTimer);
-      nextCheckTimer = window.setTimeout(() => {
-        nextCheckTimer = null;
-        void checkBackend();
-      }, delay);
-    };
+    const controller = new AbortController();
+    const timeoutTimer = window.setTimeout(
+      () => controller.abort(),
+      PROBE_TIMEOUT_MS,
+    );
 
     const checkBackend = async () => {
-      if (cancelled || checking) return;
-      checking = true;
-      const controller = new AbortController();
-      activeController = controller;
-      timeoutTimer = window.setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
-
       let nextStatus: ProbeStatus = "unavailable";
       try {
         const response = await fetch(
@@ -140,113 +48,70 @@ export default function BackendStartupNotice() {
             : "unavailable";
       } catch (error) {
         const errorName = error instanceof Error ? error.name : "";
-        // fetch() does not expose the name of the blocking extension. When the
-        // browser is online but the cross-origin request is rejected, report the
-        // health check as blocked rather than claiming the backend is down.
+        // Browser fetch errors do not identify the blocking extension. An
+        // online cross-origin rejection is therefore labelled as filtered.
         nextStatus = !navigator.onLine || errorName === "AbortError"
           ? "unavailable"
           : "blocked";
       } finally {
-        if (timeoutTimer !== null) window.clearTimeout(timeoutTimer);
-        timeoutTimer = null;
-        if (activeController === controller) activeController = null;
-        checking = false;
+        window.clearTimeout(timeoutTimer);
       }
 
-      if (cancelled) return;
-      setProbeStatus(nextStatus);
-      if (nextStatus === "reachable") {
-        scheduleCheck(HEALTHY_POLL_DELAY_MS);
-      } else if (nextStatus === "blocked") {
-        // Avoid repeatedly hitting an endpoint that the browser is deliberately blocking.
-        scheduleCheck(BLOCKED_RETRY_DELAY_MS);
-      } else {
-        scheduleCheck(RETRY_DELAY_MS);
-      }
+      if (!cancelled) setProbeStatus(nextStatus);
     };
 
-    const checkNow = () => {
-      if (cancelled || checking) return;
-      if (nextCheckTimer !== null) {
-        window.clearTimeout(nextCheckTimer);
-        nextCheckTimer = null;
-      }
-      void checkBackend();
-    };
-
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") checkNow();
-    };
-
-    window.addEventListener("online", checkNow);
-    document.addEventListener("visibilitychange", handleVisibility);
     void checkBackend();
-
     return () => {
       cancelled = true;
-      window.removeEventListener("online", checkNow);
-      document.removeEventListener("visibilitychange", handleVisibility);
-      if (nextCheckTimer !== null) window.clearTimeout(nextCheckTimer);
-      if (timeoutTimer !== null) window.clearTimeout(timeoutTimer);
-      activeController?.abort();
+      window.clearTimeout(timeoutTimer);
+      controller.abort();
     };
   }, [location.pathname, location.search]);
 
-  if (probeStatus === "checking" || probeStatus === "reachable") return null;
+  if (dismissed || probeStatus === "checking") return null;
 
-  const healthCheckBlocked = probeStatus === "blocked";
-  const noSleepLabel =
-    noSleepStatus === "on"
-      ? "On"
-      : noSleepStatus === "unsupported"
-        ? "Not supported"
-        : noSleepStatus === "checking"
-          ? "Starting"
-          : "Off";
+  const isBlocked = probeStatus === "blocked";
+  const isReachable = probeStatus === "reachable";
 
   return (
     <div className="backend-startup-notice" role="status" aria-live="polite">
       <span
-        className="backend-startup-notice__indicator"
-        data-state={healthCheckBlocked ? "blocked" : "waiting"}
+        className="backend-startup-notice__dot"
+        data-state={isBlocked ? "blocked" : isReachable ? "ready" : "waiting"}
         aria-hidden="true"
       />
-      <div className="backend-startup-notice__copy">
-        <strong>
-          {healthCheckBlocked
-            ? "Ad blocker is blocking the optional status check"
-            : "Blogg’s backend may be asleep"}
-        </strong>
-        <p>
-          {healthCheckBlocked
-            ? "The browser is blocking Blogg’s /healthz request, which is commonly caused by an ad blocker or privacy filter. This check is only used for the status notice; it is not required for normal site requests."
-            : "The backend status check has not received a response. The hosted backend automatically shuts down after 15 minutes without activity and wakes when a new app request reaches it."}
-        </p>
 
-        <div className="backend-startup-notice__statuses" aria-label="Connection status">
-          <span
-            className="backend-startup-notice__status"
-            data-state={healthCheckBlocked ? "active" : "unknown"}
-          >
-            Ad blocker: {healthCheckBlocked ? "Active" : "Not confirmed"}
+      <div className="backend-startup-notice__items">
+        <span className="backend-startup-notice__item" data-state={isBlocked ? "active" : isReachable ? "inactive" : "unknown"}>
+          Ad blocker: {isBlocked ? "Active" : isReachable ? "Off" : "Unknown"}
+        </span>
+        <span className="backend-startup-notice__item" data-state={isReachable ? "active" : "inactive"}>
+          NoSleep: {isReachable ? "On" : "Off"}
+        </span>
+        <span className="backend-startup-notice__item backend-startup-notice__item--info">
+          Backend auto-sleeps after 15 min idle
+        </span>
+        {isBlocked && (
+          <span className="backend-startup-notice__hint">
+            Optional status request blocked; normal site requests are separate.
           </span>
-          <span
-            className="backend-startup-notice__status"
-            data-state={noSleepStatus === "on" ? "active" : "unknown"}
-          >
-            NoSleep: {noSleepLabel}
+        )}
+        {!isBlocked && !isReachable && (
+          <span className="backend-startup-notice__hint">
+            Backend status could not be confirmed; it may be waking up.
           </span>
-          <span className="backend-startup-notice__status" data-state="info">
-            Backend auto-sleep: 15 min idle
-          </span>
-        </div>
-
-        <p className="backend-startup-notice__footnote">
-          NoSleep keeps this visible tab’s screen awake only. It does not send
-          keep-alive requests, so the backend can still sleep after 15 minutes
-          without activity.
-        </p>
+        )}
       </div>
+
+      <button
+        className="backend-startup-notice__close"
+        type="button"
+        aria-label="Close status notice"
+        title="Close"
+        onClick={() => setDismissed(true)}
+      >
+        ×
+      </button>
     </div>
   );
 }
