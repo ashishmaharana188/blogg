@@ -1,7 +1,7 @@
 /*
  * Mobile/tablet bottom sheet for Footnotes & References.
- * Position the slot against the viewport, not the editor's content box, so the
- * dock remains attached to the actual bottom edge even when the form scrolls.
+ * Position the expanded drawer against the viewport. The collapsed state is
+ * deliberately NOT a full-screen layer: it occupies only the bottom dock area.
  */
 .blogg-ref-minimize-button {
   display: none;
@@ -25,7 +25,9 @@
     transform: none;
     pointer-events: none;
     z-index: 10050;
-    background: transparent;
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
   }
 
   .blogg-editor-layout.is-references-open .blogg-reference-panel-slot.is-visible .blogg-references-sidebar {
@@ -107,6 +109,66 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
+  }
+
+  /*
+   * CRITICAL: When Footnotes is collapsed, the old implementation kept its
+   * fixed wrapper stretched across the whole viewport. Global dark mode paints
+   * generic panel wrappers, which turned that transparent layer into an opaque
+   * sheet and hid the blog editor behind it. Shrink the wrapper to the dock.
+   * :has() is supported by current Firefox, Chrome, and Safari.
+   */
+  .blogg-editor-layout.is-references-open
+  .blogg-reference-panel-slot.is-visible:has(.blogg-references-sidebar.is-collapsed) {
+    position: fixed !important;
+    top: auto !important;
+    right: 8px !important;
+    bottom: 0 !important;
+    left: 8px !important;
+    inset: auto 8px 0 !important;
+    display: block !important;
+    flex: none !important;
+    width: auto !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    opacity: 1 !important;
+    transform: none !important;
+    pointer-events: none !important;
+    z-index: 10050 !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+  }
+
+  .blogg-editor-layout.is-references-open
+  .blogg-reference-panel-slot.is-visible:has(.blogg-references-sidebar.is-collapsed)
+  .blogg-references-sidebar.is-collapsed {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    display: flex !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 6px 12px 0 !important;
+    overflow: hidden !important;
+    pointer-events: auto !important;
+  }
+
+  /* Expanded drawer keeps its full-screen positioning layer transparent too. */
+  .blogg-editor-layout.is-references-open
+  .blogg-reference-panel-slot.is-visible:has(.blogg-references-sidebar:not(.is-collapsed)) {
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
   }
 }
 
