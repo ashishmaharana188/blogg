@@ -62,3 +62,132 @@ html.blogg-dark-mode .blogg-profile-root .blogg-form-host .blogg-mobile-header-t
   background: #414141 !important;
   color: #ffffff !important;
 }
+
+/*
+ * Final editor contrast enforcement.
+ * The earlier rules covered only selected inputs and BlockNote wrappers. Some
+ * nested editor elements can carry their own dark foreground declarations.
+ * Apply a high-specificity foreground to every form descendant, but leave the
+ * pastel tag chips and sticky-note layer to keep their own palette.
+ */
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form,
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form :where(*) :not(.blogg-sticky-layer):not(.blogg-sticky-layer *):not(.blogg-editor-tags-list):not(.blogg-editor-tags-list *) {
+  color: #f1f1f1 !important;
+  -webkit-text-fill-color: #f1f1f1 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  text-shadow: none !important;
+}
+
+/* Keep the form itself and all editor panes visibly separated from the page. */
+html.blogg-dark-mode .blogg-form-host,
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form,
+html.blogg-dark-mode .blogg-form-host .blogg-editor-layout,
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form-main,
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form-inner,
+html.blogg-dark-mode .blogg-form-host .blogg-editor-blocknote-surface {
+  background-color: #1c1c1c !important;
+  color: #f1f1f1 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  filter: none !important;
+}
+
+/* The heading fields must not depend on inherited utility-class colours. */
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form :is(
+  .blogg-editor-author,
+  .blogg-editor-title,
+  .blogg-editor-description
+) {
+  background: #242424 !important;
+  color: #f7f7f7 !important;
+  -webkit-text-fill-color: #f7f7f7 !important;
+  caret-color: #ffffff !important;
+  border-color: #505050 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Normal fields and controls retain a dark surface with a bright foreground. */
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form :is(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea:not(.blogg-sticky-text),
+  select
+) {
+  background-color: #242424 !important;
+  color: #f1f1f1 !important;
+  -webkit-text-fill-color: #f1f1f1 !important;
+  caret-color: #ffffff !important;
+  border-color: #505050 !important;
+  opacity: 1 !important;
+}
+
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form :is(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea:not(.blogg-sticky-text)
+)::placeholder {
+  color: #a7a7a7 !important;
+  -webkit-text-fill-color: #a7a7a7 !important;
+  opacity: 1 !important;
+}
+
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form button {
+  color: #f1f1f1 !important;
+  -webkit-text-fill-color: #f1f1f1 !important;
+}
+
+/* BlockNote: force readable text on every nested block and contenteditable node. */
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form .bn-container,
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form .bn-container :where(*),
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form .bn-editor,
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form .bn-editor :where(*),
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form [contenteditable="true"],
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form [contenteditable="true"] :where(*) {
+  color: #f1f1f1 !important;
+  -webkit-text-fill-color: #f1f1f1 !important;
+  caret-color: #ffffff !important;
+  --bn-colors-editor-text: #f1f1f1 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form .bn-container {
+  --bn-colors-editor-background: #1c1c1c !important;
+  --bn-colors-menu-background: #292929 !important;
+  --bn-colors-tooltip-background: #333333 !important;
+  background: #1c1c1c !important;
+}
+
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form .bn-editor,
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form .bn-editor [contenteditable="true"] {
+  background: transparent !important;
+}
+
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form .bn-editor :where(h1, h2, h3, h4, p, li, blockquote, code, pre, td, th) {
+  color: #f1f1f1 !important;
+  -webkit-text-fill-color: #f1f1f1 !important;
+}
+
+/* Restore the intentional dark lettering on the light pastel tag chips. */
+html.blogg-dark-mode .blogg-form-host .blogg-editor-tags-list > div,
+html.blogg-dark-mode .blogg-form-host .blogg-editor-tags-list > div :where(*) {
+  color: #172033 !important;
+  -webkit-text-fill-color: #172033 !important;
+}
+
+/* Sticky notes are independent pastel cards; never recolour their text or paper. */
+html.blogg-dark-mode .blogg-form-host .blogg-sticky-layer,
+html.blogg-dark-mode .blogg-form-host .blogg-sticky-layer :where(*) {
+  -webkit-text-fill-color: currentColor !important;
+}
+
+html.blogg-dark-mode .blogg-form-host .blogg-sticky-layer .blogg-sticky-text {
+  background: transparent !important;
+  color: inherit !important;
+  caret-color: currentColor !important;
+}
+
+html.blogg-dark-mode .blogg-form-host .blogg-sticky-layer .blogg-sticky-pink { color: #831843 !important; }
+html.blogg-dark-mode .blogg-form-host .blogg-sticky-layer .blogg-sticky-yellow { color: #713f12 !important; }
+html.blogg-dark-mode .blogg-form-host .blogg-sticky-layer .blogg-sticky-sky { color: #0c4a6e !important; }
+html.blogg-dark-mode .blogg-form-host .blogg-sticky-layer .blogg-sticky-emerald { color: #064e3b !important; }
