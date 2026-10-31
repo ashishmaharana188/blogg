@@ -1,0 +1,230 @@
+/*
+ * Blogg dark-mode contrast pass for all writing-form and Footnotes surfaces.
+ * Loaded after darkMode.css and bloggEditorDarkMode.css from main.tsx.
+ * Keep selectors scoped to Blogg so unrelated app areas retain their palettes.
+ */
+
+html.blogg-dark-mode .blogg-form-host,
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form,
+html.blogg-dark-mode .blogg-form-host .blogg-editor-layout,
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form-main,
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form-inner {
+  color: #ededed !important;
+  background-color: #1c1c1c !important;
+}
+
+/* The references slot is only a positioning wrapper, never a painted panel. */
+html.blogg-dark-mode .blogg-reference-panel-slot,
+html.blogg-dark-mode .blogg-reference-panel-slot.is-visible {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Footnotes panel: establish a predictable dark surface and readable defaults. */
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-references-sidebar {
+  background: #242424 !important;
+  background-color: #242424 !important;
+  color: #e6e6e6 !important;
+  border-color: #505050 !important;
+  box-shadow: 0 -8px 24px rgb(0 0 0 / 30%) !important;
+  color-scheme: dark;
+}
+
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-references-sidebar :where(*) {
+  border-color: #484848;
+  text-shadow: none !important;
+}
+
+/* Text in the Footnotes pane, including text carrying light-theme utility classes. */
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-references-sidebar,
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-references-sidebar :where(
+  p, span, label, small, strong, em, b, i, li, h1, h2, h3, h4, div, a, button
+) {
+  color: #e2e2e2 !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-header,
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-added,
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-passage-section,
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-footer,
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-item {
+  border-color: #484848 !important;
+}
+
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-header-toggle,
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-added-toggle,
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-item-title,
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-item button,
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-actions button {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #f0f0f0 !important;
+  -webkit-text-fill-color: #f0f0f0 !important;
+  border-color: #777777 !important;
+}
+
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-open-note-button,
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-minimize-button,
+html.blogg-dark-mode .blogg-reference-panel-slot button[aria-label="Close footnotes"] {
+  background: #373737 !important;
+  background-color: #373737 !important;
+  color: #f5f5f5 !important;
+  -webkit-text-fill-color: #f5f5f5 !important;
+  border: 1px solid #666666 !important;
+  box-shadow: none !important;
+}
+
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-references-sidebar button:hover:not(:disabled) {
+  background-color: #3b3b3b !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  border-color: #777777 !important;
+}
+
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-header-toggle:hover,
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-added-toggle:hover,
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-item-title:hover,
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-item button:hover {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-references-sidebar button:disabled {
+  color: #969696 !important;
+  -webkit-text-fill-color: #969696 !important;
+  opacity: .62 !important;
+}
+
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-count,
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-eyebrow,
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-filter-label,
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-linked-text,
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-message.is-status,
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-footer > span {
+  color: #b5b5b5 !important;
+  -webkit-text-fill-color: #b5b5b5 !important;
+}
+
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-message.is-error {
+  color: #f0aaa0 !important;
+  -webkit-text-fill-color: #f0aaa0 !important;
+}
+
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-passage,
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-passage :where(*) {
+  color: #dddddd !important;
+  -webkit-text-fill-color: #dddddd !important;
+}
+
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-selected-passage,
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-item > p {
+  color: #c9c9c9 !important;
+  -webkit-text-fill-color: #c9c9c9 !important;
+}
+
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-select,
+html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-select option {
+  background: #222222 !important;
+  background-color: #222222 !important;
+  color: #f0f0f0 !important;
+  -webkit-text-fill-color: #f0f0f0 !important;
+  border-color: #555555 !important;
+}
+
+html.blogg-dark-mode .blogg-reference-panel-slot a {
+  color: #c6d8ff !important;
+  -webkit-text-fill-color: #c6d8ff !important;
+}
+
+html.blogg-dark-mode .blogg-reference-panel-slot a:hover {
+  color: #e1eaff !important;
+  -webkit-text-fill-color: #e1eaff !important;
+}
+
+html.blogg-dark-mode .blogg-reference-panel-slot ::selection {
+  background: rgb(190 210 240 / 28%) !important;
+  color: #ffffff !important;
+}
+
+/* Floating referenced-note window, including every nested BlockNote element. */
+html.blogg-dark-mode .blogg-reference-note-window,
+html.blogg-dark-mode .blogg-reference-note-window :where(header, section, article, div) {
+  background-color: #242424 !important;
+  color: #e2e2e2 !important;
+  border-color: #4b4b4b !important;
+}
+
+html.blogg-dark-mode .blogg-reference-note-window :where(h1, h2, h3, h4, p, span, small, strong, li, blockquote, td, th) {
+  color: #e2e2e2 !important;
+  -webkit-text-fill-color: #e2e2e2 !important;
+}
+
+html.blogg-dark-mode .blogg-reference-note-window .blogg-reference-note-window-eyebrow,
+html.blogg-dark-mode .blogg-reference-note-window .blogg-reference-note-window-author,
+html.blogg-dark-mode .blogg-reference-note-window .blogg-reference-note-window-subtitle,
+html.blogg-dark-mode .blogg-reference-note-window .blogg-reference-note-window-state {
+  color: #b5b5b5 !important;
+  -webkit-text-fill-color: #b5b5b5 !important;
+}
+
+html.blogg-dark-mode .blogg-reference-note-window .blogg-reference-note-window-heading h2,
+html.blogg-dark-mode .blogg-reference-note-window .blogg-reference-note-window-article > h3 {
+  color: #f3f3f3 !important;
+  -webkit-text-fill-color: #f3f3f3 !important;
+}
+
+html.blogg-dark-mode .blogg-reference-note-window .blogg-reference-note-window-controls button {
+  background: #383838 !important;
+  background-color: #383838 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  border-color: #656565 !important;
+}
+
+html.blogg-dark-mode .blogg-reference-note-window .blogg-reference-note-window-controls button:hover {
+  background: #494949 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+html.blogg-dark-mode .blogg-reference-note-window .blogg-reference-note-window-body,
+html.blogg-dark-mode .blogg-reference-note-window .blogg-reference-note-window-body .bn-container,
+html.blogg-dark-mode .blogg-reference-note-window .blogg-reference-note-window-body .bn-editor,
+html.blogg-dark-mode .blogg-reference-note-window .blogg-reference-note-window-body .bn-editor :where(*) {
+  background-color: transparent !important;
+  color: #e7e7e7 !important;
+  -webkit-text-fill-color: #e7e7e7 !important;
+  --bn-colors-editor-text: #e7e7e7 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+html.blogg-dark-mode .blogg-reference-note-window .blogg-reference-note-window-body a {
+  color: #c6d8ff !important;
+  -webkit-text-fill-color: #c6d8ff !important;
+}
+
+/* Restore intentionally pastel editor tags and notes, which are not dark UI. */
+html.blogg-dark-mode .blogg-form-host .blogg-editor-tags-list > div,
+html.blogg-dark-mode .blogg-form-host .blogg-editor-tags-list > div :where(*) {
+  color: #172033 !important;
+  -webkit-text-fill-color: #172033 !important;
+}
+
+html.blogg-dark-mode .blogg-form-host .blogg-sticky-layer .blogg-sticky-pink { color: #831843 !important; }
+html.blogg-dark-mode .blogg-form-host .blogg-sticky-layer .blogg-sticky-yellow { color: #713f12 !important; }
+html.blogg-dark-mode .blogg-form-host .blogg-sticky-layer .blogg-sticky-sky { color: #0c4a6e !important; }
+html.blogg-dark-mode .blogg-form-host .blogg-sticky-layer .blogg-sticky-emerald { color: #064e3b !important; }
+
+@media (max-width: 1199px) {
+  html.blogg-dark-mode .blogg-editor-layout.is-references-open
+  .blogg-reference-panel-slot.is-visible {
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+  }
+}
