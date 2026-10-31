@@ -191,3 +191,22 @@ html.blogg-dark-mode .blogg-form-host .blogg-sticky-layer .blogg-sticky-pink { c
 html.blogg-dark-mode .blogg-form-host .blogg-sticky-layer .blogg-sticky-yellow { color: #713f12 !important; }
 html.blogg-dark-mode .blogg-form-host .blogg-sticky-layer .blogg-sticky-sky { color: #0c4a6e !important; }
 html.blogg-dark-mode .blogg-form-host .blogg-sticky-layer .blogg-sticky-emerald { color: #064e3b !important; }
+
+
+/*
+ * Mobile Footnotes drawer fix.
+ * The drawer's portal-like fixed wrapper covers the viewport so its collapsed
+ * bar can sit at the bottom. Global dark mode was assigning that wrapper an
+ * opaque surface colour, hiding the entire editor behind it. Only the drawer
+ * itself should have a background; the full-screen positioning layer must stay
+ * transparent in both themes.
+ */
+@media (max-width: 1199px) {
+  html.blogg-dark-mode .blogg-profile-root .blogg-form-host
+  .blogg-editor-layout.is-references-open
+  .blogg-reference-panel-slot.is-visible {
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+  }
+}
