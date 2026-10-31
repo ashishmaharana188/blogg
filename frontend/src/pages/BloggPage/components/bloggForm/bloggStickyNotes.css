@@ -1,0 +1,263 @@
+.blogg-sticky-controls {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 7px;
+  flex: 0 0 auto;
+}
+
+.blogg-sticky-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 5px 9px;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  background: #fff;
+  color: #475569;
+  font: 600 11px/1.2 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  white-space: nowrap;
+  transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
+}
+
+.blogg-sticky-toggle:hover,
+.blogg-sticky-toggle.is-enabled {
+  border-color: #94a3b8;
+  color: #0f172a;
+  background: #f8fafc;
+}
+
+.blogg-sticky-toggle > svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.blogg-sticky-count {
+  display: inline-flex;
+  min-width: 17px;
+  height: 17px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  font: 700 9px/1 system-ui, sans-serif;
+}
+
+.blogg-sticky-switch {
+  display: inline-flex;
+  width: 25px;
+  height: 15px;
+  align-items: center;
+  padding: 2px;
+  border-radius: 99px;
+  background: #cbd5e1;
+  transition: background 120ms ease;
+}
+
+.blogg-sticky-switch > span {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 20%);
+  transition: transform 120ms ease;
+}
+
+.blogg-sticky-switch.is-on { background: #475569; }
+.blogg-sticky-switch.is-on > span { transform: translateX(10px); }
+
+.blogg-sticky-save-status,
+.blogg-sticky-save-error {
+  color: #64748b;
+  font: 500 10px/1.3 system-ui, sans-serif;
+  white-space: nowrap;
+}
+.blogg-sticky-save-error { color: #b91c1c; }
+
+/* A viewport-fixed layer: the note positions do not follow the scrolling editor. */
+.blogg-sticky-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  overflow: hidden;
+  pointer-events: none;
+  isolation: isolate;
+}
+
+.blogg-sticky-card {
+  position: absolute;
+  width: 112px;
+  height: 112px;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid;
+  box-shadow: 0 4px 6px -1px rgb(15 23 42 / 18%), 0 2px 4px -2px rgb(15 23 42 / 18%);
+  pointer-events: auto;
+  transform: translate(-50%, -50%) rotate(var(--sticky-rotation));
+  transform-origin: center;
+  transition: box-shadow 130ms ease, scale 130ms ease;
+  touch-action: auto;
+}
+
+.blogg-sticky-card:hover {
+  scale: 1.05;
+  box-shadow: 0 12px 18px -7px rgb(15 23 42 / 28%), 0 4px 7px -4px rgb(15 23 42 / 22%);
+}
+
+.blogg-sticky-pink {
+  --sticky-rotation: -6deg;
+  border-color: #fbcfe8;
+  background: #fce7f3;
+  color: #831843;
+}
+.blogg-sticky-yellow {
+  --sticky-rotation: 6deg;
+  border-color: #fde68a;
+  background: #fef9c3;
+  color: #713f12;
+}
+.blogg-sticky-sky {
+  --sticky-rotation: -12deg;
+  border-color: #bae6fd;
+  background: #e0f2fe;
+  color: #0c4a6e;
+}
+.blogg-sticky-emerald {
+  --sticky-rotation: 12deg;
+  border-color: #a7f3d0;
+  background: #d1fae5;
+  color: #064e3b;
+}
+
+.blogg-sticky-drag-handle {
+  display: flex;
+  width: 28px;
+  height: 9px;
+  align-items: center;
+  gap: 2px;
+  margin: -5px 0 2px -4px;
+  cursor: grab;
+  touch-action: none;
+  opacity: .42;
+}
+.blogg-sticky-drag-handle:active { cursor: grabbing; }
+.blogg-sticky-drag-handle span {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.blogg-sticky-text {
+  display: block;
+  width: 100%;
+  height: calc(100% - 8px);
+  box-sizing: border-box;
+  padding: 1px 0 0;
+  resize: none;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font: 10px/1.45 Georgia, "Times New Roman", serif;
+  overflow: auto;
+}
+.blogg-sticky-text::placeholder { color: currentColor; opacity: .38; }
+
+.blogg-sticky-remove {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  z-index: 3;
+  display: flex;
+  width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 50%;
+  background: #fff;
+  color: #94a3b8;
+  opacity: 0;
+  transition: color 120ms ease, opacity 120ms ease;
+  cursor: pointer;
+}
+.blogg-sticky-card:hover .blogg-sticky-remove,
+.blogg-sticky-remove:focus-visible { opacity: 1; }
+.blogg-sticky-remove:hover { color: #ef4444; }
+.blogg-sticky-remove svg,
+.blogg-sticky-add svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.blogg-sticky-add {
+  position: absolute;
+  top: 74px;
+  right: 22px;
+  z-index: 12020;
+  display: flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 50%;
+  background: #fff;
+  color: #94a3b8;
+  box-shadow: 0 4px 8px rgb(15 23 42 / 14%);
+  pointer-events: auto;
+  cursor: pointer;
+  transition: color 120ms ease, scale 120ms ease;
+}
+.blogg-sticky-add:hover { color: #ec4899; scale: 1.06; }
+.blogg-sticky-add svg { width: 16px; height: 16px; }
+
+html.blogg-dark-mode .blogg-sticky-toggle {
+  border-color: #4b4b4b;
+  background: #282828;
+  color: #d0d0d0;
+}
+html.blogg-dark-mode .blogg-sticky-toggle:hover,
+html.blogg-dark-mode .blogg-sticky-toggle.is-enabled {
+  border-color: #777;
+  background: #333;
+  color: #f0f0f0;
+}
+html.blogg-dark-mode .blogg-sticky-count { background: #3a3a3a; color: #ddd; }
+html.blogg-dark-mode .blogg-sticky-switch { background: #666; }
+html.blogg-dark-mode .blogg-sticky-switch.is-on { background: #aaa; }
+html.blogg-dark-mode .blogg-sticky-switch.is-on > span { background: #222; }
+html.blogg-dark-mode .blogg-sticky-save-status { color: #aaa; }
+
+@media (max-width: 640px) {
+  .blogg-sticky-card {
+    width: 104px;
+    height: 104px;
+    padding: 10px;
+  }
+  .blogg-sticky-add { top: 66px; right: 12px; }
+  .blogg-sticky-remove { opacity: 1; top: 3px; right: 3px; }
+  .blogg-sticky-text { font-size: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blogg-sticky-card,
+  .blogg-sticky-add,
+  .blogg-sticky-remove { transition: none; }
+}

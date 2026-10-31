@@ -10,6 +10,7 @@ import { bloggEditorSchema } from "./bloggEditorSchema";
 import CopyrightNotice from "../../../../components/CopyrightNotice";
 import { fetchLinkPreview } from "./linkPreviewService";
 import BloggReferencesSidebar from "./bloggReferencesSidebar";
+import BloggStickyNotes from "./BloggStickyNotes";
 import "../../../bloggReferenceHighlight.css";
 import "./bloggReferencesLayout.css";
 import "./bloggFormActions.css";
@@ -597,6 +598,8 @@ const UserForm = ({
                       </button>
                     ))}
                 </div>
+
+                {isEditable && <BloggStickyNotes bloggId={currentBloggId} />}
 
                 {canEdit && (
                   isReadOnly ? (
