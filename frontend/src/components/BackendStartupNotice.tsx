@@ -5,21 +5,98 @@ import "./backendStartupNotice.css";
 
 const PROBE_TIMEOUT_MS = 4_500;
 const RETRY_DELAY_MS = 2_500;
+const BLOCKED_RETRY_DELAY_MS = 60_000;
 const HEALTHY_POLL_DELAY_MS = 15_000;
 
-type HealthResponse = {
-  status?: string;
+type ProbeStatus = "checking" | "reachable" | "blocked" | "unavailable";
+type NoSleepStatus = "checking" | "on" | "off" | "unsupported";
+
+type WakeLockSentinelLike = {
+  release: () => Promise<void>;
+  addEventListener: (type: "release", listener: () => void) => void;
+};
+
+type WakeLockApiLike = {
+  request: (type: "screen") => Promise<WakeLockSentinelLike>;
+};
+
+type NavigatorWithWakeLock = Navigator & {
+  wakeLock?: WakeLockApiLike;
 };
 
 /**
- * Shows a lightweight notice when the API cannot respond yet, such as while
- * the hosted backend is waking up after a restart. It does not block navigation
- * or replace the page's existing loading artwork.
+ * Explains when the optional health-check is blocked and reports whether the
+ * browser has actually granted a screen wake lock. It never blocks navigation.
  */
 export default function BackendStartupNotice() {
-  const [backendUnavailable, setBackendUnavailable] = useState(false);
+  const [probeStatus, setProbeStatus] = useState<ProbeStatus>("checking");
+  const [noSleepStatus, setNoSleepStatus] = useState<NoSleepStatus>("checking");
   const location = useLocation();
 
+  // Keep the current screen awake while this tab is visible. A screen wake lock
+  // does not send traffic to, or prevent idle shutdown of, the hosted backend.
+  useEffect(() => {
+    let cancelled = false;
+    let requesting = false;
+    let wakeLock: WakeLockSentinelLike | null = null;
+
+    const requestNoSleep = async () => {
+      const api = (navigator as NavigatorWithWakeLock).wakeLock;
+      if (!api) {
+        setNoSleepStatus("unsupported");
+        return;
+      }
+      if (cancelled || requesting || wakeLock || document.visibilityState !== "visible") {
+        return;
+      }
+
+      requesting = true;
+      try {
+        const lock = await api.request("screen");
+        if (cancelled || document.visibilityState !== "visible") {
+          await lock.release();
+          if (!cancelled) setNoSleepStatus("off");
+          return;
+        }
+
+        wakeLock = lock;
+        setNoSleepStatus("on");
+        lock.addEventListener("release", () => {
+          if (wakeLock === lock) wakeLock = null;
+          if (!cancelled) setNoSleepStatus("off");
+        });
+      } catch {
+        if (!cancelled) setNoSleepStatus("off");
+      } finally {
+        requesting = false;
+      }
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void requestNoSleep();
+      } else if (!cancelled && wakeLock) {
+        // Release explicitly so the visible-tab handler can request a fresh lock.
+        const currentLock = wakeLock;
+        wakeLock = null;
+        setNoSleepStatus("off");
+        void currentLock.release();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    void requestNoSleep();
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", handleVisibility);
+      if (wakeLock) void wakeLock.release();
+      wakeLock = null;
+    };
+  }, []);
+
+  // The health endpoint is optional. Some ad blockers intentionally block it;
+  // that is reported separately from an HTTP response indicating backend trouble.
   useEffect(() => {
     let cancelled = false;
     let checking = false;
@@ -43,22 +120,32 @@ export default function BackendStartupNotice() {
       activeController = controller;
       timeoutTimer = window.setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
 
-      let responding = false;
+      let nextStatus: ProbeStatus = "unavailable";
       try {
-        const response = await fetch(`${API_BASE_URL}/healthz`, {
-          method: "GET",
-          credentials: "omit",
-          cache: "no-store",
-          headers: { Accept: "application/json" },
-          signal: controller.signal,
-        });
+        const response = await fetch(
+          `${API_BASE_URL}/healthz?startupProbe=${Date.now()}`,
+          {
+            method: "GET",
+            mode: "cors",
+            credentials: "omit",
+            cache: "no-store",
+            signal: controller.signal,
+          },
+        );
 
-        if (response.ok) {
-          const payload = (await response.json()) as HealthResponse;
-          responding = payload?.status === "ok";
-        }
-      } catch {
-        // Connection refused, host still waking, and timeout are all expected here.
+        const contentType = response.headers.get("content-type") || "";
+        nextStatus =
+          response.ok && contentType.toLowerCase().includes("application/json")
+            ? "reachable"
+            : "unavailable";
+      } catch (error) {
+        const errorName = error instanceof Error ? error.name : "";
+        // fetch() does not expose the name of the blocking extension. When the
+        // browser is online but the cross-origin request is rejected, report the
+        // health check as blocked rather than claiming the backend is down.
+        nextStatus = !navigator.onLine || errorName === "AbortError"
+          ? "unavailable"
+          : "blocked";
       } finally {
         if (timeoutTimer !== null) window.clearTimeout(timeoutTimer);
         timeoutTimer = null;
@@ -67,8 +154,15 @@ export default function BackendStartupNotice() {
       }
 
       if (cancelled) return;
-      setBackendUnavailable(!responding);
-      scheduleCheck(responding ? HEALTHY_POLL_DELAY_MS : RETRY_DELAY_MS);
+      setProbeStatus(nextStatus);
+      if (nextStatus === "reachable") {
+        scheduleCheck(HEALTHY_POLL_DELAY_MS);
+      } else if (nextStatus === "blocked") {
+        // Avoid repeatedly hitting an endpoint that the browser is deliberately blocking.
+        scheduleCheck(BLOCKED_RETRY_DELAY_MS);
+      } else {
+        scheduleCheck(RETRY_DELAY_MS);
+      }
     };
 
     const checkNow = () => {
@@ -98,17 +192,59 @@ export default function BackendStartupNotice() {
     };
   }, [location.pathname, location.search]);
 
-  if (!backendUnavailable) return null;
+  if (probeStatus === "checking" || probeStatus === "reachable") return null;
+
+  const healthCheckBlocked = probeStatus === "blocked";
+  const noSleepLabel =
+    noSleepStatus === "on"
+      ? "On"
+      : noSleepStatus === "unsupported"
+        ? "Not supported"
+        : noSleepStatus === "checking"
+          ? "Starting"
+          : "Off";
 
   return (
     <div className="backend-startup-notice" role="status" aria-live="polite">
-      <span className="backend-startup-notice__spinner" aria-hidden="true" />
+      <span
+        className="backend-startup-notice__indicator"
+        data-state={healthCheckBlocked ? "blocked" : "waiting"}
+        aria-hidden="true"
+      />
       <div className="backend-startup-notice__copy">
-        <strong>Blogg’s backend is starting up</strong>
+        <strong>
+          {healthCheckBlocked
+            ? "Ad blocker is blocking the optional status check"
+            : "Blogg’s backend may be asleep"}
+        </strong>
         <p>
-          After a site restart, the backend can take around 30 seconds to wake up.
-          Feed, account details, and blogs may take longer to open while it starts.
-          Keep this page open; this notice will disappear when the backend responds.
+          {healthCheckBlocked
+            ? "The browser is blocking Blogg’s /healthz request, which is commonly caused by an ad blocker or privacy filter. This check is only used for the status notice; it is not required for normal site requests."
+            : "The backend status check has not received a response. The hosted backend automatically shuts down after 15 minutes without activity and wakes when a new app request reaches it."}
+        </p>
+
+        <div className="backend-startup-notice__statuses" aria-label="Connection status">
+          <span
+            className="backend-startup-notice__status"
+            data-state={healthCheckBlocked ? "active" : "unknown"}
+          >
+            Ad blocker: {healthCheckBlocked ? "Active" : "Not confirmed"}
+          </span>
+          <span
+            className="backend-startup-notice__status"
+            data-state={noSleepStatus === "on" ? "active" : "unknown"}
+          >
+            NoSleep: {noSleepLabel}
+          </span>
+          <span className="backend-startup-notice__status" data-state="info">
+            Backend auto-sleep: 15 min idle
+          </span>
+        </div>
+
+        <p className="backend-startup-notice__footnote">
+          NoSleep keeps this visible tab’s screen awake only. It does not send
+          keep-alive requests, so the backend can still sleep after 15 minutes
+          without activity.
         </p>
       </div>
     </div>

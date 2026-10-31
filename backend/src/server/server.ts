@@ -55,6 +55,11 @@ await initializePostgresSchema();
 // only after MongoDB connects and PostgreSQL pool/schema initialization completes.
 // Keep this handler intentionally lightweight: it must not query application data.
 app.get("/healthz", (_req, res) => {
+  // This public endpoint is also called cross-origin by the frontend and uptime
+  // monitors. It never uses cookies, so wildcard CORS is safe and avoids a stale
+  // FRONTEND_URL setting preventing the browser from seeing a successful probe.
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
   res.setHeader("Pragma", "no-cache");
   res.status(200).json({
