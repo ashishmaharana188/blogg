@@ -228,3 +228,36 @@ html.blogg-dark-mode .blogg-form-host .blogg-sticky-layer .blogg-sticky-emerald 
     background-image: none !important;
   }
 }
+
+/* -------------------------------------------------------------------------
+   Explicit text fixes for the two remaining controls reported in dark mode.
+   The feed action is a button and a link sharing the same light-theme class;
+   the form Footnotes label has its own light-theme colour on the row.
+   ------------------------------------------------------------------------- */
+html.blogg-dark-mode .blog-feed-page .blog-feed-post-actions button.blog-feed-open-link,
+html.blogg-dark-mode .blog-feed-page .blog-feed-post-actions a.blog-feed-open-link {
+  color: #e8e8e8 !important;
+  -webkit-text-fill-color: #e8e8e8 !important;
+  text-decoration-color: #a8a8a8 !important;
+}
+
+html.blogg-dark-mode .blog-feed-page .blog-feed-post-actions button.blog-feed-open-link:hover,
+html.blogg-dark-mode .blog-feed-page .blog-feed-post-actions a.blog-feed-open-link:hover,
+html.blogg-dark-mode .blog-feed-page .blog-feed-post-actions button.blog-feed-open-link:focus-visible,
+html.blogg-dark-mode .blog-feed-page .blog-feed-post-actions a.blog-feed-open-link:focus-visible {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  text-decoration-color: #ffffff !important;
+}
+
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form .blogg-editor-references-toggle-row,
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form .blogg-editor-references-toggle-row > .blogg-editor-references-toggle-label,
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form .blogg-editor-references-toggle-row > span {
+  color: #ededed !important;
+  -webkit-text-fill-color: #ededed !important;
+}
+
+html.blogg-dark-mode .blogg-form-host .blogg-editor-form .blogg-editor-references-toggle-row .blogg-editor-switch {
+  color: #ededed !important;
+  -webkit-text-fill-color: #ededed !important;
+}
