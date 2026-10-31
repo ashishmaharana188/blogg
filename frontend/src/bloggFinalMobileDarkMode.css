@@ -1,4 +1,4 @@
-/* Final high-contrast rules for the Footnotes controls and mobile minimiser. */
+/* Final high-contrast rules for the Footnotes controls in dark mode. */
 html.blogg-dark-mode .blogg-editor-form .blogg-editor-references-toggle-row,
 html.blogg-dark-mode .blogg-editor-form .blogg-editor-references-toggle-row > span,
 html.blogg-dark-mode .blogg-editor-form .blogg-editor-references-toggle-row .blogg-editor-references-toggle-label {
@@ -12,6 +12,7 @@ html.blogg-dark-mode .blogg-editor-form button[aria-label="Show Footnotes and Re
 html.blogg-dark-mode .blogg-editor-form button.text-slate-600 {
   color: #f5f5f5 !important;
   -webkit-text-fill-color: #f5f5f5 !important;
+  text-decoration-color: #bdbdbd !important;
   opacity: 1 !important;
 }
 
@@ -20,40 +21,10 @@ html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-header-toggle :where
   color: #f5f5f5 !important;
   -webkit-text-fill-color: #f5f5f5 !important;
   opacity: 1 !important;
+  text-shadow: none !important;
 }
 
 html.blogg-dark-mode .blogg-reference-panel-slot .blogg-ref-count {
   color: #bdbdbd !important;
   -webkit-text-fill-color: #bdbdbd !important;
-}
-
-@media (max-width: 760px) {
-  .blogg-mobile-header-toggle-row {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: flex-end !important;
-    width: 100% !important;
-    margin: -2px 0 -7px !important;
-  }
-
-  .blogg-mobile-header-toggle {
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    min-height: 30px !important;
-    padding: 5px 9px !important;
-    border: 1px solid #7c8795 !important;
-    border-radius: 5px !important;
-    background: #f8fafc !important;
-    color: #273246 !important;
-    font: 600 10px/1.2 system-ui, sans-serif !important;
-    cursor: pointer !important;
-  }
-
-  html.blogg-dark-mode .blogg-mobile-header-toggle {
-    border-color: #666666 !important;
-    background: #383838 !important;
-    color: #f4f4f4 !important;
-    -webkit-text-fill-color: #f4f4f4 !important;
-  }
 }

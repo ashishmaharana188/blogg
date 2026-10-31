@@ -142,7 +142,6 @@ const UserForm = ({
         selectedBlogg !== undefined &&
         !initialEditMode),
   );
-  const [isMobileHeaderCollapsed, setIsMobileHeaderCollapsed] = useState(false);
   const [formData, setFormData] = useState({
     author: selectedBlogg?.author ?? "",
     title: selectedBlogg?.title ?? "",
@@ -520,23 +519,7 @@ const UserForm = ({
         <main className="blogg-editor-form-main min-w-0">
           <div className="blogg-editor-form-inner relative mx-auto block w-full max-w-[1600px] p-3 sm:p-4">
             <div className="mx-auto flex w-full max-w-[1200px] min-w-0 flex-col gap-4">
-              <div className={`blogg-editor-heading-area ${isMobileHeaderCollapsed ? "is-mobile-collapsed" : ""}`}>
-                {isEditable && (
-                  <div className="blogg-mobile-header-toggle-row">
-                    <button
-                      type="button"
-                      className="blogg-mobile-header-toggle"
-                      onClick={() => setIsMobileHeaderCollapsed((collapsed) => !collapsed)}
-                      aria-expanded={!isMobileHeaderCollapsed}
-                      aria-controls="blogg-editor-heading-fields"
-                    >
-                      <span>{isMobileHeaderCollapsed ? "Show header" : "Minimise header"}</span>
-                      <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d={isMobileHeaderCollapsed ? "m7 14 5-5 5 5" : "m7 10 5 5 5-5"} />
-                      </svg>
-                    </button>
-                  </div>
-                )}
+              <div className="blogg-editor-heading-area">
                 <div id="blogg-editor-heading-fields" className="blogg-editor-heading-fields">
                   <div className="blogg-editor-field blogg-editor-author-field self-center -mt-4 w-full max-w-[500px]">
                     <textarea
@@ -560,7 +543,7 @@ const UserForm = ({
                       autoResize(titleRef);
                     }}
                     placeholder="Document Title"
-                    className={`blogg-editor-title w-full max-w-[1100px] resize-none overflow-hidden whitespace-pre-wrap break-words text-3xl sm:text-4xl font-bold outline-none self-center text-center ${isMobileHeaderCollapsed ? "is-mobile-header-compact" : ""}`}
+                    className="blogg-editor-title w-full max-w-[1100px] resize-none overflow-hidden whitespace-pre-wrap break-words text-3xl sm:text-4xl font-bold outline-none self-center text-center"
                   />
                   <div className="blogg-editor-field blogg-editor-description-field self-center -mt-4 w-full max-w-[800px]">
                     <textarea
@@ -579,7 +562,7 @@ const UserForm = ({
               </div>
 
               <div className="blogg-editor-tags-toolbar-row mt-4 flex w-full min-w-0 items-center gap-3">
-                <div className={`blogg-editor-tags-list flex min-w-0 flex-1 flex-wrap items-center justify-center gap-2 ${isMobileHeaderCollapsed ? "is-mobile-header-collapsed" : ""}`}>
+                <div className="blogg-editor-tags-list flex min-w-0 flex-1 flex-wrap items-center justify-center gap-2">
                   {tags.map((tag, index) => (
                     <div
                       key={index}
