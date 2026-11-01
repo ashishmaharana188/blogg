@@ -48,30 +48,46 @@ function createRandomRoute(seed: number, viewBoxHeight: number, unitsPerPixel: n
   const startsLeft = random() < 0.5;
   const startY = randomBetween(random, -32, 32) * unitsPerPixel;
   const lookAhead = ROUTE_LOOKAHEAD_PX * unitsPerPixel;
+  const minX = -85;
+  const maxX = 1085;
 
-  const edgePoint = (left: boolean, y: number, isEndpoint = false): Point => ({
-    x: left
-      ? randomBetween(random, isEndpoint ? -45 : -70, isEndpoint ? 95 : 330)
-      : randomBetween(random, isEndpoint ? 905 : 670, isEndpoint ? 1045 : 1070),
-    y,
-  });
+  // Reflect a wandering route at the canvas edges rather than forcing it to
+  // alternate left/right. This allows several consecutive turns in either
+  // horizontal direction while keeping the line inside the page silhouette.
+  const reflectX = (value: number): number => {
+    let next = value;
+    while (next < minX || next > maxX) {
+      if (next < minX) next = minX + (minX - next);
+      if (next > maxX) next = maxX - (next - maxX);
+    }
+    return next;
+  };
 
-  const points: Point[] = [edgePoint(startsLeft, startY, true)];
+  let currentX = startsLeft
+    ? randomBetween(random, -45, 35)
+    : randomBetween(random, 965, 1045);
   let currentY = startY;
-  let sweepIndex = 0;
+  let previousHorizontalStep = randomBetween(random, -260, 260);
+  const points: Point[] = [{ x: currentX, y: currentY }];
   const finalY = viewBoxHeight + lookAhead;
+  let pointIndex = 0;
 
-  // Randomized physical gaps are converted into SVG units using the page width.
-  // This keeps the curve spacing visually consistent on phones and desktops.
-  while (currentY < finalY && sweepIndex < 1200) {
+  // Each anchor gets a different vertical interval and horizontal movement.
+  // Horizontal momentum is deliberately weak: the path may continue in the
+  // same direction for a while, reverse, drift diagonally, or sweep across.
+  while (currentY < finalY && pointIndex < 1600) {
     currentY += randomBetween(random, ROUTE_GAP_MIN_PX, ROUTE_GAP_MAX_PX) * unitsPerPixel;
-    const travelsLeft = sweepIndex % 2 === 0 ? !startsLeft : startsLeft;
-    points.push(edgePoint(travelsLeft, currentY, currentY >= viewBoxHeight));
-    sweepIndex += 1;
+    const momentum = previousHorizontalStep * randomBetween(random, 0.08, 0.22);
+    const horizontalStep = randomBetween(random, -470, 470) + momentum;
+    const nextX = reflectX(currentX + horizontalStep);
+    previousHorizontalStep = nextX - currentX;
+    currentX = nextX;
+    points.push({ x: currentX, y: currentY });
+    pointIndex += 1;
   }
 
-  // Build a smooth cubic spline with a shared tangent at every anchor. Shorter,
-  // per-turn handles make the bends tighter without creating angular joins.
+  // Smooth cubic spline with a shared tangent at every anchor. Longer, gently
+  // randomized handles round the turns instead of creating pointed reversals.
   const distance = (a: Point, b: Point): number => Math.hypot(b.x - a.x, b.y - a.y);
   const direction = (a: Point, b: Point): Point => {
     const length = distance(a, b) || 1;
@@ -94,8 +110,9 @@ function createRandomRoute(seed: number, viewBoxHeight: number, unitsPerPixel: n
       : outgoing;
   });
 
-  // Derive handle randomness independently per anchor. Extending the route then
-  // leaves all existing handle lengths unchanged as later points are appended.
+  // Seed each handle independently by anchor index. Because points are generated
+  // in order from the same page seed, loading more content does not alter the
+  // already visible section of the route.
   const handleLengths = points.map((point, index) => {
     const previousGap = index > 0
       ? distance(points[index - 1], point)
@@ -104,7 +121,7 @@ function createRandomRoute(seed: number, viewBoxHeight: number, unitsPerPixel: n
       ? distance(point, points[index + 1])
       : previousGap;
     const handleRandom = makeRandom((seed ^ Math.imul(index + 1, 0x9e3779b1)) >>> 0);
-    return Math.min(previousGap, nextGap) * randomBetween(handleRandom, 0.105, 0.17);
+    return Math.min(previousGap, nextGap) * randomBetween(handleRandom, 0.25, 0.34);
   });
 
   let path = `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
