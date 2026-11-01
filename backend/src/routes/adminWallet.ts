@@ -518,6 +518,28 @@ async function buildWalletResponse() {
   };
 }
 
+// Public Feed line numeral endpoint. It returns Savings divided by ₹10,000,
+// rounded to two decimals. Each 0.01 step therefore represents ₹100. This is the
+// explicitly requested public scaled figure; exact balances and the ledger remain
+// available only through the guarded administrator endpoint.
+router.get("/showcase/wallet-graph", async (_req, res, next) => {
+  try {
+    const settings = await getDB().collection("adminWalletSettings").findOne(
+      { key: SETTINGS_KEY },
+      { projection: { _id: 0, savingsBalancePaise: 1 } },
+    );
+    const savingsBalancePaise = Number(settings?.savingsBalancePaise || 0);
+    const unitsOfTenThousand = Number.isFinite(savingsBalancePaise)
+      ? Math.round((savingsBalancePaise / 1_000_000) * 100) / 100
+      : 0;
+
+    res.setHeader("Cache-Control", "no-store");
+    res.json({ value: unitsOfTenThousand });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get("/admin/wallet", ...ADMIN_GUARD, async (_req, res, next) => {
   try {
     res.setHeader("Cache-Control", "private, no-store");

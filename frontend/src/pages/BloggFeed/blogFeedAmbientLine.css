@@ -67,3 +67,41 @@ html.blogg-dark-mode .blog-feed-page > .blog-feed-ambient-line {
 @media (prefers-reduced-motion: reduce) {
   .blog-feed-ambient-line__traveller { display: none; }
 }
+
+.blog-feed-ambient-line.is-pointer-active .blog-feed-ambient-line__traveller {
+  stroke-width: 4.1;
+  stroke-opacity: 1;
+}
+
+
+
+/* Brutalist monoline numerals: heavier, squared terminals, geometric weight. */
+.blog-feed-ambient-line__wallet-numeral {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 8.2;
+  stroke-opacity: 0.82;
+  stroke-linecap: square;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.blog-feed-ambient-line.is-pointer-active .blog-feed-ambient-line__wallet-numeral {
+  stroke-width: 8.8;
+  stroke-opacity: 0.94;
+}
+
+html.blogg-dark-mode .blog-feed-ambient-line__wallet-numeral {
+  stroke-opacity: 0.9;
+}
+
+@media (max-width: 760px) {
+  .blog-feed-ambient-line__wallet-numeral {
+    stroke-width: 7.0;
+  }
+
+  .blog-feed-ambient-line.is-pointer-active .blog-feed-ambient-line__wallet-numeral {
+    stroke-width: 7.6;
+  }
+}
