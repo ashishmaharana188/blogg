@@ -195,7 +195,6 @@ export default function AdminWalletFeedWidget() {
       data-wallet-graph-mode={lineMode ? "graph" : "numerical"}
     >
       <div className="admin-wallet-feed-widget__heading">
-        <span>WALLET</span>
         {isAdmin ? (
           <div className="admin-wallet-feed-widget__admin-controls">
             <span className="admin-wallet-feed-widget__admin">ADMIN</span>

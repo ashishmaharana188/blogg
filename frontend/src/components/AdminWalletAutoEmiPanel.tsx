@@ -187,7 +187,9 @@ export default function AdminWalletAutoEmiPanel() {
       !Number.isSafeInteger(amountPaise) ||
       amountPaise <= 0
     ) {
-      setError("Enter an EMI amount greater than zero, with up to two decimal places.");
+      setError(
+        "Enter an EMI amount greater than zero, with up to two decimal places.",
+      );
       return;
     }
     if (!description.trim()) {
@@ -212,7 +214,9 @@ export default function AdminWalletAutoEmiPanel() {
       setAmount("");
       setDescription("");
       setDayOfMonth(5);
-      setMessage("EMI mandate created. Its first debit is scheduled for the next occurrence.");
+      setMessage(
+        "EMI mandate created. Its first debit is scheduled for the next occurrence.",
+      );
       window.dispatchEvent(new Event("admin-wallet-data-updated"));
     } catch (reason) {
       setError(
@@ -267,7 +271,9 @@ export default function AdminWalletAutoEmiPanel() {
       );
       setPayload(data);
       setEditingId(null);
-      setMessage("Mandate updated. Previous monthly debits remain unchanged in history.");
+      setMessage(
+        "Mandate updated. Previous monthly debits remain unchanged in history.",
+      );
       window.dispatchEvent(new Event("admin-wallet-data-updated"));
     } catch (reason) {
       setError(
@@ -341,7 +347,9 @@ export default function AdminWalletAutoEmiPanel() {
 
   if (!isAdmin || !mountNode) return null;
 
-  const enabledCount = payload.mandates.filter((mandate) => mandate.enabled).length;
+  const enabledCount = payload.mandates.filter(
+    (mandate) => mandate.enabled,
+  ).length;
 
   return createPortal(
     <section
@@ -352,9 +360,6 @@ export default function AdminWalletAutoEmiPanel() {
       <div className="admin-wallet-section-heading">
         <div>
           <h3>Recurring EMI mandates</h3>
-          <p className="admin-wallet-emi-caption">
-            NACH-style schedule and debit history · internal wallet ledger only
-          </p>
         </div>
         <div className="admin-wallet-emi-heading-actions">
           <span className="admin-wallet-emi-count">
@@ -364,11 +369,17 @@ export default function AdminWalletAutoEmiPanel() {
             type="button"
             className="admin-wallet-icon-button"
             aria-expanded={!collapsed}
-            aria-label={collapsed ? "Expand recurring EMI mandates" : "Minimise recurring EMI mandates"}
+            aria-label={
+              collapsed
+                ? "Expand recurring EMI mandates"
+                : "Minimise recurring EMI mandates"
+            }
             title={collapsed ? "Expand" : "Minimise"}
             onClick={() => setCollapsed((value) => !value)}
           >
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d={collapsed ? "m6 14 6-6 6 6" : "m6 10 6 6 6-6"} /></svg>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d={collapsed ? "m6 14 6-6 6 6" : "m6 10 6 6 6-6"} />
+            </svg>
           </button>
         </div>
       </div>
@@ -399,16 +410,23 @@ export default function AdminWalletAutoEmiPanel() {
                                   min="0.01"
                                   step="0.01"
                                   value={editAmount}
-                                  onChange={(event) => setEditAmount(event.target.value)}
+                                  onChange={(event) =>
+                                    setEditAmount(event.target.value)
+                                  }
                                 />
                               </label>
                               <label>
                                 <span>Debit day</span>
                                 <select
                                   value={editDay}
-                                  onChange={(event) => setEditDay(Number(event.target.value))}
+                                  onChange={(event) =>
+                                    setEditDay(Number(event.target.value))
+                                  }
                                 >
-                                  {Array.from({ length: 31 }, (_, index) => index + 1).map((day) => (
+                                  {Array.from(
+                                    { length: 31 },
+                                    (_, index) => index + 1,
+                                  ).map((day) => (
                                     <option key={day} value={day}>
                                       {ordinal(day)} of each month
                                     </option>
@@ -421,7 +439,9 @@ export default function AdminWalletAutoEmiPanel() {
                                   type="text"
                                   maxLength={120}
                                   value={editDescription}
-                                  onChange={(event) => setEditDescription(event.target.value)}
+                                  onChange={(event) =>
+                                    setEditDescription(event.target.value)
+                                  }
                                 />
                               </label>
                             </div>
@@ -430,11 +450,15 @@ export default function AdminWalletAutoEmiPanel() {
                                 type="button"
                                 className="admin-wallet-icon-button is-save"
                                 disabled={isBusy}
-                                onClick={() => void updateMandate(mandate.mandateId)}
+                                onClick={() =>
+                                  void updateMandate(mandate.mandateId)
+                                }
                                 aria-label="Save mandate changes"
                                 title="Save changes"
                               >
-                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5 9.5 17 19 7.5" /></svg>
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                  <path d="M5 12.5 9.5 17 19 7.5" />
+                                </svg>
                               </button>
                               <button
                                 type="button"
@@ -444,7 +468,9 @@ export default function AdminWalletAutoEmiPanel() {
                                 aria-label="Cancel mandate editing"
                                 title="Cancel"
                               >
-                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17" /></svg>
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                  <path d="m7 7 10 10M17 7 7 17" />
+                                </svg>
                               </button>
                             </div>
                           </div>
@@ -453,14 +479,22 @@ export default function AdminWalletAutoEmiPanel() {
                             <div className="admin-wallet-emi-mandate-main">
                               <div className="admin-wallet-emi-mandate-title">
                                 <strong>{mandate.description}</strong>
-                                <span className={`admin-wallet-emi-mandate-status ${mandate.enabled ? "is-enabled" : "is-paused"}`}>
+                                <span
+                                  className={`admin-wallet-emi-mandate-status ${mandate.enabled ? "is-enabled" : "is-paused"}`}
+                                >
                                   {mandate.enabled ? "Active" : "Paused"}
                                 </span>
                               </div>
                               <div className="admin-wallet-emi-mandate-meta">
-                                <strong>{formatMoney(mandate.amountPaise)} / month</strong>
-                                <span>Debit on the {ordinal(mandate.dayOfMonth)}</span>
-                                <span>Next: {formatDate(mandate.nextEmiAt)}</span>
+                                <strong>
+                                  {formatMoney(mandate.amountPaise)} / month
+                                </strong>
+                                <span>
+                                  Debit on the {ordinal(mandate.dayOfMonth)}
+                                </span>
+                                <span>
+                                  Next: {formatDate(mandate.nextEmiAt)}
+                                </span>
                               </div>
                             </div>
                             <div className="admin-wallet-emi-actions">
@@ -472,19 +506,35 @@ export default function AdminWalletAutoEmiPanel() {
                                 aria-label={`Edit ${mandate.description}`}
                                 title="Edit mandate"
                               >
-                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5 4 4M4 20l4.2-.9L19 8.3a2.1 2.1 0 0 0-3-3L5.2 16.1 4 20Z" /></svg>
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                  <path d="m15 5 4 4M4 20l4.2-.9L19 8.3a2.1 2.1 0 0 0-3-3L5.2 16.1 4 20Z" />
+                                </svg>
                               </button>
                               <button
                                 type="button"
                                 className="admin-wallet-icon-button"
                                 disabled={isBusy}
                                 onClick={() => void toggleMandate(mandate)}
-                                aria-label={mandate.enabled ? `Pause ${mandate.description}` : `Resume ${mandate.description}`}
-                                title={mandate.enabled ? "Pause mandate" : "Resume mandate"}
+                                aria-label={
+                                  mandate.enabled
+                                    ? `Pause ${mandate.description}`
+                                    : `Resume ${mandate.description}`
+                                }
+                                title={
+                                  mandate.enabled
+                                    ? "Pause mandate"
+                                    : "Resume mandate"
+                                }
                               >
-                                {mandate.enabled
-                                  ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14" /></svg>
-                                  : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7V5Z" /></svg>}
+                                {mandate.enabled ? (
+                                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M8 5v14M16 5v14" />
+                                  </svg>
+                                ) : (
+                                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="m8 5 11 7-11 7V5Z" />
+                                  </svg>
+                                )}
                               </button>
                               <button
                                 type="button"
@@ -494,7 +544,9 @@ export default function AdminWalletAutoEmiPanel() {
                                 aria-label={`Delete ${mandate.description}`}
                                 title="Delete mandate"
                               >
-                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-.8 13H6.8L6 7m4 4v5m4-5v5" /></svg>
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                  <path d="M4 7h16M9 7V4h6v3m3 0-.8 13H6.8L6 7m4 4v5m4-5v5" />
+                                </svg>
                               </button>
                             </div>
                           </>
@@ -505,16 +557,13 @@ export default function AdminWalletAutoEmiPanel() {
                 </div>
               ) : (
                 <p className="admin-wallet-empty">
-                  No EMI mandates yet. Add one below to track monthly wallet debits.
+                  No EMI mandates yet. Add one below to track monthly wallet
+                  debits.
                 </p>
               )}
 
               <div className="admin-wallet-emi-create">
-                <div className="admin-wallet-section-heading admin-wallet-section-heading--single">
-                  <div>
-                    <h4>Add EMI mandate</h4>
-                  </div>
-                </div>
+                <div className="admin-wallet-section-heading admin-wallet-section-heading--single"></div>
                 <div className="admin-wallet-emi-fields">
                   <label>
                     <span>Monthly amount (₹)</span>
@@ -531,13 +580,17 @@ export default function AdminWalletAutoEmiPanel() {
                     <span>Debit day</span>
                     <select
                       value={dayOfMonth}
-                      onChange={(event) => setDayOfMonth(Number(event.target.value))}
+                      onChange={(event) =>
+                        setDayOfMonth(Number(event.target.value))
+                      }
                     >
-                      {Array.from({ length: 31 }, (_, index) => index + 1).map((day) => (
-                        <option key={day} value={day}>
-                          {ordinal(day)} of each month
-                        </option>
-                      ))}
+                      {Array.from({ length: 31 }, (_, index) => index + 1).map(
+                        (day) => (
+                          <option key={day} value={day}>
+                            {ordinal(day)} of each month
+                          </option>
+                        ),
+                      )}
                     </select>
                   </label>
                   <label className="admin-wallet-emi-description">
@@ -570,18 +623,31 @@ export default function AdminWalletAutoEmiPanel() {
                 >
                   <span className="admin-wallet-emi-history-label">
                     <strong>Debit history</strong>
-                    <small>{payload.history.length} recorded monthly debits</small>
+                    <small>
+                      {payload.history.length} recorded monthly debits
+                    </small>
                   </span>
-                  <span className="admin-wallet-emi-history-chevron" aria-hidden="true">{showHistory ? "⌃" : "⌄"}</span>
+                  <span
+                    className="admin-wallet-emi-history-chevron"
+                    aria-hidden="true"
+                  >
+                    {showHistory ? "⌃" : "⌄"}
+                  </span>
                 </button>
-                {showHistory && (
-                  payload.history.length > 0 ? (
+                {showHistory &&
+                  (payload.history.length > 0 ? (
                     <div className="admin-wallet-emi-history-list">
                       {payload.history.map((entry) => (
-                        <article className="admin-wallet-history-row" key={entry.eventKey}>
+                        <article
+                          className="admin-wallet-history-row"
+                          key={entry.eventKey}
+                        >
                           <div className="admin-wallet-history-copy">
                             <strong>{entry.description}</strong>
-                            <span>{entry.occurrenceMonth} · {formatDate(entry.createdAt)}</span>
+                            <span>
+                              {entry.occurrenceMonth} ·{" "}
+                              {formatDate(entry.createdAt)}
+                            </span>
                           </div>
                           <strong className="is-negative">
                             −{formatMoney(entry.amountPaise)}
@@ -591,14 +657,11 @@ export default function AdminWalletAutoEmiPanel() {
                     </div>
                   ) : (
                     <p className="admin-wallet-empty">
-                      Monthly debit records will appear here after the first scheduled occurrence.
+                      Monthly debit records will appear here after the first
+                      scheduled occurrence.
                     </p>
-                  )
-                )}
+                  ))}
               </div>
-              <p className="admin-wallet-note">
-                This creates internal wallet ledger entries only. It does not register a bank NACH mandate or debit an external bank account.
-              </p>
             </>
           )}
         </>

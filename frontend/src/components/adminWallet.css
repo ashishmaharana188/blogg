@@ -39,7 +39,7 @@
 .admin-wallet-panel__header p:not(.admin-wallet-panel__eyebrow) {
   margin: 5px 0 0;
   color: #687586;
-  font-size: .76rem;
+  font-size: 0.76rem;
   line-height: 1.5;
 }
 
@@ -48,7 +48,7 @@
   color: #8993a1;
   font-size: 9px;
   font-weight: 750;
-  letter-spacing: .13em;
+  letter-spacing: 0.13em;
 }
 
 .admin-wallet-status {
@@ -102,7 +102,7 @@
 }
 
 .admin-wallet-metric > strong.admin-wallet-date {
-  font-size: .95rem;
+  font-size: 0.95rem;
 }
 
 .admin-wallet-metric > small {
@@ -111,8 +111,12 @@
   line-height: 1.4;
 }
 
-.admin-wallet-panel .is-positive { color: #16804a !important; }
-.admin-wallet-panel .is-negative { color: #c04444 !important; }
+.admin-wallet-panel .is-positive {
+  color: #16804a !important;
+}
+.admin-wallet-panel .is-negative {
+  color: #c04444 !important;
+}
 
 .admin-wallet-section {
   margin-top: 15px;
@@ -132,14 +136,14 @@
 .admin-wallet-section-heading h3 {
   margin: 0;
   color: #243044;
-  font-size: .86rem;
+  font-size: 0.86rem;
   font-weight: 750;
 }
 
 .admin-wallet-section-heading p {
   margin: 4px 0 0;
   color: #7a8492;
-  font-size: .69rem;
+  font-size: 0.69rem;
   line-height: 1.5;
 }
 
@@ -154,7 +158,9 @@
   border-radius: 999px;
   background: #e5e9ef;
   cursor: pointer;
-  transition: background .15s ease, border-color .15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .admin-wallet-switch > span {
@@ -163,7 +169,7 @@
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 1px 3px rgb(15 23 42 / 22%);
-  transition: transform .15s ease;
+  transition: transform 0.15s ease;
 }
 
 .admin-wallet-switch.is-on {
@@ -171,8 +177,13 @@
   background: #177b4c;
 }
 
-.admin-wallet-switch.is-on > span { transform: translateX(18px); }
-.admin-wallet-switch:disabled { cursor: wait; opacity: .55; }
+.admin-wallet-switch.is-on > span {
+  transform: translateX(18px);
+}
+.admin-wallet-switch:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
 
 .admin-wallet-settings-fields {
   display: grid;
@@ -222,13 +233,23 @@
   border-radius: 7px;
   background: #1b293c;
   color: #fff;
-  font: 650 11px/1.2 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font:
+    650 11px/1.2 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
   cursor: pointer;
   white-space: nowrap;
 }
 
-.admin-wallet-button:hover:not(:disabled) { background: #2b3b52; }
-.admin-wallet-button:disabled { cursor: wait; opacity: .55; }
+.admin-wallet-button:hover:not(:disabled) {
+  background: #2b3b52;
+}
+.admin-wallet-button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
 
 .admin-wallet-button--secondary {
   border-color: #d3dae3;
@@ -322,9 +343,16 @@
   gap: 3px;
 }
 
-.admin-wallet-cycle-toggle strong { font-size: 11px; }
-.admin-wallet-cycle-toggle small { color: #8993a1; font-size: 9px; }
-.admin-wallet-cycle-toggle > span:last-child { font-size: 19px; }
+.admin-wallet-cycle-toggle strong {
+  font-size: 11px;
+}
+.admin-wallet-cycle-toggle small {
+  color: #8993a1;
+  font-size: 9px;
+}
+.admin-wallet-cycle-toggle > span:last-child {
+  font-size: 19px;
+}
 
 .admin-wallet-message,
 .admin-wallet-error {
@@ -335,8 +363,14 @@
   line-height: 1.5;
 }
 
-.admin-wallet-message { background: #eff9f2; color: #176b3a; }
-.admin-wallet-error { background: #fff2f0; color: #a33b31; }
+.admin-wallet-message {
+  background: #eff9f2;
+  color: #176b3a;
+}
+.admin-wallet-error {
+  background: #fff2f0;
+  color: #a33b31;
+}
 
 .admin-wallet-feed-widget-mount {
   width: 184px;
@@ -367,13 +401,13 @@
   color: #667085;
   font-size: 9px;
   font-weight: 800;
-  letter-spacing: .12em;
+  letter-spacing: 0.12em;
 }
 
 .admin-wallet-feed-widget__admin {
   color: #16804a;
   font-size: 8px;
-  letter-spacing: .08em;
+  letter-spacing: 0.08em;
 }
 
 .admin-wallet-feed-widget__metric {
@@ -396,8 +430,12 @@
   overflow-wrap: anywhere;
 }
 
-.admin-wallet-feed-widget__metric > strong.is-positive { color: #16804a; }
-.admin-wallet-feed-widget__metric > strong.is-negative { color: #c04444; }
+.admin-wallet-feed-widget__metric > strong.is-positive {
+  color: #16804a;
+}
+.admin-wallet-feed-widget__metric > strong.is-negative {
+  color: #c04444;
+}
 
 .admin-wallet-feed-widget__footer {
   display: flex;
@@ -424,7 +462,9 @@
   text-decoration: none;
 }
 
-.admin-wallet-feed-widget__link:hover { color: #16804a; }
+.admin-wallet-feed-widget__link:hover {
+  color: #16804a;
+}
 .admin-wallet-feed-widget__muted,
 .admin-wallet-feed-widget__error {
   margin: 7px 0;
@@ -433,7 +473,9 @@
   line-height: 1.5;
 }
 
-.admin-wallet-feed-widget__error { color: #a33b31; }
+.admin-wallet-feed-widget__error {
+  color: #a33b31;
+}
 
 html.blogg-dark-mode .admin-wallet-panel {
   border-color: #454545;
@@ -450,7 +492,9 @@ html.blogg-dark-mode .admin-wallet-metric > strong {
   color: #ededed;
 }
 
-html.blogg-dark-mode .admin-wallet-panel__header p:not(.admin-wallet-panel__eyebrow),
+html.blogg-dark-mode
+  .admin-wallet-panel__header
+  p:not(.admin-wallet-panel__eyebrow),
 html.blogg-dark-mode .admin-wallet-section-heading p,
 html.blogg-dark-mode .admin-wallet-metric > span,
 html.blogg-dark-mode .admin-wallet-metric > small,
@@ -504,11 +548,23 @@ html.blogg-dark-mode .admin-wallet-cycle-toggle {
   border-color: #454545;
 }
 
-html.blogg-dark-mode .admin-wallet-history-row > strong { color: #e5e5e5; }
-html.blogg-dark-mode .admin-wallet-panel .is-positive { color: #83d49b !important; }
-html.blogg-dark-mode .admin-wallet-panel .is-negative { color: #f09a91 !important; }
-html.blogg-dark-mode .admin-wallet-message { background: #1e3928; color: #a9e0ba; }
-html.blogg-dark-mode .admin-wallet-error { background: #402623; color: #f3aaa1; }
+html.blogg-dark-mode .admin-wallet-history-row > strong {
+  color: #e5e5e5;
+}
+html.blogg-dark-mode .admin-wallet-panel .is-positive {
+  color: #83d49b !important;
+}
+html.blogg-dark-mode .admin-wallet-panel .is-negative {
+  color: #f09a91 !important;
+}
+html.blogg-dark-mode .admin-wallet-message {
+  background: #1e3928;
+  color: #a9e0ba;
+}
+html.blogg-dark-mode .admin-wallet-error {
+  background: #402623;
+  color: #f3aaa1;
+}
 
 html.blogg-dark-mode .admin-wallet-feed-widget {
   border-color: #494949;
@@ -529,26 +585,47 @@ html.blogg-dark-mode .admin-wallet-feed-widget__muted {
   color: #a6a6a6;
 }
 
-html.blogg-dark-mode .admin-wallet-feed-widget__metric > strong { color: #ededed; }
-html.blogg-dark-mode .admin-wallet-feed-widget__metric > strong.is-positive { color: #83d49b; }
-html.blogg-dark-mode .admin-wallet-feed-widget__metric > strong.is-negative { color: #f09a91; }
-html.blogg-dark-mode .admin-wallet-feed-widget__link:hover { color: #a9e0ba; }
+html.blogg-dark-mode .admin-wallet-feed-widget__metric > strong {
+  color: #ededed;
+}
+html.blogg-dark-mode .admin-wallet-feed-widget__metric > strong.is-positive {
+  color: #83d49b;
+}
+html.blogg-dark-mode .admin-wallet-feed-widget__metric > strong.is-negative {
+  color: #f09a91;
+}
+html.blogg-dark-mode .admin-wallet-feed-widget__link:hover {
+  color: #a9e0ba;
+}
 
 @media (max-width: 760px) {
-  .admin-wallet-panel { padding: 14px; }
-  .admin-wallet-settings-fields { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  .admin-wallet-settings-fields .admin-wallet-button { grid-column: 1 / -1; }
-  .admin-wallet-entry-form { grid-template-columns: minmax(0, 1fr); }
-  .admin-wallet-entry-description { grid-column: auto; }
+  .admin-wallet-panel {
+    padding: 14px;
+  }
+  .admin-wallet-settings-fields {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .admin-wallet-settings-fields .admin-wallet-button {
+    grid-column: 1 / -1;
+  }
+  .admin-wallet-entry-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .admin-wallet-entry-description {
+    grid-column: auto;
+  }
   .admin-wallet-feed-widget-mount,
-  .admin-wallet-feed-widget { width: min(184px, calc(100vw - 40px)); }
+  .admin-wallet-feed-widget {
+    width: min(184px, calc(100vw - 40px));
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .admin-wallet-switch,
-  .admin-wallet-switch > span { transition: none; }
+  .admin-wallet-switch > span {
+    transition: none;
+  }
 }
-
 
 /* Transaction ledger editing and removal controls. */
 .admin-wallet-history-value {
@@ -632,7 +709,7 @@ html.blogg-dark-mode .admin-wallet-feed-widget__link:hover { color: #a9e0ba; }
 
 .admin-wallet-history-action:disabled {
   cursor: wait;
-  opacity: .55;
+  opacity: 0.55;
 }
 
 .admin-wallet-history-edit-form {
@@ -741,7 +818,6 @@ html.blogg-dark-mode .admin-wallet-history-edit-form input {
   }
 }
 
-
 /* Keep the transaction row icon controls compact and aligned with the amount. */
 .admin-wallet-history-heading-actions {
   display: flex;
@@ -776,7 +852,6 @@ html.blogg-dark-mode .admin-wallet-history-edit-form input {
   }
 }
 
-
 /* Responsive Wallet: use the whole dashboard row instead of inheriting a
    narrow column from the original three-column account layout. */
 @media (max-width: 1120px) {
@@ -808,7 +883,7 @@ html.blogg-dark-mode .admin-wallet-history-edit-form input {
   }
 
   .admin-wallet-metric > strong {
-    font-size: clamp(.88rem, 1.8vw, 1.15rem);
+    font-size: clamp(0.88rem, 1.8vw, 1.15rem);
   }
 
   .admin-wallet-settings-fields {
@@ -820,7 +895,10 @@ html.blogg-dark-mode .admin-wallet-history-edit-form input {
   }
 
   .admin-wallet-emi-fields {
-    grid-template-columns: minmax(100px, .8fr) minmax(120px, 1fr) minmax(130px, 1.2fr) auto;
+    grid-template-columns: minmax(100px, 0.8fr) minmax(120px, 1fr) minmax(
+        130px,
+        1.2fr
+      ) auto;
   }
 }
 
@@ -847,7 +925,7 @@ html.blogg-dark-mode .admin-wallet-history-edit-form input {
   }
 
   .admin-wallet-panel__header p:not(.admin-wallet-panel__eyebrow) {
-    font-size: .68rem;
+    font-size: 0.68rem;
   }
 
   .admin-wallet-summary-grid {
@@ -866,12 +944,12 @@ html.blogg-dark-mode .admin-wallet-history-edit-form input {
   }
 
   .admin-wallet-metric > strong {
-    font-size: clamp(.9rem, 4vw, 1.12rem);
+    font-size: clamp(0.9rem, 4vw, 1.12rem);
     line-height: 1.2;
   }
 
   .admin-wallet-metric > strong.admin-wallet-date {
-    font-size: .86rem;
+    font-size: 0.86rem;
   }
 
   .admin-wallet-metric > small {
@@ -889,11 +967,11 @@ html.blogg-dark-mode .admin-wallet-history-edit-form input {
   }
 
   .admin-wallet-section-heading h3 {
-    font-size: .8rem;
+    font-size: 0.8rem;
   }
 
   .admin-wallet-section-heading p {
-    font-size: .64rem;
+    font-size: 0.64rem;
   }
 
   .admin-wallet-settings-fields {
@@ -925,7 +1003,7 @@ html.blogg-dark-mode .admin-wallet-history-edit-form input {
   }
 
   .admin-wallet-entry-form {
-    grid-template-columns: minmax(100px, .65fr) minmax(0, 1.35fr);
+    grid-template-columns: minmax(100px, 0.65fr) minmax(0, 1.35fr);
     align-items: end;
     gap: 7px;
   }
@@ -981,7 +1059,7 @@ html.blogg-dark-mode .admin-wallet-history-edit-form input {
   }
 
   .admin-wallet-entry-form {
-    grid-template-columns: minmax(92px, .7fr) minmax(0, 1.3fr);
+    grid-template-columns: minmax(92px, 0.7fr) minmax(0, 1.3fr);
   }
 
   .admin-wallet-button {
