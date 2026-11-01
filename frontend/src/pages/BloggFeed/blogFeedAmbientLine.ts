@@ -17,8 +17,8 @@ type ResizeBinding = { observer: ResizeObserver; svg: SVGSVGElement };
 
 const resizeBindings = new WeakMap<HTMLElement, ResizeBinding>();
 
-// Keep the original hand-drawn route and its broad winding silhouette.
-// Only tiny, smoothed anchor offsets are randomised on each Feed mount.
+// Preserve the original continuous winding route. Larger, smoothed anchor offsets
+// make each newly mounted Feed visibly different without changing its silhouette.
 const START: Point = { x: 105, y: 8 };
 const BASE_SEGMENTS: Segment[] = [
   { controlOne: { x: 42, y: 60 }, controlTwo: { x: 24, y: 120 }, end: { x: 50, y: 170 } },
@@ -65,18 +65,18 @@ function createRandomRoute(): string {
   const random = makeRandom(seed);
   const baseAnchors = [START, ...BASE_SEGMENTS.map((segment) => segment.end)];
 
-  // Restrained variation: the original path remains recognisable. Adjacent
-  // offsets are blended so the random changes never create sharp or uneven bends.
+  // Adjacent offsets are blended to preserve smooth transitions. The new range
+  // is deliberately larger than the previous ±18/±8 values, which were hard to see.
   const rawOffsets: Point[] = baseAnchors.map(() => ({
-    x: randomBetween(random, -18, 18),
-    y: randomBetween(random, -8, 8),
+    x: randomBetween(random, -58, 58),
+    y: randomBetween(random, -28, 28),
   }));
   const offsets = rawOffsets.map((offset, index) => {
     const previous = rawOffsets[Math.max(0, index - 1)];
     const next = rawOffsets[Math.min(rawOffsets.length - 1, index + 1)];
     return {
-      x: previous.x * 0.22 + offset.x * 0.56 + next.x * 0.22,
-      y: previous.y * 0.22 + offset.y * 0.56 + next.y * 0.22,
+      x: previous.x * 0.2 + offset.x * 0.6 + next.x * 0.2,
+      y: previous.y * 0.2 + offset.y * 0.6 + next.y * 0.2,
     };
   });
 
@@ -87,12 +87,24 @@ function createRandomRoute(): string {
     const fromOffset = offsets[index];
     const toOffset = offsets[index + 1];
     const c1 = {
-      x: segment.controlOne.x + fromOffset.x * 0.72 + toOffset.x * 0.28 + randomBetween(random, -1.5, 1.5),
-      y: segment.controlOne.y + fromOffset.y * 0.72 + toOffset.y * 0.28 + randomBetween(random, -0.8, 0.8),
+      x: segment.controlOne.x
+        + fromOffset.x * 0.72
+        + toOffset.x * 0.28
+        + randomBetween(random, -11, 11),
+      y: segment.controlOne.y
+        + fromOffset.y * 0.72
+        + toOffset.y * 0.28
+        + randomBetween(random, -7, 7),
     };
     const c2 = {
-      x: segment.controlTwo.x + fromOffset.x * 0.28 + toOffset.x * 0.72 + randomBetween(random, -1.5, 1.5),
-      y: segment.controlTwo.y + fromOffset.y * 0.28 + toOffset.y * 0.72 + randomBetween(random, -0.8, 0.8),
+      x: segment.controlTwo.x
+        + fromOffset.x * 0.28
+        + toOffset.x * 0.72
+        + randomBetween(random, -11, 11),
+      y: segment.controlTwo.y
+        + fromOffset.y * 0.28
+        + toOffset.y * 0.72
+        + randomBetween(random, -7, 7),
     };
     const end = {
       x: segment.end.x + toOffset.x,
@@ -172,6 +184,8 @@ function ensureAmbientLines(): void {
 
     let svg = page.querySelector<SVGSVGElement>(":scope > .blog-feed-ambient-line");
     if (!svg) {
+      // The route is generated once for each newly mounted Feed page. It is not
+      // regenerated during every DOM mutation, so the line never jumps mid-scroll.
       svg = createAmbientSvg();
       page.insertBefore(svg, page.firstChild);
     }
@@ -180,8 +194,6 @@ function ensureAmbientLines(): void {
   });
 }
 
-// Feed mounts through client-side routing. Recheck on mount, pagination, resize,
-// and when the admin Appearance panel changes the local preference.
 ensureAmbientLines();
 const observer = new MutationObserver(() => ensureAmbientLines());
 observer.observe(ROOT, { childList: true, subtree: true });

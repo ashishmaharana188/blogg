@@ -10,6 +10,7 @@ import { initializePostgresSchema } from "../db/postgresSchema.ts";
 import blogInterceptRouter from "../routes/bloggDocument/bloggDocumentIndex.ts";
 import blogStickyNotesRouter from "../routes/blogStickyNotes.ts";
 import adminWalletRouter from "../routes/adminWallet.ts";
+import adminWalletAutoEmiRouter, { startAdminWalletEmiScheduler } from "../routes/adminWalletAutoEmi.ts";
 import canvasViewInterceptor from "../routes/canvasView/canvasViewIndex.ts";
 import flipBookInterceptor from "../routes/flipBook/flipBookIndex.ts";
 import authenticationRouter from "../routes/authentication/authenticationIndex.ts";
@@ -57,9 +58,6 @@ await initializePostgresSchema();
 // only after MongoDB connects and PostgreSQL pool/schema initialization completes.
 // Keep this handler intentionally lightweight: it must not query application data.
 app.get("/healthz", (_req, res) => {
-  // This public endpoint is also called cross-origin by the frontend and uptime
-  // monitors. It never uses cookies, so wildcard CORS is safe and avoids a stale
-  // FRONTEND_URL setting preventing the browser from seeing a successful probe.
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
@@ -73,7 +71,6 @@ app.get("/healthz", (_req, res) => {
 });
 
 app.use(cookieParser());
-// Register fixed preview paths before dynamic note IDs; "feed" and "account" are share pages, not blogg IDs.
 app.use(accountSharePreviewRouter);
 app.use(feedSharePreviewRouter);
 app.use(sharePreviewRouter);
@@ -81,6 +78,10 @@ app.use(bloggShareSnapshotRouter);
 app.use("/api/auth", authenticationRouter);
 app.use("/api/admin", adminStatusRouter);
 app.use("/api", blogStickyNotesRouter);
+
+// The EMI router must precede the wallet router: it processes due recurring
+// debits before the normal wallet summary is returned to Account or Feed.
+app.use("/api", adminWalletAutoEmiRouter);
 app.use("/api", adminWalletRouter);
 
 // A cached rich-link preview can outlive a note being changed from Public to Private.
@@ -165,4 +166,10 @@ app.use(canvasViewInterceptor);
 app.use(blogInterceptRouter);
 app.use(flipBookInterceptor);
 app.use(errorHandler);
+
+// The scheduler runs while this Node process is awake. On a sleeping/free Render
+// instance it catches up at the next request; dependable wall-clock execution
+// requires an always-on backend instance or an external scheduler.
+startAdminWalletEmiScheduler();
+
 app.listen(port, "0.0.0.0", () => { logger.info({ event: "SERVER_RUNNING", port }); });

@@ -115,6 +115,10 @@ export default function AdminWalletPanel() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [showCycles, setShowCycles] = useState(false);
+  const [editingEventKey, setEditingEventKey] = useState<string | null>(null);
+  const [editingAmount, setEditingAmount] = useState("");
+  const [updatingTransaction, setUpdatingTransaction] = useState(false);
+  const [removingTransactionKey, setRemovingTransactionKey] = useState<string | null>(null);
 
   const isAdminAccountView =
     location.pathname.replace(/\/+$/, "") === "/account" &&
@@ -260,6 +264,81 @@ export default function AdminWalletPanel() {
       setError(reason instanceof Error ? reason.message : "Could not record the transaction.");
     } finally {
       setSavingEntry(false);
+    }
+  };
+
+
+  const beginEditTransaction = (transaction: WalletTransaction) => {
+    if (transaction.type === "settlement") return;
+    setEditingEventKey(transaction.eventKey);
+    setEditingAmount((transaction.walletDeltaPaise / 100).toFixed(2));
+    setError("");
+    setMessage("");
+  };
+
+  const updateTransactionAmount = async (transaction: WalletTransaction) => {
+    const parsed = Number(editingAmount);
+    const amountPaise = Math.round(parsed * 100);
+    if (!Number.isFinite(parsed) || !Number.isSafeInteger(amountPaise) || amountPaise === 0) {
+      setError("Enter a non-zero amount with up to two decimal places.");
+      return;
+    }
+    if (transaction.type === "expense" && amountPaise >= 0) {
+      setError("Expense amounts must remain negative. Use a minus sign.");
+      return;
+    }
+    if ((transaction.type === "income" || transaction.type === "funding") && amountPaise <= 0) {
+      setError("Income and funding amounts must remain positive.");
+      return;
+    }
+
+    setUpdatingTransaction(true);
+    setError("");
+    setMessage("");
+    try {
+      const data = await walletRequest<WalletData>(
+        `/api/admin/wallet/transactions/${encodeURIComponent(transaction.eventKey)}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ amountPaise }),
+        },
+      );
+      setWallet(data);
+      setEditingEventKey(null);
+      setEditingAmount("");
+      setMessage("Transaction amount updated. Wallet, cycle P&L and any linked Savings transfer were recalculated.");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not update the transaction amount.");
+    } finally {
+      setUpdatingTransaction(false);
+    }
+  };
+
+  const removeTransaction = async (transaction: WalletTransaction) => {
+    if (transaction.type === "settlement") return;
+    const confirmed = window.confirm(
+      `Remove this ${transaction.type} transaction?\n\n${transaction.description}\n${money(transaction.walletDeltaPaise, true)}\n\nThe cycle balance and any linked Savings transfer will be recalculated.`,
+    );
+    if (!confirmed) return;
+
+    setRemovingTransactionKey(transaction.eventKey);
+    setError("");
+    setMessage("");
+    try {
+      const data = await walletRequest<WalletData>(
+        `/api/admin/wallet/transactions/${encodeURIComponent(transaction.eventKey)}`,
+        { method: "DELETE" },
+      );
+      setWallet(data);
+      if (editingEventKey === transaction.eventKey) {
+        setEditingEventKey(null);
+        setEditingAmount("");
+      }
+      setMessage("Transaction removed. Wallet, cycle P&L and any linked Savings transfer were recalculated.");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not remove the transaction.");
+    } finally {
+      setRemovingTransactionKey(null);
     }
   };
 
@@ -434,47 +513,142 @@ export default function AdminWalletPanel() {
             <div className="admin-wallet-section-heading">
               <div>
                 <h3>Transaction history</h3>
-                <p>Latest {wallet?.recentTransactions.length || 0} ledger entries.</p>
+                <p>Latest {wallet?.recentTransactions.length || 0} ledger entries. Edit or remove funding, income and expense entries.</p>
               </div>
-              <button
-                type="button"
-                className="admin-wallet-button admin-wallet-button--secondary"
-                disabled={settling || !wallet?.currentCycleId}
-                onClick={() => void settleWallet()}
-              >
-                {settling ? "Transferring…" : "Transfer to Savings"}
-              </button>
+              <div className="admin-wallet-history-heading-actions">
+                <button
+                  type="button"
+                  className="admin-wallet-button admin-wallet-button--secondary"
+                  disabled={settling || !wallet?.currentCycleId}
+                  onClick={() => void settleWallet()}
+                >
+                  {settling ? "Transferring…" : "Transfer to Savings"}
+                </button>
+              </div>
             </div>
 
             {wallet?.recentTransactions.length ? (
               <div className="admin-wallet-history-list">
-                {wallet.recentTransactions.map((transaction) => (
-                  <article className="admin-wallet-history-row" key={transaction.eventKey}>
-                    <div className="admin-wallet-history-copy">
-                      <strong>{transaction.description}</strong>
-                      <span>{longDate(transaction.createdAt)} · {transaction.type}</span>
-                      {transaction.savingsDeltaPaise !== 0 && (
-                        <small>
-                          Savings {transaction.savingsDeltaPaise > 0 ? "+" : "−"}
-                          {money(Math.abs(transaction.savingsDeltaPaise))}
-                        </small>
-                      )}
-                    </div>
-                    <strong className={
-                      transaction.walletDeltaPaise > 0
-                        ? "is-positive"
-                        : transaction.walletDeltaPaise < 0
-                          ? "is-negative"
-                          : ""
-                    }>
-                      {money(transaction.walletDeltaPaise, true)}
-                    </strong>
-                  </article>
-                ))}
+                {wallet.recentTransactions.map((transaction) => {
+                  const isEditing = editingEventKey === transaction.eventKey;
+                  const isRemoving = removingTransactionKey === transaction.eventKey;
+                  const isSystemSettlement = transaction.type === "settlement";
+                  return (
+                    <article className="admin-wallet-history-row" key={transaction.eventKey}>
+                      <div className="admin-wallet-history-copy">
+                        <strong>{transaction.description}</strong>
+                        <span>{longDate(transaction.createdAt)} · {transaction.type}</span>
+                        {transaction.savingsDeltaPaise !== 0 && (
+                          <small>
+                            Savings {transaction.savingsDeltaPaise > 0 ? "+" : "−"}
+                            {money(Math.abs(transaction.savingsDeltaPaise))}
+                          </small>
+                        )}
+                      </div>
+
+                      <div className="admin-wallet-history-value">
+                        {isEditing ? (
+                          <form
+                            className="admin-wallet-history-edit-form"
+                            onSubmit={(event) => {
+                              event.preventDefault();
+                              void updateTransactionAmount(transaction);
+                            }}
+                          >
+                            <label>
+                              <span>Signed amount (₹)</span>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={editingAmount}
+                                onChange={(event) => setEditingAmount(event.target.value)}
+                                autoFocus
+                                required
+                              />
+                            </label>
+                            <div className="admin-wallet-history-actions">
+                              <button
+                                type="submit"
+                                className="admin-wallet-history-action is-save"
+                                disabled={updatingTransaction}
+                                aria-label={updatingTransaction ? "Saving amount" : "Save amount"}
+                                title={updatingTransaction ? "Saving amount" : "Save amount"}
+                              >
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                  <path d="M5 12.5 9.5 17 19 7.5" />
+                                </svg>
+                              </button>
+                              <button
+                                type="button"
+                                className="admin-wallet-history-action"
+                                disabled={updatingTransaction}
+                                onClick={() => {
+                                  setEditingEventKey(null);
+                                  setEditingAmount("");
+                                }}
+                                aria-label="Cancel editing"
+                                title="Cancel editing"
+                              >
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                  <path d="m7 7 10 10M17 7 7 17" />
+                                </svg>
+                              </button>
+                            </div>
+                          </form>
+                        ) : (
+                          <>
+                            <strong className={
+                              transaction.walletDeltaPaise > 0
+                                ? "is-positive"
+                                : transaction.walletDeltaPaise < 0
+                                  ? "is-negative"
+                                  : ""
+                            }>
+                              {money(transaction.walletDeltaPaise, true)}
+                            </strong>
+                            {isSystemSettlement ? (
+                              <small className="admin-wallet-history-system-label">Linked Savings transfer</small>
+                            ) : (
+                              <div className="admin-wallet-history-actions">
+                                <button
+                                  type="button"
+                                  className="admin-wallet-history-action"
+                                  disabled={Boolean(removingTransactionKey) || updatingTransaction}
+                                  onClick={() => beginEditTransaction(transaction)}
+                                  aria-label="Edit transaction amount"
+                                  title="Edit transaction amount"
+                                >
+                                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="m15 5 4 4M4 20l4.2-.9L19 8.3a2.1 2.1 0 0 0-3-3L5.2 16.1 4 20Z" />
+                                  </svg>
+                                </button>
+                                <button
+                                  type="button"
+                                  className="admin-wallet-history-action is-danger"
+                                  disabled={Boolean(removingTransactionKey) || updatingTransaction || isRemoving}
+                                  onClick={() => void removeTransaction(transaction)}
+                                  aria-label={isRemoving ? "Removing transaction" : "Delete transaction"}
+                                  title={isRemoving ? "Removing transaction" : "Delete transaction"}
+                                >
+                                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M4 7h16M9 7V4h6v3m3 0-.8 13H6.8L6 7m4 4v5m4-5v5" />
+                                  </svg>
+                                </button>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
             ) : (
               <p className="admin-wallet-empty">No wallet transactions have been recorded yet.</p>
             )}
+            <p className="admin-wallet-note">
+              Savings transfer rows are system-linked and cannot be edited separately. Editing or removing a transaction from a completed cycle automatically recalculates its transfer.
+            </p>
           </section>
 
           <section className="admin-wallet-section admin-wallet-cycle-section">

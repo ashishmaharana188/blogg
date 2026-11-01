@@ -1,0 +1,216 @@
+/* Wallet placement and collapsible, bounded history. */
+.admin-wallet-history-toggle-mount {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+.admin-wallet-history-toggle {
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid #d3dae3;
+  border-radius: 7px;
+  background: #f7f9fb;
+  color: #354256;
+  font: 650 10px/1.2 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.admin-wallet-history-toggle:hover {
+  background: #edf1f5;
+}
+
+.admin-wallet-section[aria-label="Wallet transaction history"] .admin-wallet-history-list {
+  box-sizing: border-box;
+  max-height: min(320px, 38vh);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding: 0 8px 0 0;
+  scrollbar-width: thin;
+  scrollbar-color: #b8c0ca transparent;
+}
+
+.admin-wallet-section[aria-label="Wallet transaction history"] .admin-wallet-history-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.admin-wallet-section[aria-label="Wallet transaction history"] .admin-wallet-history-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.admin-wallet-section[aria-label="Wallet transaction history"] .admin-wallet-history-list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #b8c0ca;
+}
+
+.admin-wallet-section[aria-label="Wallet transaction history"][data-history-collapsed="true"] .admin-wallet-history-list,
+.admin-wallet-section[aria-label="Wallet transaction history"][data-history-collapsed="true"] .admin-wallet-empty {
+  display: none;
+}
+
+/* The recurring internal-wallet EMI schedule. */
+.admin-wallet-auto-emi-mount {
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-wallet-emi-fields {
+  display: grid;
+  grid-template-columns: minmax(120px, .8fr) minmax(150px, 1fr) minmax(160px, 1.3fr) auto;
+  align-items: end;
+  gap: 9px;
+}
+
+.admin-wallet-emi-fields label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.admin-wallet-emi-fields label > span {
+  color: #566274;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.admin-wallet-emi-fields input,
+.admin-wallet-emi-fields select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 37px;
+  padding: 8px 9px;
+  border: 1px solid #d9dfe7;
+  border-radius: 7px;
+  background: #fff;
+  color: #263247;
+  font: inherit;
+  font-size: 12px;
+}
+
+.admin-wallet-emi-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 7px 14px;
+  margin-top: 11px;
+  padding: 9px 11px;
+  border: 1px solid #e8ebef;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #667085;
+  font-size: 10px;
+}
+
+.admin-wallet-emi-status strong {
+  color: #354256;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+html.blogg-dark-mode .admin-wallet-history-toggle {
+  border-color: #555;
+  background: #303030;
+  color: #ededed;
+}
+
+html.blogg-dark-mode .admin-wallet-section[aria-label="Wallet transaction history"] .admin-wallet-history-list {
+  scrollbar-color: #626262 transparent;
+}
+
+html.blogg-dark-mode .admin-wallet-section[aria-label="Wallet transaction history"] .admin-wallet-history-list::-webkit-scrollbar-thumb {
+  background: #626262;
+}
+
+html.blogg-dark-mode .admin-wallet-emi-fields label > span {
+  color: #bdbdbd;
+}
+
+html.blogg-dark-mode .admin-wallet-emi-fields input,
+html.blogg-dark-mode .admin-wallet-emi-fields select {
+  border-color: #555;
+  background: #2b2b2b;
+  color: #ededed;
+  color-scheme: dark;
+}
+
+html.blogg-dark-mode .admin-wallet-emi-status {
+  border-color: #454545;
+  background: #2b2b2b;
+  color: #a6a6a6;
+}
+
+html.blogg-dark-mode .admin-wallet-emi-status strong {
+  color: #ededed;
+}
+
+@media (max-width: 900px) {
+  .admin-wallet-emi-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-wallet-emi-description {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 560px) {
+  .admin-wallet-emi-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-wallet-emi-description {
+    grid-column: auto;
+  }
+
+  .admin-wallet-emi-fields .admin-wallet-button {
+    width: 100%;
+  }
+
+  .admin-wallet-history-toggle {
+    min-height: 30px;
+    padding: 5px 8px;
+  }
+}
+
+
+/* Wallet follows Daily Activity in the broad center column on desktop. At
+   narrower dashboard widths it becomes a full-width row after the Health panels. */
+.account-dashboard-youtube-column > .admin-wallet-panel-mount {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.admin-wallet-panel-mount {
+  min-width: 0;
+}
+
+@media (max-width: 1120px) {
+  .account-page .account-dashboard-grid .admin-wallet-panel-mount {
+    grid-column: 1 / -1 !important;
+    order: 13 !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+  }
+}
+
+
+@media (max-width: 560px) {
+  .admin-wallet-section-heading {
+    flex-wrap: wrap;
+  }
+
+  .admin-wallet-history-heading-actions {
+    margin-left: auto;
+  }
+}

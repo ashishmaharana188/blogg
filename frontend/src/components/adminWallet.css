@@ -548,3 +548,230 @@ html.blogg-dark-mode .admin-wallet-feed-widget__link:hover { color: #a9e0ba; }
   .admin-wallet-switch,
   .admin-wallet-switch > span { transition: none; }
 }
+
+
+/* Transaction ledger editing and removal controls. */
+.admin-wallet-history-value {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  min-width: 112px;
+  max-width: min(220px, 48%);
+}
+
+.admin-wallet-history-value > strong {
+  color: #3c4655;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.admin-wallet-history-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.admin-wallet-history-action {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  flex: 0 0 28px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #d8dee7;
+  border-radius: 7px;
+  background: #f8fafc;
+  color: #445166;
+  cursor: pointer;
+}
+.admin-wallet-history-action svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.admin-wallet-history-action:hover:not(:disabled) {
+  border-color: #aab5c3;
+  background: #edf1f5;
+  color: #1d2939;
+}
+
+.admin-wallet-history-action.is-save {
+  border-color: #1b293c;
+  background: #1b293c;
+  color: #ffffff;
+}
+
+.admin-wallet-history-action.is-save:hover:not(:disabled) {
+  background: #2b3b52;
+  color: #ffffff;
+}
+
+.admin-wallet-history-action.is-danger {
+  border-color: #efceca;
+  background: #fff8f7;
+  color: #a33b31;
+}
+
+.admin-wallet-history-action.is-danger:hover:not(:disabled) {
+  border-color: #dba8a2;
+  background: #fff0ee;
+  color: #8f2c25;
+}
+
+.admin-wallet-history-action:disabled {
+  cursor: wait;
+  opacity: .55;
+}
+
+.admin-wallet-history-edit-form {
+  display: flex;
+  width: min(180px, 100%);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.admin-wallet-history-edit-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-wallet-history-edit-form label > span,
+.admin-wallet-history-system-label {
+  color: #8993a1;
+  font-size: 8px;
+  line-height: 1.3;
+  text-align: right;
+}
+
+.admin-wallet-history-edit-form input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  padding: 6px 8px;
+  border: 1px solid #cfd7e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #263247;
+  font: inherit;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.admin-wallet-history-edit-form input:focus-visible {
+  outline: 2px solid #8293aa;
+  outline-offset: 1px;
+}
+
+html.blogg-dark-mode .admin-wallet-history-value > strong {
+  color: #e5e5e5;
+}
+
+html.blogg-dark-mode .admin-wallet-history-action {
+  border-color: #555;
+  background: #303030;
+  color: #dedede;
+}
+
+html.blogg-dark-mode .admin-wallet-history-action:hover:not(:disabled) {
+  border-color: #777;
+  background: #414141;
+  color: #ffffff;
+}
+
+html.blogg-dark-mode .admin-wallet-history-action.is-save {
+  border-color: #777;
+  background: #474747;
+  color: #ffffff;
+}
+
+html.blogg-dark-mode .admin-wallet-history-action.is-danger {
+  border-color: #75433e;
+  background: #402623;
+  color: #f3aaa1;
+}
+
+html.blogg-dark-mode .admin-wallet-history-edit-form label > span,
+html.blogg-dark-mode .admin-wallet-history-system-label {
+  color: #a6a6a6;
+}
+
+html.blogg-dark-mode .admin-wallet-history-edit-form input {
+  border-color: #555;
+  background: #2b2b2b;
+  color: #ededed;
+  color-scheme: dark;
+}
+
+@media (max-width: 560px) {
+  .admin-wallet-history-row {
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .admin-wallet-history-value {
+    min-width: 98px;
+    max-width: 52%;
+  }
+
+  .admin-wallet-history-actions {
+    gap: 4px;
+  }
+
+  .admin-wallet-history-action {
+    width: 27px;
+    height: 27px;
+    min-height: 27px;
+    flex-basis: 27px;
+  }
+}
+
+
+/* Keep the transaction row icon controls compact and aligned with the amount. */
+.admin-wallet-history-heading-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.admin-wallet-history-toggle-mount {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.admin-wallet-history-row .admin-wallet-history-actions {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+@media (max-width: 560px) {
+  .admin-wallet-section-heading {
+    align-items: flex-start;
+  }
+
+  .admin-wallet-history-heading-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+}

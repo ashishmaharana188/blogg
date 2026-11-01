@@ -297,6 +297,189 @@ async function processDueCycles(
   return changed;
 }
 
+
+async function recalculateCycleAfterTransactionChange(
+  settings: WalletSettings,
+  session: ClientSession,
+  cycleId: string,
+): Promise<void> {
+  const cycles = getDB().collection<WalletCycle>("adminWalletCycles");
+  const cycle = await cycles.findOne({ cycleId }, { session });
+  if (!cycle) {
+    throw Object.assign(new Error("The transaction's wallet cycle could not be found."), { statusCode: 409 });
+  }
+
+  const transactions = getDB().collection<WalletTransaction>("adminWalletTransactions");
+  const sourceEntries = await transactions.find(
+    { cycleId, type: { $ne: "settlement" } },
+    { session },
+  ).toArray();
+
+  const cycleBalancePaise = sourceEntries.reduce(
+    (total, entry) => total + Number(entry.walletDeltaPaise || 0),
+    0,
+  );
+  const fundingPaise = sourceEntries
+    .filter((entry) => entry.type === "funding")
+    .reduce((total, entry) => total + Number(entry.walletDeltaPaise || 0), 0);
+  const entryCount = sourceEntries.filter(
+    (entry) => entry.type === "expense" || entry.type === "income",
+  ).length;
+
+  if (cycle.status === "closed") {
+    const settlement = await transactions.findOne(
+      { cycleId, type: "settlement" },
+      { session },
+    );
+    if (!settlement) {
+      throw Object.assign(
+        new Error("This completed cycle has no linked Savings transfer. Its entries cannot be changed safely."),
+        { statusCode: 409 },
+      );
+    }
+
+    const previousSavingsTransfer = Number(settlement.savingsDeltaPaise || 0);
+    const savingsAdjustment = cycleBalancePaise - previousSavingsTransfer;
+
+    // Keep the cycle's paired transfer in step with edited/deleted source entries.
+    // The Savings balance changes by the exact difference, not by the whole cycle again.
+    await transactions.updateOne(
+      { eventKey: settlement.eventKey },
+      {
+        $set: {
+          amountPaise: cycleBalancePaise,
+          walletDeltaPaise: -cycleBalancePaise,
+          savingsDeltaPaise: cycleBalancePaise,
+        },
+      },
+      { session },
+    );
+
+    settings.savingsBalancePaise += savingsAdjustment;
+    await cycles.updateOne(
+      { cycleId, status: "closed" },
+      {
+        $set: {
+          fundingPaise,
+          entryCount,
+          netPnlPaise: cycleBalancePaise,
+          savingsTransferPaise: cycleBalancePaise,
+        },
+      },
+      { session },
+    );
+    return;
+  }
+
+  if (settings.currentCycleId !== cycleId) {
+    throw Object.assign(
+      new Error("This is not the active wallet cycle. Refresh the wallet and try again."),
+      { statusCode: 409 },
+    );
+  }
+
+  settings.walletBalancePaise = cycleBalancePaise;
+  await cycles.updateOne(
+    { cycleId, status: "open" },
+    {
+      $set: {
+        fundingPaise,
+        entryCount,
+        netPnlPaise: cycleBalancePaise,
+      },
+    },
+    { session },
+  );
+}
+
+function validateTransactionReplacement(
+  transaction: WalletTransaction,
+  amountPaise: unknown,
+): amountPaise is number {
+  if (!validAmount(amountPaise) || amountPaise === 0) return false;
+  if (transaction.type === "expense") return amountPaise < 0;
+  if (transaction.type === "income" || transaction.type === "funding") return amountPaise > 0;
+  return false;
+}
+
+async function updateWalletTransaction(
+  eventKey: string,
+  amountPaise: number,
+): Promise<void> {
+  await ensureIndexes();
+  await withWalletTransaction(async (session) => {
+    const settings = await loadSettings(session);
+    await processDueCycles(settings, session, new Date());
+
+    const transactions = getDB().collection<WalletTransaction>("adminWalletTransactions");
+    const existing = await transactions.findOne({ eventKey }, { session });
+    if (!existing) {
+      throw Object.assign(new Error("Wallet transaction not found."), { statusCode: 404 });
+    }
+    if (existing.type === "settlement") {
+      throw Object.assign(
+        new Error("Savings settlement rows are linked to the whole cycle. Edit or remove a source transaction instead; the transfer will recalculate automatically."),
+        { statusCode: 400 },
+      );
+    }
+    if (!existing.cycleId) {
+      throw Object.assign(new Error("This transaction is not linked to a wallet cycle."), { statusCode: 409 });
+    }
+    if (!validateTransactionReplacement(existing, amountPaise)) {
+      throw Object.assign(
+        new Error(existing.type === "expense"
+          ? "Expense amounts must remain negative."
+          : "Income and funding amounts must remain positive."),
+        { statusCode: 400 },
+      );
+    }
+
+    await transactions.updateOne(
+      { eventKey, type: existing.type },
+      {
+        $set: {
+          amountPaise,
+          walletDeltaPaise: amountPaise,
+        },
+      },
+      { session },
+    );
+    await recalculateCycleAfterTransactionChange(settings, session, existing.cycleId);
+    await saveSettings(settings, session);
+  });
+}
+
+async function removeWalletTransaction(eventKey: string): Promise<void> {
+  await ensureIndexes();
+  await withWalletTransaction(async (session) => {
+    const settings = await loadSettings(session);
+    await processDueCycles(settings, session, new Date());
+
+    const transactions = getDB().collection<WalletTransaction>("adminWalletTransactions");
+    const existing = await transactions.findOne({ eventKey }, { session });
+    if (!existing) {
+      throw Object.assign(new Error("Wallet transaction not found."), { statusCode: 404 });
+    }
+    if (existing.type === "settlement") {
+      throw Object.assign(
+        new Error("Savings settlement rows cannot be removed separately. Remove or edit a source transaction instead; the transfer will recalculate automatically."),
+        { statusCode: 400 },
+      );
+    }
+    if (!existing.cycleId) {
+      throw Object.assign(new Error("This transaction is not linked to a wallet cycle."), { statusCode: 409 });
+    }
+
+    const deletion = await transactions.deleteOne({ eventKey, type: existing.type }, { session });
+    if (deletion.deletedCount !== 1) {
+      throw Object.assign(new Error("The transaction changed before it could be removed. Refresh and try again."), { statusCode: 409 });
+    }
+
+    await recalculateCycleAfterTransactionChange(settings, session, existing.cycleId);
+    await saveSettings(settings, session);
+  });
+}
+
 async function buildWalletResponse() {
   await ensureIndexes();
   const settings = await withWalletTransaction(async (session) => {
@@ -481,6 +664,44 @@ router.post("/admin/wallet/entries", ...ADMIN_GUARD, async (req, res, next) => {
       await saveSettings(settings, session);
     });
 
+    res.setHeader("Cache-Control", "private, no-store");
+    res.json(await buildWalletResponse());
+  } catch (error) {
+    next(error);
+  }
+});
+
+
+router.patch("/admin/wallet/transactions/:eventKey", ...ADMIN_GUARD, async (req, res, next) => {
+  try {
+    const eventKey = String(req.params.eventKey || "");
+    const amountPaise = req.body?.amountPaise;
+    if (!eventKey) {
+      res.status(400).json({ message: "A transaction identifier is required." });
+      return;
+    }
+    if (!validAmount(amountPaise) || amountPaise === 0) {
+      res.status(400).json({ message: "Enter a non-zero transaction amount in paise." });
+      return;
+    }
+
+    await updateWalletTransaction(eventKey, amountPaise);
+    res.setHeader("Cache-Control", "private, no-store");
+    res.json(await buildWalletResponse());
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/admin/wallet/transactions/:eventKey", ...ADMIN_GUARD, async (req, res, next) => {
+  try {
+    const eventKey = String(req.params.eventKey || "");
+    if (!eventKey) {
+      res.status(400).json({ message: "A transaction identifier is required." });
+      return;
+    }
+
+    await removeWalletTransaction(eventKey);
     res.setHeader("Cache-Control", "private, no-store");
     res.json(await buildWalletResponse());
   } catch (error) {
