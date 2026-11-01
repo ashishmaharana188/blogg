@@ -9,6 +9,7 @@ import { warmupPgPool } from "../db/postgres.ts";
 import { initializePostgresSchema } from "../db/postgresSchema.ts";
 import blogInterceptRouter from "../routes/bloggDocument/bloggDocumentIndex.ts";
 import blogStickyNotesRouter from "../routes/blogStickyNotes.ts";
+import adminWalletRouter from "../routes/adminWallet.ts";
 import canvasViewInterceptor from "../routes/canvasView/canvasViewIndex.ts";
 import flipBookInterceptor from "../routes/flipBook/flipBookIndex.ts";
 import authenticationRouter from "../routes/authentication/authenticationIndex.ts";
@@ -80,6 +81,7 @@ app.use(bloggShareSnapshotRouter);
 app.use("/api/auth", authenticationRouter);
 app.use("/api/admin", adminStatusRouter);
 app.use("/api", blogStickyNotesRouter);
+app.use("/api", adminWalletRouter);
 
 // A cached rich-link preview can outlive a note being changed from Public to Private.
 // Re-check visibility before the cache is consulted.

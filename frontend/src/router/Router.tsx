@@ -1,7 +1,8 @@
 import { Navigate, Route, Routes, useParams } from "react-router-dom";
 import Login from "../pages/Authentication/pages/login";
 import Register from "../pages/Authentication/pages/register";
-import HomePage from "../pages/BloggFeed/BlogFeed";
+import LegalHomePage from "../pages/LegalHomePage";
+import PublicLegalPage from "../pages/PublicLegalPage";
 import BloggPage from "../pages/BloggPage/BloggPage";
 import BloggReadPage from "../pages/BloggReadPage";
 import BloggEmbedPage from "../pages/BloggEmbed/BloggEmbedPage";
@@ -24,7 +25,9 @@ const Router = () => (
     <Route path="/account" element={<AdminAccountPage />} />
     <Route path="/login" element={<Login />} />
     <Route path="/register" element={<Register />} />
-    <Route path="/feed" element={<HomePage />} />
+    <Route path="/feed" element={<LegalHomePage />} />
+    <Route path="/privacy" element={<PublicLegalPage kind="privacy" />} />
+    <Route path="/terms" element={<PublicLegalPage kind="terms" />} />
     <Route path="/blog" element={<BloggPage />} />
     <Route path="/blog/:bloggId" element={<BloggPage />} />
     <Route path="/read/:bloggId" element={<BloggReadPage />} />

@@ -50,9 +50,10 @@ export default function BackendStartupNotice() {
         const errorName = error instanceof Error ? error.name : "";
         // Browser fetch errors do not identify the blocking extension. An
         // online cross-origin rejection is therefore labelled as filtered.
-        nextStatus = !navigator.onLine || errorName === "AbortError"
-          ? "unavailable"
-          : "blocked";
+        nextStatus =
+          !navigator.onLine || errorName === "AbortError"
+            ? "unavailable"
+            : "blocked";
       } finally {
         window.clearTimeout(timeoutTimer);
       }
@@ -82,20 +83,24 @@ export default function BackendStartupNotice() {
       />
 
       <div className="backend-startup-notice__items">
-        <span className="backend-startup-notice__item" data-state={isBlocked ? "active" : isReachable ? "inactive" : "unknown"}>
+        <span
+          className="backend-startup-notice__item"
+          data-state={
+            isBlocked ? "active" : isReachable ? "inactive" : "unknown"
+          }
+        >
           Ad blocker: {isBlocked ? "Active" : isReachable ? "Off" : "Unknown"}
         </span>
-        <span className="backend-startup-notice__item" data-state={isReachable ? "active" : "inactive"}>
+        <span
+          className="backend-startup-notice__item"
+          data-state={isReachable ? "active" : "inactive"}
+        >
           NoSleep: {isReachable ? "On" : "Off"}
         </span>
         <span className="backend-startup-notice__item backend-startup-notice__item--info">
           Backend auto-sleeps after 15 min idle
         </span>
-        {isBlocked && (
-          <span className="backend-startup-notice__hint">
-            Optional status request blocked; normal site requests are separate.
-          </span>
-        )}
+
         {!isBlocked && !isReachable && (
           <span className="backend-startup-notice__hint">
             Backend status could not be confirmed; it may be waking up.
