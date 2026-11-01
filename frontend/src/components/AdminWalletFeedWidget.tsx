@@ -52,7 +52,9 @@ export default function AdminWalletFeedWidget() {
 
     const tryAttach = () => {
       if (disposed || mount) return Boolean(mount);
-      const rail = document.querySelector<HTMLElement>(".blog-feed-widget-rail");
+      const rail = document.querySelector<HTMLElement>(
+        ".blog-feed-widget-rail",
+      );
       if (!rail) return false;
       mount = document.createElement("div");
       mount.className = "admin-wallet-feed-widget-mount";
@@ -71,7 +73,7 @@ export default function AdminWalletFeedWidget() {
       disposed = true;
       observer?.disconnect();
       mount?.remove();
-      setMountNode((current) => current === mount ? null : current);
+      setMountNode((current) => (current === mount ? null : current));
       setWallet(null);
       setError("");
     };
@@ -88,14 +90,22 @@ export default function AdminWalletFeedWidget() {
     })
       .then(async (response) => {
         const payload = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(payload.message || `Wallet request failed (${response.status}).`);
+        if (!response.ok)
+          throw new Error(
+            payload.message || `Wallet request failed (${response.status}).`,
+          );
         return payload as FeedWalletSummary;
       })
       .then((data) => {
         if (!cancelled) setWallet(data);
       })
       .catch((reason) => {
-        if (!cancelled) setError(reason instanceof Error ? reason.message : "Wallet summary is unavailable.");
+        if (!cancelled)
+          setError(
+            reason instanceof Error
+              ? reason.message
+              : "Wallet summary is unavailable.",
+          );
       });
     return () => {
       cancelled = true;
@@ -105,7 +115,10 @@ export default function AdminWalletFeedWidget() {
   if (!isAdmin || !mountNode) return null;
 
   return createPortal(
-    <aside className="admin-wallet-feed-widget" aria-label="Administrator wallet summary">
+    <aside
+      className="admin-wallet-feed-widget"
+      aria-label="Administrator wallet summary"
+    >
       <div className="admin-wallet-feed-widget__heading">
         <span>WALLET</span>
         <span className="admin-wallet-feed-widget__admin">ADMIN</span>
@@ -122,23 +135,32 @@ export default function AdminWalletFeedWidget() {
           </div>
           <div className="admin-wallet-feed-widget__metric">
             <span>Net P&amp;L</span>
-            <strong className={wallet.netPnlPaise < 0 ? "is-negative" : "is-positive"}>
+            <strong
+              className={wallet.netPnlPaise < 0 ? "is-negative" : "is-positive"}
+            >
               {money(wallet.netPnlPaise)}
             </strong>
           </div>
           <div className="admin-wallet-feed-widget__metric">
             <span>Total savings</span>
-            <strong className={wallet.savingsBalancePaise < 0 ? "is-negative" : "is-positive"}>
+            <strong
+              className={
+                wallet.savingsBalancePaise < 0 ? "is-negative" : "is-positive"
+              }
+            >
               {money(wallet.savingsBalancePaise)}
             </strong>
           </div>
           <div className="admin-wallet-feed-widget__footer">
-            <span>{wallet.autoFundingEnabled ? `Auto · ${money(wallet.fundingAmountPaise)}` : "Auto funding off"}</span>
+            <span>
+              {wallet.autoFundingEnabled
+                ? `Auto · ${money(wallet.fundingAmountPaise)}`
+                : "Auto funding off"}
+            </span>
             <span>Next: {dateLabel(wallet.nextFundingAt)}</span>
           </div>
         </>
       )}
-      <Link to="/account" className="admin-wallet-feed-widget__link">Manage Wallet <span aria-hidden="true">→</span></Link>
     </aside>,
     mountNode,
   );

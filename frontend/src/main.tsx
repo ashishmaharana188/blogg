@@ -23,6 +23,7 @@ import "./responsiveFeedWidgetFlow.css";
 import "./newsletter.css";
 import "./responsiveFeedTabletBridge.css";
 import "./newsletterMinimizable.css";
+import "./responsiveFeedWidgetReflowMobile.css";
 import "./darkMode.css";
 import "./bloggEditorDarkMode.css";
 import "./bloggDarkModeControls.css";

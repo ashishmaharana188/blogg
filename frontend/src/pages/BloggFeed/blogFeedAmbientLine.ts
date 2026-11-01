@@ -8,34 +8,9 @@ const AMBIENT_LINE_PREFERENCE_KEY = "blogg-feed-ambient-line-enabled";
 const AMBIENT_LINE_CHANGE_EVENT = "blogg-feed-ambient-line-preference-change";
 
 type Point = { x: number; y: number };
-type Segment = {
-  controlOne: Point;
-  controlTwo: Point;
-  end: Point;
-};
 type ResizeBinding = { observer: ResizeObserver; svg: SVGSVGElement };
 
 const resizeBindings = new WeakMap<HTMLElement, ResizeBinding>();
-
-// Preserve the original continuous winding route. Larger, smoothed anchor offsets
-// make each newly mounted Feed visibly different without changing its silhouette.
-const START: Point = { x: 105, y: 8 };
-const BASE_SEGMENTS: Segment[] = [
-  { controlOne: { x: 42, y: 60 }, controlTwo: { x: 24, y: 120 }, end: { x: 50, y: 170 } },
-  { controlOne: { x: 84, y: 238 }, controlTwo: { x: 170, y: 225 }, end: { x: 132, y: 290 } },
-  { controlOne: { x: 99, y: 346 }, controlTwo: { x: 18, y: 350 }, end: { x: 54, y: 415 } },
-  { controlOne: { x: 96, y: 482 }, controlTwo: { x: 208, y: 470 }, end: { x: 160, y: 532 } },
-  { controlOne: { x: 112, y: 592 }, controlTwo: { x: 24, y: 604 }, end: { x: 70, y: 668 } },
-  { controlOne: { x: 122, y: 730 }, controlTwo: { x: 258, y: 707 }, end: { x: 332, y: 770 } },
-  { controlOne: { x: 432, y: 855 }, controlTwo: { x: 690, y: 780 }, end: { x: 860, y: 685 } },
-  { controlOne: { x: 1000, y: 610 }, controlTwo: { x: 1015, y: 660 }, end: { x: 950, y: 724 } },
-  { controlOne: { x: 883, y: 790 }, controlTwo: { x: 848, y: 825 }, end: { x: 899, y: 884 } },
-  { controlOne: { x: 956, y: 950 }, controlTwo: { x: 1007, y: 1005 }, end: { x: 922, y: 1072 } },
-  { controlOne: { x: 841, y: 1138 }, controlTwo: { x: 703, y: 1100 }, end: { x: 620, y: 1160 } },
-  { controlOne: { x: 510, y: 1238 }, controlTwo: { x: 380, y: 1310 }, end: { x: 276, y: 1260 } },
-  { controlOne: { x: 166, y: 1208 }, controlTwo: { x: 70, y: 1304 }, end: { x: 120, y: 1378 } },
-  { controlOne: { x: 173, y: 1452 }, controlTwo: { x: 355, y: 1410 }, end: { x: 490, y: 1490 } },
-];
 
 function isAmbientLineEnabled(): boolean {
   try {
@@ -63,58 +38,70 @@ function randomBetween(random: () => number, min: number, max: number): number {
 function createRandomRoute(): string {
   const seed = (Math.random() * 0xffffffff) >>> 0;
   const random = makeRandom(seed);
-  const baseAnchors = [START, ...BASE_SEGMENTS.map((segment) => segment.end)];
+  const startsLeft = random() < 0.5;
+  const sweepCount = random() < 0.5 ? 4 : 6;
 
-  // Adjacent offsets are blended to preserve smooth transitions. The new range
-  // is deliberately larger than the previous ±18/±8 values, which were hard to see.
-  const rawOffsets: Point[] = baseAnchors.map(() => ({
-    x: randomBetween(random, -58, 58),
-    y: randomBetween(random, -28, 28),
-  }));
-  const offsets = rawOffsets.map((offset, index) => {
-    const previous = rawOffsets[Math.max(0, index - 1)];
-    const next = rawOffsets[Math.min(rawOffsets.length - 1, index + 1)];
-    return {
-      x: previous.x * 0.2 + offset.x * 0.6 + next.x * 0.2,
-      y: previous.y * 0.2 + offset.y * 0.6 + next.y * 0.2,
-    };
+  const edgePoint = (left: boolean, y: number, isEndpoint = false): Point => ({
+    x: left
+      ? randomBetween(random, isEndpoint ? -45 : -95, isEndpoint ? 95 : 340)
+      : randomBetween(random, isEndpoint ? 905 : 660, isEndpoint ? 1045 : 1095),
+    y,
   });
 
-  const first = { x: START.x + offsets[0].x, y: START.y + offsets[0].y };
+  // Randomise the route itself: enter near one edge, sweep to the opposite side,
+  // then alternate sides down the page before exiting at the opposite edge.
+  // These are the path's anchor points, not randomised Bézier handles.
+  const points: Point[] = [
+    edgePoint(startsLeft, randomBetween(random, -45, 45), true),
+  ];
+
+  const verticalStep = SVG_HEIGHT_UNITS / (sweepCount + 1);
+  const maxVerticalJitter = Math.min(88, verticalStep * 0.28);
+  for (let index = 0; index < sweepCount; index += 1) {
+    const travelsLeft = index % 2 === 1 ? startsLeft : !startsLeft;
+    const expectedY = verticalStep * (index + 1);
+    const y = expectedY + randomBetween(random, -maxVerticalJitter, maxVerticalJitter);
+    points.push(edgePoint(travelsLeft, y));
+  }
+
+  points.push(edgePoint(!startsLeft, randomBetween(random, SVG_HEIGHT_UNITS - 45, SVG_HEIGHT_UNITS + 55), true));
+
+  // Convert the randomized anchors into a Catmull-Rom-derived cubic Bézier path.
+  // Tangents are calculated from neighbouring anchors, keeping every transition
+  // smooth while leaving the overall side-to-side journey free to change per load.
+  const first = points[0];
+  const second = points[1];
+  const last = points[points.length - 1];
+  const penultimate = points[points.length - 2];
+  const beforeFirst = {
+    x: first.x - (second.x - first.x),
+    y: first.y - (second.y - first.y),
+  };
+  const afterLast = {
+    x: last.x + (last.x - penultimate.x),
+    y: last.y + (last.y - penultimate.y),
+  };
+  const paddedPoints = [beforeFirst, ...points, afterLast];
+
   let path = `M ${first.x.toFixed(1)} ${first.y.toFixed(1)}`;
-
-  BASE_SEGMENTS.forEach((segment, index) => {
-    const fromOffset = offsets[index];
-    const toOffset = offsets[index + 1];
-    const c1 = {
-      x: segment.controlOne.x
-        + fromOffset.x * 0.72
-        + toOffset.x * 0.28
-        + randomBetween(random, -11, 11),
-      y: segment.controlOne.y
-        + fromOffset.y * 0.72
-        + toOffset.y * 0.28
-        + randomBetween(random, -7, 7),
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const previous = paddedPoints[index];
+    const start = paddedPoints[index + 1];
+    const end = paddedPoints[index + 2];
+    const next = paddedPoints[index + 3];
+    const controlOne = {
+      x: start.x + (end.x - previous.x) / 6,
+      y: start.y + (end.y - previous.y) / 6,
     };
-    const c2 = {
-      x: segment.controlTwo.x
-        + fromOffset.x * 0.28
-        + toOffset.x * 0.72
-        + randomBetween(random, -11, 11),
-      y: segment.controlTwo.y
-        + fromOffset.y * 0.28
-        + toOffset.y * 0.72
-        + randomBetween(random, -7, 7),
-    };
-    const end = {
-      x: segment.end.x + toOffset.x,
-      y: segment.end.y + toOffset.y,
+    const controlTwo = {
+      x: end.x - (next.x - start.x) / 6,
+      y: end.y - (next.y - start.y) / 6,
     };
 
-    path += ` C ${c1.x.toFixed(1)} ${c1.y.toFixed(1)}`
-      + ` ${c2.x.toFixed(1)} ${c2.y.toFixed(1)}`
+    path += ` C ${controlOne.x.toFixed(1)} ${controlOne.y.toFixed(1)}`
+      + ` ${controlTwo.x.toFixed(1)} ${controlTwo.y.toFixed(1)}`
       + ` ${end.x.toFixed(1)} ${end.y.toFixed(1)}`;
-  });
+  }
 
   return path;
 }
@@ -184,8 +171,8 @@ function ensureAmbientLines(): void {
 
     let svg = page.querySelector<SVGSVGElement>(":scope > .blog-feed-ambient-line");
     if (!svg) {
-      // The route is generated once for each newly mounted Feed page. It is not
-      // regenerated during every DOM mutation, so the line never jumps mid-scroll.
+      // Generate once per page mount. Content mutations and scrolling do not
+      // regenerate the path, so the line stays fixed while its highlight travels.
       svg = createAmbientSvg();
       page.insertBefore(svg, page.firstChild);
     }

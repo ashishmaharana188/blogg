@@ -228,3 +228,124 @@ html.blogg-dark-mode .admin-wallet-emi-status strong {
   overflow: hidden !important;
   pointer-events: none !important;
 }
+
+
+/* Make the responsive Wallet card occupy its own full dashboard row. */
+@media (max-width: 1120px) {
+  .account-page .account-dashboard-grid > .account-dashboard-youtube-column,
+  .account-page .account-dashboard-grid > .account-dashboard-left-column,
+  .account-page .account-dashboard-grid > .account-dashboard-media-column {
+    min-width: 0;
+  }
+
+  .account-page .account-dashboard-grid .admin-wallet-panel-mount {
+    grid-column: 1 / -1 !important;
+    justify-self: stretch !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    order: 14 !important;
+  }
+}
+
+
+/* Override the compact one-column EMI form at phone widths: paired fields
+   remain side-by-side, with the description and save action below them. */
+@media (max-width: 720px) {
+  .admin-wallet-emi-fields {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    align-items: end;
+  }
+
+  .admin-wallet-emi-description,
+  .admin-wallet-emi-fields .admin-wallet-button {
+    grid-column: 1 / -1;
+  }
+
+  .admin-wallet-emi-fields .admin-wallet-button {
+    justify-self: start;
+    width: auto;
+  }
+}
+
+
+/* Reflow the public/admin account dashboard around visible cards. Hidden
+   widgets leave the grid entirely; auto-dense placement packs remaining cards
+   into the earliest available cells instead of preserving empty columns. */
+@media (min-width: 721px) and (max-width: 1120px) {
+  .account-page .account-dashboard-grid {
+    grid-auto-flow: row dense !important;
+    grid-auto-rows: min-content;
+  }
+
+  .account-page .account-dashboard-grid .account-dashboard-youtube {
+    grid-column: auto !important;
+    order: 1 !important;
+    align-self: start;
+    min-width: 0;
+  }
+
+  .account-page .account-dashboard-grid .account-dashboard-media-stack {
+    grid-column: auto !important;
+    order: 2 !important;
+    align-self: start;
+    min-width: 0;
+  }
+
+  /* When the Music visibility toggle hides both media cards, remove their
+     now-empty wrapper from grid layout as well. */
+  .account-page .account-dashboard-grid
+    .account-dashboard-media-stack:not(
+      :has(> .account-showcase-mini-section:not([style*="display: none"]))
+    ) {
+    display: none !important;
+  }
+
+  /* No empty right-hand column when Music is switched off. */
+  .account-page .account-dashboard-grid:not(
+    :has(.account-dashboard-media-stack > .account-showcase-mini-section:not([style*="display: none"]))
+  ) .account-dashboard-youtube {
+    grid-column: 1 / -1 !important;
+  }
+
+  .account-page .account-dashboard-grid .admin-wallet-panel-mount {
+    grid-column: 1 / -1 !important;
+    order: 14 !important;
+    justify-self: stretch !important;
+    align-self: start !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .account-page .account-dashboard-grid {
+    grid-auto-flow: row dense !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-auto-rows: min-content;
+  }
+
+  .account-page .account-dashboard-grid
+    .account-dashboard-media-stack:not(
+      :has(> .account-showcase-mini-section:not([style*="display: none"]))
+    ) {
+    display: none !important;
+  }
+
+  .account-page .account-dashboard-grid .admin-wallet-panel-mount {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+  }
+}
+
+
+/* A lone featured card should use the whole row left by visibility filtering. */
+@media (min-width: 721px) and (max-width: 1120px) {
+  .account-page .account-dashboard-grid
+    .account-dashboard-featured-card-list > .showcase-link-card:only-child {
+    grid-column: 1 / -1;
+  }
+}

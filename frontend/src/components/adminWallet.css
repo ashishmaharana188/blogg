@@ -775,3 +775,218 @@ html.blogg-dark-mode .admin-wallet-history-edit-form input {
     gap: 6px;
   }
 }
+
+
+/* Responsive Wallet: use the whole dashboard row instead of inheriting a
+   narrow column from the original three-column account layout. */
+@media (max-width: 1120px) {
+  .account-page .account-dashboard-grid .admin-wallet-panel-mount {
+    grid-column: 1 / -1 !important;
+    justify-self: stretch !important;
+    align-self: start !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    order: 14 !important;
+  }
+
+  .account-page .admin-wallet-panel-mount .admin-wallet-panel {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+  }
+
+  .admin-wallet-summary-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .admin-wallet-metric {
+    min-width: 0;
+    padding: 10px;
+  }
+
+  .admin-wallet-metric > strong {
+    font-size: clamp(.88rem, 1.8vw, 1.15rem);
+  }
+
+  .admin-wallet-settings-fields {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  }
+
+  .admin-wallet-entry-form {
+    grid-template-columns: 120px minmax(0, 1fr) auto;
+  }
+
+  .admin-wallet-emi-fields {
+    grid-template-columns: minmax(100px, .8fr) minmax(120px, 1fr) minmax(130px, 1.2fr) auto;
+  }
+}
+
+/* Phones keep the card full width, with compact two-column metric and
+   input layouts. No controls are forced into a narrow single vertical stack. */
+@media (max-width: 720px) {
+  .admin-wallet-panel-mount {
+    margin: 0 !important;
+  }
+
+  .admin-wallet-panel {
+    padding: 12px !important;
+    border-radius: 11px;
+  }
+
+  .admin-wallet-panel__header {
+    align-items: center;
+    margin-bottom: 10px;
+    gap: 8px;
+  }
+
+  .admin-wallet-panel__header h2 {
+    font-size: 1rem;
+  }
+
+  .admin-wallet-panel__header p:not(.admin-wallet-panel__eyebrow) {
+    font-size: .68rem;
+  }
+
+  .admin-wallet-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    margin-bottom: 10px;
+  }
+
+  .admin-wallet-metric {
+    padding: 9px;
+    gap: 4px;
+  }
+
+  .admin-wallet-metric > span {
+    font-size: 9px;
+  }
+
+  .admin-wallet-metric > strong {
+    font-size: clamp(.9rem, 4vw, 1.12rem);
+    line-height: 1.2;
+  }
+
+  .admin-wallet-metric > strong.admin-wallet-date {
+    font-size: .86rem;
+  }
+
+  .admin-wallet-metric > small {
+    font-size: 8px;
+  }
+
+  .admin-wallet-section {
+    margin-top: 10px;
+    padding-top: 10px;
+  }
+
+  .admin-wallet-section-heading {
+    gap: 8px;
+    margin-bottom: 9px;
+  }
+
+  .admin-wallet-section-heading h3 {
+    font-size: .8rem;
+  }
+
+  .admin-wallet-section-heading p {
+    font-size: .64rem;
+  }
+
+  .admin-wallet-settings-fields {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: end;
+    gap: 7px;
+  }
+
+  .admin-wallet-settings-fields .admin-wallet-button {
+    grid-column: 1 / -1;
+    justify-self: start;
+    width: auto;
+  }
+
+  .admin-wallet-emi-fields {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: end;
+    gap: 7px;
+  }
+
+  .admin-wallet-emi-description {
+    grid-column: 1 / -1;
+  }
+
+  .admin-wallet-emi-fields .admin-wallet-button {
+    grid-column: 1 / -1;
+    justify-self: start;
+    width: auto;
+  }
+
+  .admin-wallet-entry-form {
+    grid-template-columns: minmax(100px, .65fr) minmax(0, 1.35fr);
+    align-items: end;
+    gap: 7px;
+  }
+
+  .admin-wallet-entry-description {
+    grid-column: auto;
+  }
+
+  .admin-wallet-entry-form .admin-wallet-button {
+    grid-column: 1 / -1;
+    justify-self: start;
+    width: auto;
+  }
+
+  .admin-wallet-history-row {
+    gap: 8px;
+    padding: 8px 0;
+  }
+
+  .admin-wallet-history-copy > strong {
+    font-size: 10px;
+  }
+
+  .admin-wallet-history-value {
+    min-width: 92px;
+    max-width: 48%;
+  }
+
+  .admin-wallet-note,
+  .admin-wallet-feedback,
+  .admin-wallet-empty {
+    font-size: 9px;
+  }
+}
+
+/* Very narrow phones still keep amounts/actions readable without page overflow. */
+@media (max-width: 380px) {
+  .admin-wallet-panel {
+    padding: 10px !important;
+  }
+
+  .admin-wallet-summary-grid {
+    gap: 6px;
+  }
+
+  .admin-wallet-metric {
+    padding: 8px;
+  }
+
+  .admin-wallet-settings-fields,
+  .admin-wallet-emi-fields {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .admin-wallet-entry-form {
+    grid-template-columns: minmax(92px, .7fr) minmax(0, 1.3fr);
+  }
+
+  .admin-wallet-button {
+    min-height: 34px;
+    padding: 7px 9px;
+    font-size: 10px;
+  }
+}

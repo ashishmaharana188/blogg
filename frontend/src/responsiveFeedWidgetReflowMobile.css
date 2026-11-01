@@ -1,0 +1,111 @@
+/*
+ * Mobile Blog Feed widget reflow.
+ *
+ * The Health widget is hidden on the inner .blog-feed-health-widget element,
+ * but its outer bootstrap host has a 196px minimum height. Without hiding that
+ * host as well, an empty flex item remains in the rail and leaves a large gap.
+ * The grid below also lets the remaining visible cards expand into the space.
+ */
+@media (max-width: 720px) {
+  .blog-feed-page .blog-feed-widget-rail {
+    position: static !important;
+    display: grid !important;
+    grid-template-columns: repeat(
+      auto-fit,
+      minmax(min(100%, 184px), 1fr)
+    ) !important;
+    grid-auto-flow: row dense !important;
+    grid-auto-rows: minmax(min-content, auto) !important;
+    align-items: stretch !important;
+    align-content: start !important;
+    justify-content: stretch !important;
+    gap: 14px 12px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 8px 0 20px !important;
+    box-sizing: border-box !important;
+  }
+
+  .blog-feed-page .blog-feed-widget-rail > * {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    align-self: stretch !important;
+  }
+
+  .blog-feed-page .blog-feed-widget-rail > .blog-feed-now-playing-teaser {
+    position: static !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    min-height: 196px !important;
+  }
+
+  .blog-feed-page .blog-feed-widget-rail > .current-reading-feed-bootstrap-host {
+    display: flex !important;
+    min-height: 196px !important;
+  }
+
+  .blog-feed-page
+    .blog-feed-widget-rail
+    > .current-reading-feed-bootstrap-host
+    > .blog-feed-current-reading-teaser {
+    display: flex !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 196px !important;
+    max-height: none !important;
+    margin: 0 !important;
+    align-self: stretch !important;
+    justify-content: flex-start !important;
+  }
+
+  /* A disabled Health card hides its inner panel, not the bootstrap host.
+     Collapse the host too, so it cannot reserve an empty 196px row. */
+  .blog-feed-page
+    .blog-feed-widget-rail
+    > .blog-feed-health-widget-root:has(> .blog-feed-health-widget[style*="display: none"]),
+  .blog-feed-page
+    .blog-feed-widget-rail
+    > .blog-feed-health-widget-root:not(:has(> .blog-feed-health-widget)) {
+    display: none !important;
+  }
+
+  .blog-feed-page .blog-feed-widget-rail > .blog-feed-health-widget-root {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: 0 !important;
+  }
+
+  /* The Wallet is a full-width item on mobile rather than a narrow card left
+     stranded in a centered second row. */
+  .blog-feed-page .blog-feed-widget-rail > .admin-wallet-feed-widget-mount {
+    grid-column: 1 / -1 !important;
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+  }
+
+  .blog-feed-page .blog-feed-widget-rail .admin-wallet-feed-widget {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}

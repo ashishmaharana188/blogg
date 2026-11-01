@@ -452,7 +452,6 @@ export default function AdminWalletPanel() {
     >
       <header className="admin-wallet-panel__header">
         <div>
-          <p className="admin-wallet-panel__eyebrow">ADMIN FINANCES</p>
           <h2 id="admin-wallet-title">Wallet</h2>
           <p>Current cycle ledger and accumulated savings.</p>
         </div>
