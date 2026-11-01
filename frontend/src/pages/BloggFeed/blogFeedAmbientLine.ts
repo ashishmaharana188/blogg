@@ -39,63 +39,79 @@ function createRandomRoute(): string {
   const seed = (Math.random() * 0xffffffff) >>> 0;
   const random = makeRandom(seed);
   const startsLeft = random() < 0.5;
-  const sweepCount = random() < 0.5 ? 4 : 6;
+  const sweepCount = 10 + Math.floor(random() * 5);
 
   const edgePoint = (left: boolean, y: number, isEndpoint = false): Point => ({
     x: left
-      ? randomBetween(random, isEndpoint ? -45 : -95, isEndpoint ? 95 : 340)
-      : randomBetween(random, isEndpoint ? 905 : 660, isEndpoint ? 1045 : 1095),
+      ? randomBetween(random, isEndpoint ? -45 : -70, isEndpoint ? 95 : 330)
+      : randomBetween(random, isEndpoint ? 905 : 670, isEndpoint ? 1045 : 1070),
     y,
   });
 
-  // Randomise the route itself: enter near one edge, sweep to the opposite side,
-  // then alternate sides down the page before exiting at the opposite edge.
-  // These are the path's anchor points, not randomised Bézier handles.
-  const points: Point[] = [
-    edgePoint(startsLeft, randomBetween(random, -45, 45), true),
-  ];
+  // The line still sweeps from side to side, but the vertical distance between
+  // turns is independently randomized instead of using evenly spaced anchors.
+  const startY = randomBetween(random, -45, 45);
+  const endY = randomBetween(random, SVG_HEIGHT_UNITS - 45, SVG_HEIGHT_UNITS + 55);
+  const gapWeights = Array.from(
+    { length: sweepCount + 1 },
+    () => randomBetween(random, 0.52, 1.58),
+  );
+  const totalWeight = gapWeights.reduce((sum, weight) => sum + weight, 0);
+  const totalDistance = endY - startY;
 
-  const verticalStep = SVG_HEIGHT_UNITS / (sweepCount + 1);
-  const maxVerticalJitter = Math.min(88, verticalStep * 0.28);
-  for (let index = 0; index < sweepCount; index += 1) {
-    const travelsLeft = index % 2 === 1 ? startsLeft : !startsLeft;
-    const expectedY = verticalStep * (index + 1);
-    const y = expectedY + randomBetween(random, -maxVerticalJitter, maxVerticalJitter);
-    points.push(edgePoint(travelsLeft, y));
-  }
+  const points: Point[] = [edgePoint(startsLeft, startY, true)];
+  let currentY = startY;
+  gapWeights.forEach((weight, index) => {
+    currentY += totalDistance * (weight / totalWeight);
+    if (index === gapWeights.length - 1) return;
+    const travelsLeft = index % 2 === 0 ? !startsLeft : startsLeft;
+    points.push(edgePoint(travelsLeft, currentY));
+  });
+  const exitsLeft = sweepCount % 2 === 0 ? startsLeft : !startsLeft;
+  points.push(edgePoint(exitsLeft, endY, true));
 
-  points.push(edgePoint(!startsLeft, randomBetween(random, SVG_HEIGHT_UNITS - 45, SVG_HEIGHT_UNITS + 55), true));
-
-  // Convert the randomized anchors into a Catmull-Rom-derived cubic Bézier path.
-  // Tangents are calculated from neighbouring anchors, keeping every transition
-  // smooth while leaving the overall side-to-side journey free to change per load.
-  const first = points[0];
-  const second = points[1];
-  const last = points[points.length - 1];
-  const penultimate = points[points.length - 2];
-  const beforeFirst = {
-    x: first.x - (second.x - first.x),
-    y: first.y - (second.y - first.y),
+  // Build a smooth cubic spline with a shared tangent at every anchor. Shorter
+  // handles tighten each turn (a sharper curve) without creating corners or kinks.
+  const distance = (a: Point, b: Point): number => Math.hypot(b.x - a.x, b.y - a.y);
+  const direction = (a: Point, b: Point): Point => {
+    const length = distance(a, b) || 1;
+    return { x: (b.x - a.x) / length, y: (b.y - a.y) / length };
   };
-  const afterLast = {
-    x: last.x + (last.x - penultimate.x),
-    y: last.y + (last.y - penultimate.y),
-  };
-  const paddedPoints = [beforeFirst, ...points, afterLast];
+  const tangents: Point[] = points.map((point, index) => {
+    if (index === 0) return direction(points[0], points[1]);
+    if (index === points.length - 1) return direction(points[index - 1], point);
 
-  let path = `M ${first.x.toFixed(1)} ${first.y.toFixed(1)}`;
+    const incoming = direction(points[index - 1], point);
+    const outgoing = direction(point, points[index + 1]);
+    const blended = {
+      x: incoming.x + outgoing.x,
+      y: incoming.y + outgoing.y,
+    };
+    const length = Math.hypot(blended.x, blended.y);
+    return length > 0.0001
+      ? { x: blended.x / length, y: blended.y / length }
+      : outgoing;
+  });
+
+  // One handle length per anchor keeps the curve tangent continuous on both
+  // sides of that point. Different handle lengths give each turn its own radius.
+  const handleLengths = points.map((point, index) => {
+    const previousGap = index > 0 ? distance(points[index - 1], point) : distance(point, points[index + 1]);
+    const nextGap = index < points.length - 1 ? distance(point, points[index + 1]) : previousGap;
+    return Math.min(previousGap, nextGap) * randomBetween(random, 0.105, 0.17);
+  });
+
+  let path = `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
   for (let index = 0; index < points.length - 1; index += 1) {
-    const previous = paddedPoints[index];
-    const start = paddedPoints[index + 1];
-    const end = paddedPoints[index + 2];
-    const next = paddedPoints[index + 3];
+    const start = points[index];
+    const end = points[index + 1];
     const controlOne = {
-      x: start.x + (end.x - previous.x) / 6,
-      y: start.y + (end.y - previous.y) / 6,
+      x: start.x + tangents[index].x * handleLengths[index],
+      y: start.y + tangents[index].y * handleLengths[index],
     };
     const controlTwo = {
-      x: end.x - (next.x - start.x) / 6,
-      y: end.y - (next.y - start.y) / 6,
+      x: end.x - tangents[index + 1].x * handleLengths[index + 1],
+      y: end.y - tangents[index + 1].y * handleLengths[index + 1],
     };
 
     path += ` C ${controlOne.x.toFixed(1)} ${controlOne.y.toFixed(1)}`
