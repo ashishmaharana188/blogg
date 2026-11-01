@@ -3,7 +3,9 @@ import "./blogFeedAmbientLine.css";
 const ROOT = document.getElementById("root") || document.body;
 const SVG_NS = "http://www.w3.org/2000/svg";
 const SVG_WIDTH_UNITS = 1000;
-const SVG_HEIGHT_UNITS = 1500;
+const ROUTE_GAP_MIN_PX = 180;
+const ROUTE_GAP_MAX_PX = 290;
+const ROUTE_LOOKAHEAD_PX = 1900;
 const AMBIENT_LINE_PREFERENCE_KEY = "blogg-feed-ambient-line-enabled";
 const AMBIENT_LINE_CHANGE_EVENT = "blogg-feed-ambient-line-preference-change";
 
@@ -11,6 +13,7 @@ type Point = { x: number; y: number };
 type ResizeBinding = { observer: ResizeObserver; svg: SVGSVGElement };
 
 const resizeBindings = new WeakMap<HTMLElement, ResizeBinding>();
+const routeSeeds = new WeakMap<SVGSVGElement, number>();
 
 function isAmbientLineEnabled(): boolean {
   try {
@@ -35,11 +38,16 @@ function randomBetween(random: () => number, min: number, max: number): number {
   return min + random() * (max - min);
 }
 
-function createRandomRoute(): string {
-  const seed = (Math.random() * 0xffffffff) >>> 0;
+/**
+ * Build the same route from the same seed at every height. New page content only
+ * reveals additional points farther down the route; it does not redistribute
+ * existing turns across the taller SVG.
+ */
+function createRandomRoute(seed: number, viewBoxHeight: number, unitsPerPixel: number): string {
   const random = makeRandom(seed);
   const startsLeft = random() < 0.5;
-  const sweepCount = 10 + Math.floor(random() * 5);
+  const startY = randomBetween(random, -32, 32) * unitsPerPixel;
+  const lookAhead = ROUTE_LOOKAHEAD_PX * unitsPerPixel;
 
   const edgePoint = (left: boolean, y: number, isEndpoint = false): Point => ({
     x: left
@@ -48,35 +56,28 @@ function createRandomRoute(): string {
     y,
   });
 
-  // The line still sweeps from side to side, but the vertical distance between
-  // turns is independently randomized instead of using evenly spaced anchors.
-  const startY = randomBetween(random, -45, 45);
-  const endY = randomBetween(random, SVG_HEIGHT_UNITS - 45, SVG_HEIGHT_UNITS + 55);
-  const gapWeights = Array.from(
-    { length: sweepCount + 1 },
-    () => randomBetween(random, 0.52, 1.58),
-  );
-  const totalWeight = gapWeights.reduce((sum, weight) => sum + weight, 0);
-  const totalDistance = endY - startY;
-
   const points: Point[] = [edgePoint(startsLeft, startY, true)];
   let currentY = startY;
-  gapWeights.forEach((weight, index) => {
-    currentY += totalDistance * (weight / totalWeight);
-    if (index === gapWeights.length - 1) return;
-    const travelsLeft = index % 2 === 0 ? !startsLeft : startsLeft;
-    points.push(edgePoint(travelsLeft, currentY));
-  });
-  const exitsLeft = sweepCount % 2 === 0 ? startsLeft : !startsLeft;
-  points.push(edgePoint(exitsLeft, endY, true));
+  let sweepIndex = 0;
+  const finalY = viewBoxHeight + lookAhead;
 
-  // Build a smooth cubic spline with a shared tangent at every anchor. Shorter
-  // handles tighten each turn (a sharper curve) without creating corners or kinks.
+  // Randomized physical gaps are converted into SVG units using the page width.
+  // This keeps the curve spacing visually consistent on phones and desktops.
+  while (currentY < finalY && sweepIndex < 1200) {
+    currentY += randomBetween(random, ROUTE_GAP_MIN_PX, ROUTE_GAP_MAX_PX) * unitsPerPixel;
+    const travelsLeft = sweepIndex % 2 === 0 ? !startsLeft : startsLeft;
+    points.push(edgePoint(travelsLeft, currentY, currentY >= viewBoxHeight));
+    sweepIndex += 1;
+  }
+
+  // Build a smooth cubic spline with a shared tangent at every anchor. Shorter,
+  // per-turn handles make the bends tighter without creating angular joins.
   const distance = (a: Point, b: Point): number => Math.hypot(b.x - a.x, b.y - a.y);
   const direction = (a: Point, b: Point): Point => {
     const length = distance(a, b) || 1;
     return { x: (b.x - a.x) / length, y: (b.y - a.y) / length };
   };
+
   const tangents: Point[] = points.map((point, index) => {
     if (index === 0) return direction(points[0], points[1]);
     if (index === points.length - 1) return direction(points[index - 1], point);
@@ -93,12 +94,17 @@ function createRandomRoute(): string {
       : outgoing;
   });
 
-  // One handle length per anchor keeps the curve tangent continuous on both
-  // sides of that point. Different handle lengths give each turn its own radius.
+  // Derive handle randomness independently per anchor. Extending the route then
+  // leaves all existing handle lengths unchanged as later points are appended.
   const handleLengths = points.map((point, index) => {
-    const previousGap = index > 0 ? distance(points[index - 1], point) : distance(point, points[index + 1]);
-    const nextGap = index < points.length - 1 ? distance(point, points[index + 1]) : previousGap;
-    return Math.min(previousGap, nextGap) * randomBetween(random, 0.105, 0.17);
+    const previousGap = index > 0
+      ? distance(points[index - 1], point)
+      : distance(point, points[index + 1]);
+    const nextGap = index < points.length - 1
+      ? distance(point, points[index + 1])
+      : previousGap;
+    const handleRandom = makeRandom((seed ^ Math.imul(index + 1, 0x9e3779b1)) >>> 0);
+    return Math.min(previousGap, nextGap) * randomBetween(handleRandom, 0.105, 0.17);
   });
 
   let path = `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
@@ -122,24 +128,24 @@ function createRandomRoute(): string {
   return path;
 }
 
-function makePath(className: string, route: string): SVGPathElement {
+function makePath(className: string): SVGPathElement {
   const path = document.createElementNS(SVG_NS, "path");
   path.setAttribute("class", className);
-  path.setAttribute("d", route);
   path.setAttribute("pathLength", "1000");
   return path;
 }
 
 function createAmbientSvg(): SVGSVGElement {
   const svg = document.createElementNS(SVG_NS, "svg");
-  const route = createRandomRoute();
+  const seed = (Math.random() * 0xffffffff) >>> 0;
+  routeSeeds.set(svg, seed);
   svg.setAttribute("class", "blog-feed-ambient-line");
-  svg.setAttribute("viewBox", `0 0 ${SVG_WIDTH_UNITS} ${SVG_HEIGHT_UNITS}`);
+  svg.setAttribute("viewBox", `0 0 ${SVG_WIDTH_UNITS} 1`);
   svg.setAttribute("preserveAspectRatio", "none");
   svg.setAttribute("aria-hidden", "true");
   svg.setAttribute("focusable", "false");
-  svg.appendChild(makePath("blog-feed-ambient-line__track", route));
-  svg.appendChild(makePath("blog-feed-ambient-line__traveller", route));
+  svg.appendChild(makePath("blog-feed-ambient-line__track"));
+  svg.appendChild(makePath("blog-feed-ambient-line__traveller"));
   return svg;
 }
 
@@ -149,9 +155,31 @@ function updateSvgHeight(page: HTMLElement, svg: SVGSVGElement): void {
   const contentHeight = content
     ? Math.max(content.offsetHeight, content.scrollHeight)
     : page.clientHeight;
-  const height = Math.max(page.clientHeight, contentTop + contentHeight + 24);
+  const height = Math.max(
+    page.clientHeight,
+    page.scrollHeight,
+    contentTop + contentHeight + 24,
+  );
+  const width = Math.max(page.clientWidth, page.getBoundingClientRect().width, 1);
+  const viewBoxHeight = height * SVG_WIDTH_UNITS / width;
+  const unitsPerPixel = SVG_WIDTH_UNITS / width;
+
+  // Match SVG coordinate scale on both axes. The viewBox grows with the page,
+  // rather than stretching a fixed 1500-unit route over the newly loaded content.
+  svg.setAttribute(
+    "viewBox",
+    `0 0 ${SVG_WIDTH_UNITS} ${viewBoxHeight.toFixed(2)}`,
+  );
   svg.setAttribute("height", String(Math.ceil(height)));
   svg.style.height = `${Math.ceil(height)}px`;
+
+  const seed = routeSeeds.get(svg);
+  if (seed !== undefined) {
+    const route = createRandomRoute(seed, viewBoxHeight, unitsPerPixel);
+    svg.querySelectorAll<SVGPathElement>("path").forEach((path) => {
+      path.setAttribute("d", route);
+    });
+  }
 }
 
 function observePageSize(page: HTMLElement, svg: SVGSVGElement): void {
@@ -187,8 +215,8 @@ function ensureAmbientLines(): void {
 
     let svg = page.querySelector<SVGSVGElement>(":scope > .blog-feed-ambient-line");
     if (!svg) {
-      // Generate once per page mount. Content mutations and scrolling do not
-      // regenerate the path, so the line stays fixed while its highlight travels.
+      // Generate one seed per page mount. The route extends deterministically as
+      // content loads, so completed curves do not get rearranged after rendering.
       svg = createAmbientSvg();
       page.insertBefore(svg, page.firstChild);
     }
