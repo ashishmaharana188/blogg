@@ -1,0 +1,773 @@
+/* Wallet typography and control refinement. Keeps the dashboard's layout but
+   prevents a page-level typewriter font from leaking into the wallet UI. */
+.admin-wallet-panel,
+.admin-wallet-panel *,
+.admin-wallet-auto-emi,
+.admin-wallet-auto-emi * {
+  font-family: Arial, Helvetica, sans-serif !important;
+  letter-spacing: normal !important;
+  text-transform: none;
+}
+
+.admin-wallet-panel {
+  color: #273449;
+}
+
+.admin-wallet-panel h2,
+.admin-wallet-panel h3,
+.admin-wallet-panel h4,
+.admin-wallet-auto-emi h3,
+.admin-wallet-auto-emi h4 {
+  font-weight: 650;
+  letter-spacing: -0.015em !important;
+}
+
+.admin-wallet-panel p,
+.admin-wallet-panel small,
+.admin-wallet-auto-emi p,
+.admin-wallet-auto-emi small {
+  line-height: 1.45;
+}
+
+.admin-wallet-panel button,
+.admin-wallet-panel input,
+.admin-wallet-panel select,
+.admin-wallet-auto-emi button,
+.admin-wallet-auto-emi input,
+.admin-wallet-auto-emi select {
+  font: inherit;
+  letter-spacing: normal !important;
+}
+
+.admin-wallet-panel input,
+.admin-wallet-panel select,
+.admin-wallet-auto-emi input,
+.admin-wallet-auto-emi select {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.admin-wallet-panel label > span,
+.admin-wallet-auto-emi label > span {
+  font-size: 11px !important;
+  line-height: 1.35;
+}
+
+.admin-wallet-panel .admin-wallet-metric strong,
+.admin-wallet-auto-emi .admin-wallet-emi-mandate-meta strong,
+.admin-wallet-panel .admin-wallet-history-value > strong {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Compact icon-only actions. Text remains available through title and aria-label. */
+.admin-wallet-icon-button {
+  display: inline-grid;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #536176;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease,
+    color 120ms ease, transform 120ms ease;
+}
+
+.admin-wallet-icon-button:hover:not(:disabled) {
+  background: rgba(100, 116, 139, 0.12);
+  color: #1e293b;
+}
+
+.admin-wallet-icon-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.admin-wallet-icon-button:focus-visible {
+  outline: 2px solid #64748b;
+  outline-offset: 2px;
+}
+
+.admin-wallet-icon-button:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.admin-wallet-icon-button svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.admin-wallet-icon-button.is-save {
+  background: transparent;
+  color: #287047;
+}
+
+.admin-wallet-icon-button.is-save:hover:not(:disabled) {
+  background: rgba(40, 112, 71, 0.11);
+  color: #185b35;
+}
+
+.admin-wallet-icon-button.is-danger {
+  background: transparent;
+  color: #a33e3e;
+}
+
+.admin-wallet-icon-button.is-danger:hover:not(:disabled) {
+  background: rgba(163, 62, 62, 0.1);
+  color: #842d2d;
+}
+
+.admin-wallet-emi-heading-actions,
+.admin-wallet-emi-actions,
+.admin-wallet-history-actions,
+.admin-wallet-savings-actions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-wallet-emi-heading-actions {
+  margin-left: auto;
+}
+
+.admin-wallet-emi-heading-actions .admin-wallet-emi-count {
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.admin-wallet-emi-actions {
+  justify-content: flex-end;
+}
+
+.admin-wallet-auto-emi .admin-wallet-section-heading {
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-wallet-auto-emi .admin-wallet-section-heading h3 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+.admin-wallet-auto-emi .admin-wallet-emi-caption {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: #748094;
+}
+
+.admin-wallet-emi-mandates {
+  gap: 10px;
+}
+
+.admin-wallet-emi-mandate {
+  align-items: center;
+  padding: 12px 13px;
+  border-radius: 9px;
+}
+
+.admin-wallet-emi-mandate-title strong {
+  font-size: 13px;
+}
+
+.admin-wallet-emi-mandate-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 14px;
+  row-gap: 5px;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.admin-wallet-emi-mandate-meta strong {
+  font-size: 12px;
+}
+
+.admin-wallet-emi-edit {
+  width: 100%;
+}
+
+.admin-wallet-emi-edit .admin-wallet-emi-actions {
+  justify-content: flex-end;
+  margin-top: 9px;
+}
+
+.admin-wallet-emi-history-toggle {
+  font-family: inherit !important;
+  font-size: 12px;
+}
+
+.admin-wallet-emi-history-chevron {
+  color: #657286;
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* Savings tools live inside the Completed cycles section, not as a separate card. */
+.admin-wallet-cycle-content {
+  display: grid;
+  gap: 12px;
+  padding-top: 10px;
+}
+
+.admin-wallet-cycle-savings {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #e4e9f0;
+  border-radius: 9px;
+  background: #fafbfd;
+}
+
+.admin-wallet-cycle-savings-copy {
+  display: grid;
+  gap: 3px;
+}
+
+.admin-wallet-cycle-savings-copy strong {
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.admin-wallet-cycle-savings-copy span {
+  color: #69778b;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.admin-wallet-savings-fields {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.65fr) minmax(170px, 1fr) auto;
+  align-items: end;
+  gap: 9px;
+}
+
+.admin-wallet-savings-fields label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.admin-wallet-savings-fields label > span {
+  color: #566274;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.admin-wallet-savings-fields input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid #d9dfe7;
+  border-radius: 7px;
+  background: #fff;
+  color: #263247;
+}
+
+.admin-wallet-savings-actions {
+  min-height: 38px;
+}
+
+.admin-wallet-completed-cycles {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-wallet-completed-cycle {
+  overflow: hidden;
+  border: 1px solid #e5e9ef;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.admin-wallet-completed-cycle-toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin-wallet-completed-cycle-toggle:hover {
+  background: #f8fafc;
+}
+
+.admin-wallet-completed-cycle-main,
+.admin-wallet-completed-cycle-end {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.admin-wallet-completed-cycle-main {
+  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.admin-wallet-completed-cycle-main strong {
+  color: #273449;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.admin-wallet-completed-cycle-main small {
+  color: #718096;
+  font-size: 10px;
+}
+
+.admin-wallet-completed-cycle-end > strong {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-wallet-completed-cycle-end > span {
+  color: #68758a;
+  font-size: 17px;
+}
+
+.admin-wallet-cycle-entries {
+  display: grid;
+  gap: 0;
+  padding: 0 12px 10px;
+  border-top: 1px solid #edf0f4;
+}
+
+.admin-wallet-cycle-entries .admin-wallet-history-row {
+  padding: 9px 0;
+}
+
+.admin-wallet-cycle-note,
+.admin-wallet-cycle-manage-hint {
+  color: #788497;
+  font-size: 10px;
+}
+
+.admin-wallet-cycle-note {
+  margin: 6px 0 0;
+}
+
+.admin-wallet-cycle-manage-hint {
+  text-align: right;
+}
+
+.admin-wallet-cycle-section .admin-wallet-cycle-toggle {
+  font-family: inherit !important;
+}
+
+.admin-wallet-history-value {
+  display: flex;
+  min-width: 112px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.admin-wallet-history-value > strong {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.admin-wallet-history-copy > strong {
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.admin-wallet-history-copy > span {
+  font-size: 10px;
+}
+
+.admin-wallet-history-copy > small {
+  font-size: 10px;
+}
+
+.admin-wallet-history-edit-form input {
+  font-size: 12px;
+}
+
+html.blogg-dark-mode .admin-wallet-icon-button {
+  border: 0;
+  background: transparent;
+  color: #dedede;
+}
+
+html.blogg-dark-mode .admin-wallet-icon-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+html.blogg-dark-mode .admin-wallet-icon-button.is-save {
+  color: #a7d6b6;
+}
+
+html.blogg-dark-mode .admin-wallet-icon-button.is-danger {
+  color: #ffbaba;
+}
+
+html.blogg-dark-mode .admin-wallet-cycle-savings,
+html.blogg-dark-mode .admin-wallet-completed-cycle {
+  border-color: #454545;
+  background: #2b2b2b;
+}
+
+html.blogg-dark-mode .admin-wallet-cycle-savings-copy strong,
+html.blogg-dark-mode .admin-wallet-completed-cycle-main strong {
+  color: #ededed;
+}
+
+html.blogg-dark-mode .admin-wallet-cycle-savings-copy span,
+html.blogg-dark-mode .admin-wallet-completed-cycle-main small,
+html.blogg-dark-mode .admin-wallet-cycle-note,
+html.blogg-dark-mode .admin-wallet-cycle-manage-hint {
+  color: #a6a6a6;
+}
+
+html.blogg-dark-mode .admin-wallet-savings-fields input {
+  border-color: #555;
+  background: #242424;
+  color: #ededed;
+  color-scheme: dark;
+}
+
+html.blogg-dark-mode .admin-wallet-completed-cycle-toggle:hover {
+  background: #343434;
+}
+
+html.blogg-dark-mode .admin-wallet-cycle-entries {
+  border-color: #454545;
+}
+
+@media (max-width: 760px) {
+  .admin-wallet-emi-mandate {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-wallet-emi-actions {
+    justify-content: flex-start;
+  }
+
+  .admin-wallet-savings-fields {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .admin-wallet-savings-reason {
+    grid-column: 1 / -1;
+  }
+
+  .admin-wallet-savings-actions {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 440px) {
+  .admin-wallet-savings-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-wallet-savings-reason,
+  .admin-wallet-savings-actions {
+    grid-column: auto;
+  }
+
+  .admin-wallet-emi-heading-actions .admin-wallet-emi-count {
+    display: none;
+  }
+}
+
+
+/* Final alignment pass: force the wallet out of the dashboard's monospace theme. */
+html body .admin-wallet-panel,
+html body .admin-wallet-panel *,
+html body .admin-wallet-auto-emi,
+html body .admin-wallet-auto-emi * {
+  font-family: Arial, Helvetica, sans-serif !important;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+}
+
+html body .admin-wallet-panel,
+html body .admin-wallet-auto-emi {
+  line-height: 1.45;
+}
+
+/* One clean row per mandate, with deliberate separation between every value. */
+.admin-wallet-auto-emi .admin-wallet-emi-mandate {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 22px;
+  row-gap: 8px;
+  padding: 13px 0;
+  border: 0;
+  border-bottom: 1px solid #e8edf3;
+  border-radius: 0;
+  background: transparent;
+}
+
+.admin-wallet-auto-emi .admin-wallet-emi-mandate-main {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+.admin-wallet-auto-emi .admin-wallet-emi-mandate-title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+  line-height: 1.35;
+}
+
+.admin-wallet-auto-emi .admin-wallet-emi-mandate-title strong {
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.admin-wallet-auto-emi .admin-wallet-emi-mandate-title .admin-wallet-emi-mandate-status {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.admin-wallet-auto-emi .admin-wallet-emi-mandate-status.is-enabled {
+  color: #18784b;
+}
+
+.admin-wallet-auto-emi .admin-wallet-emi-mandate-status.is-paused {
+  color: #8a6670;
+}
+
+.admin-wallet-auto-emi .admin-wallet-emi-mandate-meta {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px 22px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.admin-wallet-auto-emi .admin-wallet-emi-mandate-meta > * {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.admin-wallet-auto-emi .admin-wallet-emi-mandate-meta strong {
+  font-size: 12px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-wallet-auto-emi .admin-wallet-emi-actions {
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  white-space: nowrap;
+}
+
+/* Flat icon actions: no bordered squares or filled rectangles. */
+.admin-wallet-panel .admin-wallet-icon-button,
+.admin-wallet-auto-emi .admin-wallet-icon-button {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0;
+  border: 0 !important;
+  border-radius: 50%;
+  box-shadow: none !important;
+  background: transparent !important;
+  color: #536176;
+}
+
+.admin-wallet-panel .admin-wallet-icon-button:hover:not(:disabled),
+.admin-wallet-auto-emi .admin-wallet-icon-button:hover:not(:disabled) {
+  border: 0 !important;
+  background: rgba(100, 116, 139, 0.12) !important;
+}
+
+.admin-wallet-panel .admin-wallet-icon-button.is-save,
+.admin-wallet-auto-emi .admin-wallet-icon-button.is-save {
+  color: #287047;
+}
+
+.admin-wallet-panel .admin-wallet-icon-button.is-danger,
+.admin-wallet-auto-emi .admin-wallet-icon-button.is-danger {
+  color: #b23b3b;
+}
+
+.admin-wallet-panel .admin-wallet-icon-button svg,
+.admin-wallet-auto-emi .admin-wallet-icon-button svg {
+  width: 17px;
+  height: 17px;
+}
+
+.admin-wallet-auto-emi .admin-wallet-emi-heading-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.admin-wallet-auto-emi .admin-wallet-emi-count {
+  line-height: 1.4;
+  font-size: 11px;
+}
+
+/* The history title, count and disclosure icon must occupy separate positions. */
+.admin-wallet-auto-emi .admin-wallet-emi-history-toggle {
+  display: flex;
+  width: 100%;
+  min-height: 34px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 7px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin-wallet-auto-emi .admin-wallet-emi-history-toggle:hover {
+  background: transparent;
+}
+
+.admin-wallet-auto-emi .admin-wallet-emi-history-label {
+  display: inline-flex;
+  min-width: 0;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 3px 12px;
+  line-height: 1.4;
+}
+
+.admin-wallet-auto-emi .admin-wallet-emi-history-label strong {
+  display: inline-block;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.admin-wallet-auto-emi .admin-wallet-emi-history-label small {
+  display: inline-block;
+  margin: 0;
+  color: #718096;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.admin-wallet-auto-emi .admin-wallet-emi-history-chevron {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  font-size: 17px;
+  line-height: 1;
+}
+
+/* Align savings controls and keep their save/reset glyphs flat as well. */
+.admin-wallet-panel .admin-wallet-cycle-savings {
+  gap: 12px;
+}
+
+.admin-wallet-panel .admin-wallet-savings-fields {
+  align-items: end;
+  column-gap: 12px;
+  row-gap: 9px;
+}
+
+.admin-wallet-panel .admin-wallet-savings-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-height: 38px;
+}
+
+html.blogg-dark-mode .admin-wallet-auto-emi .admin-wallet-emi-mandate {
+  border-color: #454545;
+}
+
+html.blogg-dark-mode .admin-wallet-auto-emi .admin-wallet-emi-mandate-status.is-enabled {
+  color: #8ed2aa;
+}
+
+html.blogg-dark-mode .admin-wallet-auto-emi .admin-wallet-emi-mandate-status.is-paused {
+  color: #d5aab2;
+}
+
+html.blogg-dark-mode .admin-wallet-auto-emi .admin-wallet-emi-history-label small {
+  color: #a6a6a6;
+}
+
+@media (max-width: 760px) {
+  .admin-wallet-auto-emi .admin-wallet-emi-mandate {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 8px;
+    align-items: start;
+  }
+
+  .admin-wallet-auto-emi .admin-wallet-emi-actions {
+    justify-content: flex-start;
+    padding-left: 0;
+  }
+
+  .admin-wallet-auto-emi .admin-wallet-emi-mandate-meta {
+    gap: 5px 14px;
+  }
+}
+
+@media (max-width: 560px) {
+  .admin-wallet-auto-emi .admin-wallet-section-heading {
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .admin-wallet-auto-emi .admin-wallet-emi-heading-actions {
+    gap: 8px;
+  }
+
+  .admin-wallet-auto-emi .admin-wallet-emi-mandate-meta > * {
+    white-space: normal;
+  }
+
+  .admin-wallet-panel .admin-wallet-savings-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
