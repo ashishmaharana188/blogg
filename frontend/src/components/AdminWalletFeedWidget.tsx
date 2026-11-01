@@ -70,7 +70,9 @@ export default function AdminWalletFeedWidget() {
 
     const tryAttach = () => {
       if (disposed || mount) return Boolean(mount);
-      const rail = document.querySelector<HTMLElement>(".blog-feed-widget-rail");
+      const rail = document.querySelector<HTMLElement>(
+        ".blog-feed-widget-rail",
+      );
       if (!rail) return false;
       mount = document.createElement("div");
       mount.className = "admin-wallet-feed-widget-mount";
@@ -107,8 +109,15 @@ export default function AdminWalletFeedWidget() {
       headers: { Accept: "application/json" },
     })
       .then(async (response) => {
-        const payload = await response.json().catch(() => ({})) as { value?: unknown; message?: string };
-        if (!response.ok) throw new Error(payload.message || `Wallet line request failed (${response.status}).`);
+        const payload = (await response.json().catch(() => ({}))) as {
+          value?: unknown;
+          message?: string;
+        };
+        if (!response.ok)
+          throw new Error(
+            payload.message ||
+              `Wallet line request failed (${response.status}).`,
+          );
         return cleanLineValue(payload.value);
       })
       .then((value) => {
@@ -117,7 +126,9 @@ export default function AdminWalletFeedWidget() {
       .catch(() => {
         if (!cancelled) setLineValue("0.00");
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [mountNode]);
 
   // Exact figures are requested only by authenticated administrators.
@@ -137,7 +148,9 @@ export default function AdminWalletFeedWidget() {
       .then(async (response) => {
         const payload = await response.json().catch(() => ({}));
         if (!response.ok)
-          throw new Error(payload.message || `Wallet request failed (${response.status}).`);
+          throw new Error(
+            payload.message || `Wallet request failed (${response.status}).`,
+          );
         return payload as FeedWalletSummary;
       })
       .then((data) => {
@@ -145,16 +158,24 @@ export default function AdminWalletFeedWidget() {
       })
       .catch((reason) => {
         if (!cancelled)
-          setAdminError(reason instanceof Error ? reason.message : "Wallet summary is unavailable.");
+          setAdminError(
+            reason instanceof Error
+              ? reason.message
+              : "Wallet summary is unavailable.",
+          );
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [isAdmin, mountNode]);
 
   // The ambient SVG reads the string and replaces its route segment with the
   // connected monoline digits, then continues along its normal background path.
   useEffect(() => {
     if (!mountNode) return;
-    const surface = mountNode.querySelector<HTMLElement>("[data-wallet-graph-surface='true']");
+    const surface = mountNode.querySelector<HTMLElement>(
+      "[data-wallet-graph-surface='true']",
+    );
     if (surface) surface.dataset.walletLineValue = lineValue;
     window.dispatchEvent(new Event("blogg-wallet-graph-update"));
   }, [lineValue, mountNode, view]);
@@ -166,7 +187,11 @@ export default function AdminWalletFeedWidget() {
   return createPortal(
     <aside
       className={`admin-wallet-feed-widget${lineMode ? " admin-wallet-feed-widget--graph" : " admin-wallet-feed-widget--numerical"}`}
-      aria-label={lineMode ? "Savings value represented by a continuous line numeral in units of ten thousand rupees" : "Administrator wallet summary"}
+      aria-label={
+        lineMode
+          ? "Savings value represented by a continuous line numeral in units of ten thousand rupees"
+          : "Administrator wallet summary"
+      }
       data-wallet-graph-mode={lineMode ? "graph" : "numerical"}
     >
       <div className="admin-wallet-feed-widget__heading">
@@ -174,7 +199,11 @@ export default function AdminWalletFeedWidget() {
         {isAdmin ? (
           <div className="admin-wallet-feed-widget__admin-controls">
             <span className="admin-wallet-feed-widget__admin">ADMIN</span>
-            <div className="admin-wallet-feed-widget__view-switch" role="group" aria-label="Wallet display">
+            <div
+              className="admin-wallet-feed-widget__view-switch"
+              role="group"
+              aria-label="Wallet display"
+            >
               <button
                 type="button"
                 className={view === "line" ? "is-active" : ""}
@@ -194,7 +223,7 @@ export default function AdminWalletFeedWidget() {
             </div>
           </div>
         ) : (
-          <span className="admin-wallet-feed-widget__public-label">SAVINGS / ₹10K</span>
+          <span className="admin-wallet-feed-widget__public-label"></span>
         )}
       </div>
 
@@ -220,18 +249,32 @@ export default function AdminWalletFeedWidget() {
               </div>
               <div className="admin-wallet-feed-widget__metric">
                 <span>Net P&amp;L</span>
-                <strong className={wallet.netPnlPaise < 0 ? "is-negative" : "is-positive"}>
+                <strong
+                  className={
+                    wallet.netPnlPaise < 0 ? "is-negative" : "is-positive"
+                  }
+                >
                   {money(wallet.netPnlPaise)}
                 </strong>
               </div>
               <div className="admin-wallet-feed-widget__metric">
                 <span>Total savings</span>
-                <strong className={wallet.savingsBalancePaise < 0 ? "is-negative" : "is-positive"}>
+                <strong
+                  className={
+                    wallet.savingsBalancePaise < 0
+                      ? "is-negative"
+                      : "is-positive"
+                  }
+                >
                   {money(wallet.savingsBalancePaise)}
                 </strong>
               </div>
               <div className="admin-wallet-feed-widget__footer">
-                <span>{wallet.autoFundingEnabled ? `Auto · ${money(wallet.fundingAmountPaise)}` : "Auto funding off"}</span>
+                <span>
+                  {wallet.autoFundingEnabled
+                    ? `Auto · ${money(wallet.fundingAmountPaise)}`
+                    : "Auto funding off"}
+                </span>
                 <span>Next: {dateLabel(wallet.nextFundingAt)}</span>
               </div>
             </>
