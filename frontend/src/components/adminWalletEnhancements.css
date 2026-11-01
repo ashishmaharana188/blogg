@@ -197,7 +197,7 @@ html.blogg-dark-mode .admin-wallet-emi-status strong {
 @media (max-width: 1120px) {
   .account-page .account-dashboard-grid .admin-wallet-panel-mount {
     grid-column: 1 / -1 !important;
-    order: 13 !important;
+    order: 14 !important;
     width: 100% !important;
     max-width: none !important;
     min-width: 0 !important;
@@ -213,4 +213,18 @@ html.blogg-dark-mode .admin-wallet-emi-status strong {
   .admin-wallet-history-heading-actions {
     margin-left: auto;
   }
+}
+
+
+/* Stable insertion anchor shared with the Health dashboard bootstrap. */
+.account-dashboard-youtube-column > .admin-wallet-health-anchor {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
 }

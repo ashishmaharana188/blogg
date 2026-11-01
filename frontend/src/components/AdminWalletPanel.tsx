@@ -82,7 +82,10 @@ function longDate(value: string | null | undefined): string {
       }).format(date);
 }
 
-async function walletRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function walletRequest<T>(
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     credentials: "include",
     cache: "no-store",
@@ -93,8 +96,13 @@ async function walletRequest<T>(path: string, init: RequestInit = {}): Promise<T
       ...(init.headers || {}),
     },
   });
-  const payload = await response.json().catch(() => ({})) as T & { message?: string };
-  if (!response.ok) throw new Error(payload.message || `Wallet request failed (${response.status}).`);
+  const payload = (await response.json().catch(() => ({}))) as T & {
+    message?: string;
+  };
+  if (!response.ok)
+    throw new Error(
+      payload.message || `Wallet request failed (${response.status}).`,
+    );
   return payload;
 }
 
@@ -118,7 +126,9 @@ export default function AdminWalletPanel() {
   const [editingEventKey, setEditingEventKey] = useState<string | null>(null);
   const [editingAmount, setEditingAmount] = useState("");
   const [updatingTransaction, setUpdatingTransaction] = useState(false);
-  const [removingTransactionKey, setRemovingTransactionKey] = useState<string | null>(null);
+  const [removingTransactionKey, setRemovingTransactionKey] = useState<
+    string | null
+  >(null);
 
   const isAdminAccountView =
     location.pathname.replace(/\/+$/, "") === "/account" &&
@@ -131,24 +141,47 @@ export default function AdminWalletPanel() {
     }
 
     let mount: HTMLDivElement | null = null;
+    let anchor: HTMLDivElement | null = null;
     let observer: MutationObserver | null = null;
     let disposed = false;
 
     const tryAttach = () => {
       if (disposed || mount) return Boolean(mount);
-      const leftBase = document.querySelector<HTMLElement>(".account-dashboard-left-base");
-      const statusCard = leftBase?.querySelector<HTMLElement>(".account-dashboard-status");
-      if (!leftBase || !statusCard) return false;
+
+      const youtubeColumn = document.querySelector<HTMLElement>(
+        ".account-dashboard-youtube-column",
+      );
+      const youtubePanel = youtubeColumn?.querySelector<HTMLElement>(
+        ":scope > .account-dashboard-youtube",
+      );
+      if (!youtubeColumn || !youtubePanel) return false;
+
+      // Health's placement bootstrap keeps its Steps/Daily Activity host
+      // immediately before the first direct-child .account-dashboard-featured-card-list.
+      // This dedicated marker reserves that slot; Wallet sits after it, so
+      // neither bootstrap has to move the other's element.
+      anchor = youtubeColumn.querySelector<HTMLDivElement>(
+        ":scope > .admin-wallet-health-anchor",
+      );
+      if (!anchor) {
+        anchor = document.createElement("div");
+        anchor.className =
+          "admin-wallet-health-anchor account-dashboard-featured-card-list";
+        anchor.setAttribute("aria-hidden", "true");
+        anchor.style.setProperty("display", "none", "important");
+        youtubePanel.insertAdjacentElement("afterend", anchor);
+      }
 
       mount = document.createElement("div");
       mount.className = "admin-wallet-panel-mount";
-      statusCard.insertAdjacentElement("afterend", mount);
+      anchor.insertAdjacentElement("afterend", mount);
       setMountNode(mount);
       observer?.disconnect();
       return true;
     };
 
     if (!tryAttach()) {
+      // The observer exists only until the Account dashboard columns render.
       observer = new MutationObserver(() => tryAttach());
       observer.observe(document.body, { childList: true, subtree: true });
     }
@@ -157,7 +190,8 @@ export default function AdminWalletPanel() {
       disposed = true;
       observer?.disconnect();
       mount?.remove();
-      setMountNode((current) => current === mount ? null : current);
+      anchor?.remove();
+      setMountNode((current) => (current === mount ? null : current));
     };
   }, [isAdmin, isAdminAccountView]);
 
@@ -170,7 +204,9 @@ export default function AdminWalletPanel() {
       setIntervalDays(data.intervalDays);
       setAutoFundingEnabled(data.autoFundingEnabled);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Could not load the wallet.");
+      setError(
+        reason instanceof Error ? reason.message : "Could not load the wallet.",
+      );
     } finally {
       setLoading(false);
     }
@@ -196,7 +232,9 @@ export default function AdminWalletPanel() {
       return;
     }
     if (enabled && parsedFundingPaise <= 0) {
-      setError("Set a funding amount greater than zero before enabling auto funding.");
+      setError(
+        "Set a funding amount greater than zero before enabling auto funding.",
+      );
       return;
     }
 
@@ -204,14 +242,17 @@ export default function AdminWalletPanel() {
     setError("");
     setMessage("");
     try {
-      const data = await walletRequest<WalletData>("/api/admin/wallet/settings", {
-        method: "PATCH",
-        body: JSON.stringify({
-          autoFundingEnabled: enabled,
-          fundingAmountPaise: parsedFundingPaise,
-          intervalDays,
-        }),
-      });
+      const data = await walletRequest<WalletData>(
+        "/api/admin/wallet/settings",
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            autoFundingEnabled: enabled,
+            fundingAmountPaise: parsedFundingPaise,
+            intervalDays,
+          }),
+        },
+      );
       setWallet(data);
       setAutoFundingEnabled(data.autoFundingEnabled);
       setFundingAmount((data.fundingAmountPaise / 100).toFixed(2));
@@ -222,7 +263,11 @@ export default function AdminWalletPanel() {
           : "Automatic funding paused. The current wallet and history are preserved.",
       );
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Could not save wallet settings.");
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Could not save wallet settings.",
+      );
     } finally {
       setSavingSettings(false);
     }
@@ -249,24 +294,30 @@ export default function AdminWalletPanel() {
     setError("");
     setMessage("");
     try {
-      const data = await walletRequest<WalletData>("/api/admin/wallet/entries", {
-        method: "POST",
-        body: JSON.stringify({
-          amountPaise,
-          description: entryDescription.trim(),
-        }),
-      });
+      const data = await walletRequest<WalletData>(
+        "/api/admin/wallet/entries",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            amountPaise,
+            description: entryDescription.trim(),
+          }),
+        },
+      );
       setWallet(data);
       setEntryAmount("");
       setEntryDescription("");
       setMessage("Wallet transaction recorded.");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Could not record the transaction.");
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Could not record the transaction.",
+      );
     } finally {
       setSavingEntry(false);
     }
   };
-
 
   const beginEditTransaction = (transaction: WalletTransaction) => {
     if (transaction.type === "settlement") return;
@@ -279,7 +330,11 @@ export default function AdminWalletPanel() {
   const updateTransactionAmount = async (transaction: WalletTransaction) => {
     const parsed = Number(editingAmount);
     const amountPaise = Math.round(parsed * 100);
-    if (!Number.isFinite(parsed) || !Number.isSafeInteger(amountPaise) || amountPaise === 0) {
+    if (
+      !Number.isFinite(parsed) ||
+      !Number.isSafeInteger(amountPaise) ||
+      amountPaise === 0
+    ) {
       setError("Enter a non-zero amount with up to two decimal places.");
       return;
     }
@@ -287,7 +342,10 @@ export default function AdminWalletPanel() {
       setError("Expense amounts must remain negative. Use a minus sign.");
       return;
     }
-    if ((transaction.type === "income" || transaction.type === "funding") && amountPaise <= 0) {
+    if (
+      (transaction.type === "income" || transaction.type === "funding") &&
+      amountPaise <= 0
+    ) {
       setError("Income and funding amounts must remain positive.");
       return;
     }
@@ -306,9 +364,15 @@ export default function AdminWalletPanel() {
       setWallet(data);
       setEditingEventKey(null);
       setEditingAmount("");
-      setMessage("Transaction amount updated. Wallet, cycle P&L and any linked Savings transfer were recalculated.");
+      setMessage(
+        "Transaction amount updated. Wallet, cycle P&L and any linked Savings transfer were recalculated.",
+      );
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Could not update the transaction amount.");
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Could not update the transaction amount.",
+      );
     } finally {
       setUpdatingTransaction(false);
     }
@@ -334,9 +398,15 @@ export default function AdminWalletPanel() {
         setEditingEventKey(null);
         setEditingAmount("");
       }
-      setMessage("Transaction removed. Wallet, cycle P&L and any linked Savings transfer were recalculated.");
+      setMessage(
+        "Transaction removed. Wallet, cycle P&L and any linked Savings transfer were recalculated.",
+      );
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Could not remove the transaction.");
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Could not remove the transaction.",
+      );
     } finally {
       setRemovingTransactionKey(null);
     }
@@ -363,7 +433,11 @@ export default function AdminWalletPanel() {
       setWallet(data);
       setMessage("Current cycle transferred to Savings.");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Could not settle the wallet.");
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Could not settle the wallet.",
+      );
     } finally {
       setSettling(false);
     }
@@ -372,14 +446,19 @@ export default function AdminWalletPanel() {
   if (!isAdmin || !mountNode) return null;
 
   return createPortal(
-    <section className="admin-wallet-panel" aria-labelledby="admin-wallet-title">
+    <section
+      className="admin-wallet-panel"
+      aria-labelledby="admin-wallet-title"
+    >
       <header className="admin-wallet-panel__header">
         <div>
           <p className="admin-wallet-panel__eyebrow">ADMIN FINANCES</p>
           <h2 id="admin-wallet-title">Wallet</h2>
           <p>Current cycle ledger and accumulated savings.</p>
         </div>
-        <span className={`admin-wallet-status${autoFundingEnabled ? " is-on" : ""}`}>
+        <span
+          className={`admin-wallet-status${autoFundingEnabled ? " is-on" : ""}`}
+        >
           {autoFundingEnabled ? "Auto funding on" : "Auto funding off"}
         </span>
       </header>
@@ -396,30 +475,48 @@ export default function AdminWalletPanel() {
             </div>
             <div className="admin-wallet-metric">
               <span>Net P&amp;L</span>
-              <strong className={(wallet?.netPnlPaise || 0) < 0 ? "is-negative" : "is-positive"}>
+              <strong
+                className={
+                  (wallet?.netPnlPaise || 0) < 0 ? "is-negative" : "is-positive"
+                }
+              >
                 {money(wallet?.netPnlPaise || 0)}
               </strong>
               <small>Current cycle result</small>
             </div>
             <div className="admin-wallet-metric">
               <span>Total savings</span>
-              <strong className={(wallet?.savingsBalancePaise || 0) < 0 ? "is-negative" : "is-positive"}>
+              <strong
+                className={
+                  (wallet?.savingsBalancePaise || 0) < 0
+                    ? "is-negative"
+                    : "is-positive"
+                }
+              >
                 {money(wallet?.savingsBalancePaise || 0)}
               </strong>
               <small>Completed cycle transfers</small>
             </div>
             <div className="admin-wallet-metric">
               <span>Next funding</span>
-              <strong className="admin-wallet-date">{shortDate(wallet?.nextFundingAt)}</strong>
-              <small>{wallet?.currentCycleStartAt ? `Cycle began ${shortDate(wallet.currentCycleStartAt)}` : "No open cycle"}</small>
+              <strong className="admin-wallet-date">
+                {shortDate(wallet?.nextFundingAt)}
+              </strong>
+              <small>
+                {wallet?.currentCycleStartAt
+                  ? `Cycle began ${shortDate(wallet.currentCycleStartAt)}`
+                  : "No open cycle"}
+              </small>
             </div>
           </div>
 
-          <section className="admin-wallet-section" aria-label="Automatic funding settings">
+          <section
+            className="admin-wallet-section"
+            aria-label="Automatic funding settings"
+          >
             <div className="admin-wallet-section-heading">
               <div>
                 <h3>Automatic funding</h3>
-                <p>Funds a new cycle automatically every 30 or 31 days.</p>
               </div>
               <button
                 type="button"
@@ -449,7 +546,9 @@ export default function AdminWalletPanel() {
                 <span>Funding interval</span>
                 <select
                   value={intervalDays}
-                  onChange={(event) => setIntervalDays(Number(event.target.value) as 30 | 31)}
+                  onChange={(event) =>
+                    setIntervalDays(Number(event.target.value) as 30 | 31)
+                  }
                 >
                   <option value={30}>Every 30 days</option>
                   <option value={31}>Every 31 days</option>
@@ -464,19 +563,21 @@ export default function AdminWalletPanel() {
                 {savingSettings ? "Saving…" : "Save schedule"}
               </button>
             </div>
-            <p className="admin-wallet-note">
-              First activation adds the funding amount immediately. Pausing automatic funding preserves the open cycle and all entries.
-            </p>
           </section>
 
-          <section className="admin-wallet-section" aria-label="Record a wallet transaction">
+          <section
+            className="admin-wallet-section"
+            aria-label="Record a wallet transaction"
+          >
             <div className="admin-wallet-section-heading admin-wallet-section-heading--single">
               <div>
                 <h3>Record transaction</h3>
-                <p>Enter a signed amount. Negative values are expenses; positive values are income or refunds.</p>
               </div>
             </div>
-            <form className="admin-wallet-entry-form" onSubmit={(event) => void addEntry(event)}>
+            <form
+              className="admin-wallet-entry-form"
+              onSubmit={(event) => void addEntry(event)}
+            >
               <label>
                 <span>Amount (₹)</span>
                 <input
@@ -509,11 +610,13 @@ export default function AdminWalletPanel() {
             </form>
           </section>
 
-          <section className="admin-wallet-section" aria-label="Wallet transaction history">
+          <section
+            className="admin-wallet-section"
+            aria-label="Wallet transaction history"
+          >
             <div className="admin-wallet-section-heading">
               <div>
                 <h3>Transaction history</h3>
-                <p>Latest {wallet?.recentTransactions.length || 0} ledger entries. Edit or remove funding, income and expense entries.</p>
               </div>
               <div className="admin-wallet-history-heading-actions">
                 <button
@@ -531,16 +634,23 @@ export default function AdminWalletPanel() {
               <div className="admin-wallet-history-list">
                 {wallet.recentTransactions.map((transaction) => {
                   const isEditing = editingEventKey === transaction.eventKey;
-                  const isRemoving = removingTransactionKey === transaction.eventKey;
+                  const isRemoving =
+                    removingTransactionKey === transaction.eventKey;
                   const isSystemSettlement = transaction.type === "settlement";
                   return (
-                    <article className="admin-wallet-history-row" key={transaction.eventKey}>
+                    <article
+                      className="admin-wallet-history-row"
+                      key={transaction.eventKey}
+                    >
                       <div className="admin-wallet-history-copy">
                         <strong>{transaction.description}</strong>
-                        <span>{longDate(transaction.createdAt)} · {transaction.type}</span>
+                        <span>
+                          {longDate(transaction.createdAt)} · {transaction.type}
+                        </span>
                         {transaction.savingsDeltaPaise !== 0 && (
                           <small>
-                            Savings {transaction.savingsDeltaPaise > 0 ? "+" : "−"}
+                            Savings{" "}
+                            {transaction.savingsDeltaPaise > 0 ? "+" : "−"}
                             {money(Math.abs(transaction.savingsDeltaPaise))}
                           </small>
                         )}
@@ -561,7 +671,9 @@ export default function AdminWalletPanel() {
                                 type="number"
                                 step="0.01"
                                 value={editingAmount}
-                                onChange={(event) => setEditingAmount(event.target.value)}
+                                onChange={(event) =>
+                                  setEditingAmount(event.target.value)
+                                }
                                 autoFocus
                                 required
                               />
@@ -571,8 +683,16 @@ export default function AdminWalletPanel() {
                                 type="submit"
                                 className="admin-wallet-history-action is-save"
                                 disabled={updatingTransaction}
-                                aria-label={updatingTransaction ? "Saving amount" : "Save amount"}
-                                title={updatingTransaction ? "Saving amount" : "Save amount"}
+                                aria-label={
+                                  updatingTransaction
+                                    ? "Saving amount"
+                                    : "Save amount"
+                                }
+                                title={
+                                  updatingTransaction
+                                    ? "Saving amount"
+                                    : "Save amount"
+                                }
                               >
                                 <svg viewBox="0 0 24 24" aria-hidden="true">
                                   <path d="M5 12.5 9.5 17 19 7.5" />
@@ -597,24 +717,33 @@ export default function AdminWalletPanel() {
                           </form>
                         ) : (
                           <>
-                            <strong className={
-                              transaction.walletDeltaPaise > 0
-                                ? "is-positive"
-                                : transaction.walletDeltaPaise < 0
-                                  ? "is-negative"
-                                  : ""
-                            }>
+                            <strong
+                              className={
+                                transaction.walletDeltaPaise > 0
+                                  ? "is-positive"
+                                  : transaction.walletDeltaPaise < 0
+                                    ? "is-negative"
+                                    : ""
+                              }
+                            >
                               {money(transaction.walletDeltaPaise, true)}
                             </strong>
                             {isSystemSettlement ? (
-                              <small className="admin-wallet-history-system-label">Linked Savings transfer</small>
+                              <small className="admin-wallet-history-system-label">
+                                Linked Savings transfer
+                              </small>
                             ) : (
                               <div className="admin-wallet-history-actions">
                                 <button
                                   type="button"
                                   className="admin-wallet-history-action"
-                                  disabled={Boolean(removingTransactionKey) || updatingTransaction}
-                                  onClick={() => beginEditTransaction(transaction)}
+                                  disabled={
+                                    Boolean(removingTransactionKey) ||
+                                    updatingTransaction
+                                  }
+                                  onClick={() =>
+                                    beginEditTransaction(transaction)
+                                  }
                                   aria-label="Edit transaction amount"
                                   title="Edit transaction amount"
                                 >
@@ -625,10 +754,24 @@ export default function AdminWalletPanel() {
                                 <button
                                   type="button"
                                   className="admin-wallet-history-action is-danger"
-                                  disabled={Boolean(removingTransactionKey) || updatingTransaction || isRemoving}
-                                  onClick={() => void removeTransaction(transaction)}
-                                  aria-label={isRemoving ? "Removing transaction" : "Delete transaction"}
-                                  title={isRemoving ? "Removing transaction" : "Delete transaction"}
+                                  disabled={
+                                    Boolean(removingTransactionKey) ||
+                                    updatingTransaction ||
+                                    isRemoving
+                                  }
+                                  onClick={() =>
+                                    void removeTransaction(transaction)
+                                  }
+                                  aria-label={
+                                    isRemoving
+                                      ? "Removing transaction"
+                                      : "Delete transaction"
+                                  }
+                                  title={
+                                    isRemoving
+                                      ? "Removing transaction"
+                                      : "Delete transaction"
+                                  }
                                 >
                                   <svg viewBox="0 0 24 24" aria-hidden="true">
                                     <path d="M4 7h16M9 7V4h6v3m3 0-.8 13H6.8L6 7m4 4v5m4-5v5" />
@@ -644,11 +787,10 @@ export default function AdminWalletPanel() {
                 })}
               </div>
             ) : (
-              <p className="admin-wallet-empty">No wallet transactions have been recorded yet.</p>
+              <p className="admin-wallet-empty">
+                No wallet transactions have been recorded yet.
+              </p>
             )}
-            <p className="admin-wallet-note">
-              Savings transfer rows are system-linked and cannot be edited separately. Editing or removing a transaction from a completed cycle automatically recalculates its transfer.
-            </p>
           </section>
 
           <section className="admin-wallet-section admin-wallet-cycle-section">
@@ -660,35 +802,62 @@ export default function AdminWalletPanel() {
             >
               <span>
                 <strong>Completed cycles</strong>
-                <small>{wallet?.recentCycles.length || 0} recent settlements</small>
+                <small>
+                  {wallet?.recentCycles.length || 0} recent settlements
+                </small>
               </span>
               <span aria-hidden="true">{showCycles ? "−" : "+"}</span>
             </button>
-            {showCycles && (
-              wallet?.recentCycles.length ? (
+            {showCycles &&
+              (wallet?.recentCycles.length ? (
                 <div className="admin-wallet-history-list">
                   {wallet.recentCycles.map((cycle) => (
-                    <article className="admin-wallet-history-row" key={cycle.cycleId}>
+                    <article
+                      className="admin-wallet-history-row"
+                      key={cycle.cycleId}
+                    >
                       <div className="admin-wallet-history-copy">
-                        <strong>{shortDate(cycle.startedAt)} – {shortDate(cycle.closedAt)}</strong>
-                        <span>{cycle.entryCount} manual entries · Funding {money(cycle.fundingPaise)}</span>
+                        <strong>
+                          {shortDate(cycle.startedAt)} –{" "}
+                          {shortDate(cycle.closedAt)}
+                        </strong>
+                        <span>
+                          {cycle.entryCount} manual entries · Funding{" "}
+                          {money(cycle.fundingPaise)}
+                        </span>
                       </div>
-                      <strong className={cycle.savingsTransferPaise !== null && cycle.savingsTransferPaise < 0 ? "is-negative" : "is-positive"}>
+                      <strong
+                        className={
+                          cycle.savingsTransferPaise !== null &&
+                          cycle.savingsTransferPaise < 0
+                            ? "is-negative"
+                            : "is-positive"
+                        }
+                      >
                         {money(cycle.savingsTransferPaise || 0, true)}
                       </strong>
                     </article>
                   ))}
                 </div>
               ) : (
-                <p className="admin-wallet-empty">Completed cycles will appear here after settlement.</p>
-              )
-            )}
+                <p className="admin-wallet-empty">
+                  Completed cycles will appear here after settlement.
+                </p>
+              ))}
           </section>
         </>
       )}
 
-      {message && <p className="admin-wallet-message" role="status">{message}</p>}
-      {error && <p className="admin-wallet-error" role="alert">{error}</p>}
+      {message && (
+        <p className="admin-wallet-message" role="status">
+          {message}
+        </p>
+      )}
+      {error && (
+        <p className="admin-wallet-error" role="alert">
+          {error}
+        </p>
+      )}
     </section>,
     mountNode,
   );

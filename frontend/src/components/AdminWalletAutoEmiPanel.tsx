@@ -21,7 +21,6 @@ const DEFAULT_SETTINGS: EmiSettings = {
   nextEmiAt: null,
 };
 
-
 function formatDate(value: string | null): string {
   if (!value) return "Not scheduled";
   const date = new Date(value);
@@ -57,8 +56,11 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       ...(init.headers || {}),
     },
   });
-  const payload = await response.json().catch(() => ({})) as T & { message?: string };
-  if (!response.ok) throw new Error(payload.message || `Request failed (${response.status}).`);
+  const payload = (await response.json().catch(() => ({}))) as T & {
+    message?: string;
+  };
+  if (!response.ok)
+    throw new Error(payload.message || `Request failed (${response.status}).`);
   return payload;
 }
 
@@ -95,7 +97,9 @@ export default function AdminWalletAutoEmiPanel() {
 
     const tryAttach = () => {
       if (disposed || mount) return Boolean(mount);
-      const walletPanel = document.querySelector<HTMLElement>(".admin-wallet-panel");
+      const walletPanel = document.querySelector<HTMLElement>(
+        ".admin-wallet-panel",
+      );
       const fundingSection = walletPanel?.querySelector<HTMLElement>(
         '.admin-wallet-section[aria-label="Automatic funding settings"]',
       );
@@ -118,7 +122,7 @@ export default function AdminWalletAutoEmiPanel() {
       disposed = true;
       observer?.disconnect();
       mount?.remove();
-      setMountNode((current) => current === mount ? null : current);
+      setMountNode((current) => (current === mount ? null : current));
     };
   }, [isAdmin, adminAccountView]);
 
@@ -136,7 +140,12 @@ export default function AdminWalletAutoEmiPanel() {
         setDescription(data.description);
       })
       .catch((reason) => {
-        if (!cancelled) setError(reason instanceof Error ? reason.message : "Could not load the EMI schedule.");
+        if (!cancelled)
+          setError(
+            reason instanceof Error
+              ? reason.message
+              : "Could not load the EMI schedule.",
+          );
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -149,8 +158,14 @@ export default function AdminWalletAutoEmiPanel() {
   const save = async () => {
     const parsedAmount = Number(amount);
     const amountPaise = Math.round(parsedAmount * 100);
-    if (!Number.isFinite(parsedAmount) || !Number.isSafeInteger(amountPaise) || amountPaise <= 0) {
-      setError("Enter an EMI amount greater than zero, with up to two decimal places.");
+    if (
+      !Number.isFinite(parsedAmount) ||
+      !Number.isSafeInteger(amountPaise) ||
+      amountPaise <= 0
+    ) {
+      setError(
+        "Enter an EMI amount greater than zero, with up to two decimal places.",
+      );
       return;
     }
     if (!description.trim()) {
@@ -182,7 +197,11 @@ export default function AdminWalletAutoEmiPanel() {
       );
       window.dispatchEvent(new Event("admin-wallet-data-updated"));
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Could not save the EMI schedule.");
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Could not save the EMI schedule.",
+      );
     } finally {
       setSaving(false);
     }
@@ -197,11 +216,13 @@ export default function AdminWalletAutoEmiPanel() {
   if (!isAdmin || !mountNode) return null;
 
   return createPortal(
-    <section className="admin-wallet-section admin-wallet-auto-emi" aria-label="Automatic EMI debit">
+    <section
+      className="admin-wallet-section admin-wallet-auto-emi"
+      aria-label="Automatic EMI debit"
+    >
       <div className="admin-wallet-section-heading">
         <div>
           <h3>Automatic EMI debit</h3>
-          <p>Records a recurring monthly expense against the Blogg Wallet on the selected date.</p>
         </div>
         <button
           type="button"
@@ -238,9 +259,13 @@ export default function AdminWalletAutoEmiPanel() {
                 value={dayOfMonth}
                 onChange={(event) => setDayOfMonth(Number(event.target.value))}
               >
-                {Array.from({ length: 31 }, (_, index) => index + 1).map((day) => (
-                  <option key={day} value={day}>{ordinal(day)} of each month</option>
-                ))}
+                {Array.from({ length: 31 }, (_, index) => index + 1).map(
+                  (day) => (
+                    <option key={day} value={day}>
+                      {ordinal(day)} of each month
+                    </option>
+                  ),
+                )}
               </select>
             </label>
             <label className="admin-wallet-emi-description">
@@ -263,18 +288,26 @@ export default function AdminWalletAutoEmiPanel() {
             </button>
           </div>
           <div className="admin-wallet-emi-status">
-            <span>{settings.enabled ? "Monthly debit enabled" : "Monthly debit paused"}</span>
+            <span>
+              {settings.enabled
+                ? "Monthly debit enabled"
+                : "Monthly debit paused"}
+            </span>
             <strong>Next debit: {formatDate(settings.nextEmiAt)}</strong>
           </div>
-          <p className="admin-wallet-note">
-            Runs at 9:00 AM India time. If a month does not contain the selected day, the debit runs on that month's final day.
-            This is an internal wallet-ledger entry, not a bank or UPI auto-pay instruction. The wallet can go negative if the scheduled debit exceeds its balance.
-          </p>
         </>
       )}
 
-      {message && <p className="admin-wallet-message" role="status">{message}</p>}
-      {error && <p className="admin-wallet-error" role="alert">{error}</p>}
+      {message && (
+        <p className="admin-wallet-message" role="status">
+          {message}
+        </p>
+      )}
+      {error && (
+        <p className="admin-wallet-error" role="alert">
+          {error}
+        </p>
+      )}
     </section>,
     mountNode,
   );
