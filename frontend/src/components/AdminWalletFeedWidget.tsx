@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { useAuth } from "../context/authContext";
 import { API_BASE_URL } from "../services/apiBase";
 import "./adminWallet.css";
