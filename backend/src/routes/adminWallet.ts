@@ -28,7 +28,7 @@ type WalletSettings = {
 
 type WalletTransaction = {
   eventKey: string;
-  type: "funding" | "expense" | "income" | "settlement";
+  type: "funding" | "expense" | "income" | "settlement" | "savings-adjustment";
   description: string;
   amountPaise: number;
   walletDeltaPaise: number;
@@ -724,6 +724,41 @@ router.delete("/admin/wallet/transactions/:eventKey", ...ADMIN_GUARD, async (req
     }
 
     await removeWalletTransaction(eventKey);
+    res.setHeader("Cache-Control", "private, no-store");
+    res.json(await buildWalletResponse());
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/admin/wallet/savings", ...ADMIN_GUARD, async (req, res, next) => {
+  try {
+    const savingsBalancePaise = req.body?.savingsBalancePaise;
+    const description = cleanDescription(req.body?.description) || "Manual Savings balance adjustment";
+    if (!validAmount(savingsBalancePaise)) {
+      res.status(400).json({ message: "Enter a valid Savings balance in paise." });
+      return;
+    }
+
+    await ensureIndexes();
+    await withWalletTransaction(async (session) => {
+      const settings = await loadSettings(session);
+      await processDueCycles(settings, session, new Date());
+      const adjustmentPaise = savingsBalancePaise - settings.savingsBalancePaise;
+      settings.savingsBalancePaise = savingsBalancePaise;
+      await insertTransaction(session, {
+        eventKey: `savings-adjustment:${randomUUID()}`,
+        type: "savings-adjustment",
+        description,
+        amountPaise: adjustmentPaise,
+        walletDeltaPaise: 0,
+        savingsDeltaPaise: adjustmentPaise,
+        cycleId: null,
+        createdAt: new Date(),
+      });
+      await saveSettings(settings, session);
+    });
+
     res.setHeader("Cache-Control", "private, no-store");
     res.json(await buildWalletResponse());
   } catch (error) {

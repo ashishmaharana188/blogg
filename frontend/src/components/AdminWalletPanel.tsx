@@ -8,7 +8,7 @@ import "./adminWallet.css";
 
 type WalletTransaction = {
   eventKey: string;
-  type: "funding" | "expense" | "income" | "settlement";
+  type: "funding" | "expense" | "income" | "settlement" | "savings-adjustment";
   description: string;
   amountPaise: number;
   walletDeltaPaise: number;
@@ -120,6 +120,9 @@ export default function AdminWalletPanel() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [savingEntry, setSavingEntry] = useState(false);
   const [settling, setSettling] = useState(false);
+  const [savingsTarget, setSavingsTarget] = useState("");
+  const [savingsReason, setSavingsReason] = useState("Manual savings adjustment");
+  const [adjustingSavings, setAdjustingSavings] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [showCycles, setShowCycles] = useState(false);
@@ -200,6 +203,7 @@ export default function AdminWalletPanel() {
     try {
       const data = await walletRequest<WalletData>("/api/admin/wallet");
       setWallet(data);
+      setSavingsTarget((data.savingsBalancePaise / 100).toFixed(2));
       setFundingAmount((data.fundingAmountPaise / 100).toFixed(2));
       setIntervalDays(data.intervalDays);
       setAutoFundingEnabled(data.autoFundingEnabled);
@@ -412,6 +416,45 @@ export default function AdminWalletPanel() {
     }
   };
 
+  const adjustSavings = async (resetToZero = false) => {
+    const parsed = resetToZero ? 0 : Number(savingsTarget);
+    const savingsBalancePaise = Math.round(parsed * 100);
+    if (!Number.isFinite(parsed) || !Number.isSafeInteger(savingsBalancePaise)) {
+      setError("Enter a valid Savings balance with up to two decimal places.");
+      return;
+    }
+
+    const current = wallet?.savingsBalancePaise || 0;
+    const confirmed = window.confirm(
+      `Set Savings from ${money(current)} to ${money(savingsBalancePaise)}? This creates an adjustment record and leaves completed wallet cycles unchanged.`,
+    );
+    if (!confirmed) return;
+
+    setAdjustingSavings(true);
+    setError("");
+    setMessage("");
+    try {
+      const data = await walletRequest<WalletData>("/api/admin/wallet/savings", {
+        method: "PATCH",
+        body: JSON.stringify({
+          savingsBalancePaise,
+          description: savingsReason.trim() || "Manual Savings balance adjustment",
+        }),
+      });
+      setWallet(data);
+      setSavingsTarget((data.savingsBalancePaise / 100).toFixed(2));
+      setMessage("Savings balance updated. The adjustment is visible in transaction history.");
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Could not update the Savings balance.",
+      );
+    } finally {
+      setAdjustingSavings(false);
+    }
+  };
+
   const settleWallet = async () => {
     if (!wallet?.currentCycleId) {
       setError("There is no open wallet cycle to settle.");
@@ -508,6 +551,58 @@ export default function AdminWalletPanel() {
               </small>
             </div>
           </div>
+
+          <section
+            className="admin-wallet-section"
+            aria-label="Savings balance controls"
+          >
+            <div className="admin-wallet-section-heading admin-wallet-section-heading--single">
+              <div><h3>Adjust Savings balance</h3></div>
+            </div>
+            <div className="admin-wallet-savings-fields">
+              <label>
+                <span>Set Savings to (₹)</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={savingsTarget}
+                  onChange={(event) => setSavingsTarget(event.target.value)}
+                  placeholder="0.00"
+                />
+              </label>
+              <label className="admin-wallet-savings-reason">
+                <span>Reason (optional)</span>
+                <input
+                  type="text"
+                  maxLength={240}
+                  value={savingsReason}
+                  onChange={(event) => setSavingsReason(event.target.value)}
+                  placeholder="Manual balance correction"
+                />
+              </label>
+              <div className="admin-wallet-savings-actions">
+                <button
+                  type="button"
+                  className="admin-wallet-button"
+                  disabled={adjustingSavings}
+                  onClick={() => void adjustSavings(false)}
+                >
+                  {adjustingSavings ? "Updating…" : "Set value"}
+                </button>
+                <button
+                  type="button"
+                  className="admin-wallet-button admin-wallet-button--secondary"
+                  disabled={adjustingSavings || wallet?.savingsBalancePaise === 0}
+                  onClick={() => void adjustSavings(true)}
+                >
+                  Reset to ₹0
+                </button>
+              </div>
+            </div>
+            <p className="admin-wallet-note">
+              This changes Savings only. The adjustment is recorded in transaction history and does not rewrite completed wallet cycles.
+            </p>
+          </section>
 
           <section
             className="admin-wallet-section"
@@ -635,7 +730,10 @@ export default function AdminWalletPanel() {
                   const isEditing = editingEventKey === transaction.eventKey;
                   const isRemoving =
                     removingTransactionKey === transaction.eventKey;
-                  const isSystemSettlement = transaction.type === "settlement";
+                  const isSystemSettlement = transaction.type === "settlement" || transaction.type === "savings-adjustment";
+                  const displayedAmountPaise = transaction.type === "savings-adjustment"
+                    ? transaction.savingsDeltaPaise
+                    : transaction.walletDeltaPaise;
                   return (
                     <article
                       className="admin-wallet-history-row"
@@ -718,9 +816,9 @@ export default function AdminWalletPanel() {
                           <>
                             <strong
                               className={
-                                transaction.walletDeltaPaise > 0
+                                displayedAmountPaise > 0
                                   ? "is-positive"
-                                  : transaction.walletDeltaPaise < 0
+                                  : displayedAmountPaise < 0
                                     ? "is-negative"
                                     : ""
                               }

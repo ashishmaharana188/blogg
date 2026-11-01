@@ -5,21 +5,41 @@ import { useAuth } from "../context/authContext";
 import { API_BASE_URL } from "../services/apiBase";
 import "./adminWalletEnhancements.css";
 
-type EmiSettings = {
+type EmiMandate = {
+  mandateId: string;
   enabled: boolean;
   amountPaise: number;
   dayOfMonth: number;
   description: string;
   nextEmiAt: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
 };
 
-const DEFAULT_SETTINGS: EmiSettings = {
-  enabled: false,
-  amountPaise: 0,
-  dayOfMonth: 5,
-  description: "Monthly EMI",
-  nextEmiAt: null,
+type EmiHistoryEntry = {
+  eventKey: string;
+  mandateId: string;
+  occurrenceMonth: string;
+  description: string;
+  amountPaise: number;
+  createdAt: string | null;
 };
+
+type EmiPayload = {
+  mandates: EmiMandate[];
+  history: EmiHistoryEntry[];
+};
+
+const EMPTY_PAYLOAD: EmiPayload = { mandates: [], history: [] };
+
+function formatMoney(paise: number): string {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Math.abs(paise) / 100);
+}
 
 function formatDate(value: string | null): string {
   if (!value) return "Not scheduled";
@@ -59,25 +79,29 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const payload = (await response.json().catch(() => ({}))) as T & {
     message?: string;
   };
-  if (!response.ok)
+  if (!response.ok) {
     throw new Error(payload.message || `Request failed (${response.status}).`);
+  }
   return payload;
 }
 
-/**
- * Monthly internal-wallet debit settings. This records an expense in Blogg's
- * wallet ledger; it does not initiate a bank, UPI, or card payment.
- */
 export default function AdminWalletAutoEmiPanel() {
   const { isAdmin } = useAuth();
   const location = useLocation();
   const [mountNode, setMountNode] = useState<HTMLElement | null>(null);
-  const [settings, setSettings] = useState<EmiSettings>(DEFAULT_SETTINGS);
-  const [amount, setAmount] = useState("0.00");
+  const [payload, setPayload] = useState<EmiPayload>(EMPTY_PAYLOAD);
+  const [amount, setAmount] = useState("");
   const [dayOfMonth, setDayOfMonth] = useState(5);
-  const [description, setDescription] = useState("Monthly EMI");
+  const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [busyMandateId, setBusyMandateId] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editAmount, setEditAmount] = useState("");
+  const [editDay, setEditDay] = useState(5);
+  const [editDescription, setEditDescription] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -126,36 +150,41 @@ export default function AdminWalletAutoEmiPanel() {
     };
   }, [isAdmin, adminAccountView]);
 
+  const refresh = async () => {
+    const data = await request<EmiPayload>("/api/admin/wallet/emi");
+    setPayload(data);
+    return data;
+  };
+
   useEffect(() => {
     if (!mountNode || !isAdmin) return;
     let cancelled = false;
     setLoading(true);
     setError("");
-    request<EmiSettings>("/api/admin/wallet/emi")
+
+    request<EmiPayload>("/api/admin/wallet/emi")
       .then((data) => {
-        if (cancelled) return;
-        setSettings(data);
-        setAmount((data.amountPaise / 100).toFixed(2));
-        setDayOfMonth(data.dayOfMonth);
-        setDescription(data.description);
+        if (!cancelled) setPayload(data);
       })
       .catch((reason) => {
-        if (!cancelled)
+        if (!cancelled) {
           setError(
             reason instanceof Error
               ? reason.message
-              : "Could not load the EMI schedule.",
+              : "Could not load the EMI mandates.",
           );
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
+
     return () => {
       cancelled = true;
     };
   }, [mountNode, isAdmin]);
 
-  const save = async () => {
+  const createMandate = async () => {
     const parsedAmount = Number(amount);
     const amountPaise = Math.round(parsedAmount * 100);
     if (
@@ -163,13 +192,11 @@ export default function AdminWalletAutoEmiPanel() {
       !Number.isSafeInteger(amountPaise) ||
       amountPaise <= 0
     ) {
-      setError(
-        "Enter an EMI amount greater than zero, with up to two decimal places.",
-      );
+      setError("Enter an EMI amount greater than zero, with up to two decimal places.");
       return;
     }
     if (!description.trim()) {
-      setError("Enter a description for this recurring debit.");
+      setError("Enter a name for this EMI mandate.");
       return;
     }
 
@@ -177,124 +204,394 @@ export default function AdminWalletAutoEmiPanel() {
     setError("");
     setMessage("");
     try {
-      const data = await request<EmiSettings>("/api/admin/wallet/emi", {
-        method: "PATCH",
+      const data = await request<EmiPayload>("/api/admin/wallet/emi", {
+        method: "POST",
         body: JSON.stringify({
-          enabled: settings.enabled,
           amountPaise,
           dayOfMonth,
           description: description.trim(),
+          enabled: true,
         }),
       });
-      setSettings(data);
-      setAmount((data.amountPaise / 100).toFixed(2));
-      setDayOfMonth(data.dayOfMonth);
-      setDescription(data.description);
-      setMessage(
-        data.enabled
-          ? `Monthly wallet debit saved. Next debit: ${formatDate(data.nextEmiAt)}.`
-          : "Automatic EMI debit is paused. Existing wallet history is unchanged.",
-      );
+      setPayload(data);
+      setAmount("");
+      setDescription("");
+      setDayOfMonth(5);
+      setMessage("EMI mandate created. Its first debit is scheduled for the next occurrence.");
       window.dispatchEvent(new Event("admin-wallet-data-updated"));
     } catch (reason) {
       setError(
         reason instanceof Error
           ? reason.message
-          : "Could not save the EMI schedule.",
+          : "Could not create the EMI mandate.",
       );
     } finally {
       setSaving(false);
     }
   };
 
-  const toggleEnabled = () => {
-    setSettings((current) => ({ ...current, enabled: !current.enabled }));
-    setMessage("");
+  const beginEdit = (mandate: EmiMandate) => {
+    setEditingId(mandate.mandateId);
+    setEditAmount((mandate.amountPaise / 100).toFixed(2));
+    setEditDay(mandate.dayOfMonth);
+    setEditDescription(mandate.description);
     setError("");
+    setMessage("");
+  };
+
+  const updateMandate = async (mandateId: string) => {
+    const parsedAmount = Number(editAmount);
+    const amountPaise = Math.round(parsedAmount * 100);
+    if (
+      !Number.isFinite(parsedAmount) ||
+      !Number.isSafeInteger(amountPaise) ||
+      amountPaise <= 0
+    ) {
+      setError("Enter a valid positive EMI amount.");
+      return;
+    }
+    if (!editDescription.trim()) {
+      setError("Enter a name for this EMI mandate.");
+      return;
+    }
+
+    setBusyMandateId(mandateId);
+    setError("");
+    setMessage("");
+    try {
+      const data = await request<EmiPayload>(
+        `/api/admin/wallet/emi/${encodeURIComponent(mandateId)}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            amountPaise,
+            dayOfMonth: editDay,
+            description: editDescription.trim(),
+          }),
+        },
+      );
+      setPayload(data);
+      setEditingId(null);
+      setMessage("Mandate updated. Previous monthly debits remain unchanged in history.");
+      window.dispatchEvent(new Event("admin-wallet-data-updated"));
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Could not update the EMI mandate.",
+      );
+    } finally {
+      setBusyMandateId(null);
+    }
+  };
+
+  const toggleMandate = async (mandate: EmiMandate) => {
+    setBusyMandateId(mandate.mandateId);
+    setError("");
+    setMessage("");
+    try {
+      const data = await request<EmiPayload>(
+        `/api/admin/wallet/emi/${encodeURIComponent(mandate.mandateId)}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ enabled: !mandate.enabled }),
+        },
+      );
+      setPayload(data);
+      setMessage(
+        mandate.enabled
+          ? "Mandate paused. Existing debit history is preserved."
+          : "Mandate resumed. The next debit is scheduled for the next occurrence.",
+      );
+      window.dispatchEvent(new Event("admin-wallet-data-updated"));
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Could not change the mandate status.",
+      );
+    } finally {
+      setBusyMandateId(null);
+    }
+  };
+
+  const deleteMandate = async (mandate: EmiMandate) => {
+    const confirmed = window.confirm(
+      `Delete the recurring debit "${mandate.description}"?\n\nFuture debits will stop. Previous monthly debits will remain in wallet history.`,
+    );
+    if (!confirmed) return;
+
+    setBusyMandateId(mandate.mandateId);
+    setError("");
+    setMessage("");
+    try {
+      const data = await request<EmiPayload>(
+        `/api/admin/wallet/emi/${encodeURIComponent(mandate.mandateId)}`,
+        { method: "DELETE" },
+      );
+      setPayload(data);
+      if (editingId === mandate.mandateId) setEditingId(null);
+      setMessage("Mandate deleted. Previous debit records were retained.");
+      window.dispatchEvent(new Event("admin-wallet-data-updated"));
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Could not delete the EMI mandate.",
+      );
+    } finally {
+      setBusyMandateId(null);
+    }
   };
 
   if (!isAdmin || !mountNode) return null;
 
+  const enabledCount = payload.mandates.filter((mandate) => mandate.enabled).length;
+
   return createPortal(
     <section
       className="admin-wallet-section admin-wallet-auto-emi"
-      aria-label="Automatic EMI debit"
+      aria-label="Automatic EMI debit mandates"
+      data-collapsed={collapsed ? "true" : "false"}
     >
       <div className="admin-wallet-section-heading">
         <div>
-          <h3>Automatic EMI debit</h3>
+          <h3>Recurring EMI mandates</h3>
+          <p className="admin-wallet-emi-caption">
+            NACH-style schedule and debit history · internal wallet ledger only
+          </p>
         </div>
-        <button
-          type="button"
-          role="switch"
-          aria-label="Enable automatic EMI wallet debit"
-          aria-checked={settings.enabled}
-          className={`admin-wallet-switch${settings.enabled ? " is-on" : ""}`}
-          disabled={loading || saving}
-          onClick={toggleEnabled}
-        >
-          <span />
-        </button>
+        <div className="admin-wallet-emi-heading-actions">
+          <span className="admin-wallet-emi-count">
+            {enabledCount} active · {payload.mandates.length} total
+          </span>
+          <button
+            type="button"
+            className="admin-wallet-button admin-wallet-button--secondary"
+            aria-expanded={!collapsed}
+            onClick={() => setCollapsed((value) => !value)}
+          >
+            {collapsed ? "Expand" : "Minimise"}
+          </button>
+        </div>
       </div>
 
-      {loading ? (
-        <p className="admin-wallet-feedback">Loading EMI schedule…</p>
-      ) : (
+      {!collapsed && (
         <>
-          <div className="admin-wallet-emi-fields">
-            <label>
-              <span>Monthly amount (₹)</span>
-              <input
-                type="number"
-                min="0.01"
-                step="0.01"
-                value={amount}
-                onChange={(event) => setAmount(event.target.value)}
-                placeholder="2500.00"
-              />
-            </label>
-            <label>
-              <span>Deduct on day</span>
-              <select
-                value={dayOfMonth}
-                onChange={(event) => setDayOfMonth(Number(event.target.value))}
-              >
-                {Array.from({ length: 31 }, (_, index) => index + 1).map(
-                  (day) => (
-                    <option key={day} value={day}>
-                      {ordinal(day)} of each month
-                    </option>
-                  ),
+          {loading ? (
+            <p className="admin-wallet-feedback">Loading EMI mandates…</p>
+          ) : (
+            <>
+              {payload.mandates.length > 0 ? (
+                <div className="admin-wallet-emi-mandates">
+                  {payload.mandates.map((mandate) => {
+                    const isEditing = editingId === mandate.mandateId;
+                    const isBusy = busyMandateId === mandate.mandateId;
+                    return (
+                      <article
+                        className="admin-wallet-emi-mandate"
+                        key={mandate.mandateId}
+                      >
+                        {isEditing ? (
+                          <div className="admin-wallet-emi-edit">
+                            <div className="admin-wallet-emi-fields">
+                              <label>
+                                <span>Monthly amount (₹)</span>
+                                <input
+                                  type="number"
+                                  min="0.01"
+                                  step="0.01"
+                                  value={editAmount}
+                                  onChange={(event) => setEditAmount(event.target.value)}
+                                />
+                              </label>
+                              <label>
+                                <span>Debit day</span>
+                                <select
+                                  value={editDay}
+                                  onChange={(event) => setEditDay(Number(event.target.value))}
+                                >
+                                  {Array.from({ length: 31 }, (_, index) => index + 1).map((day) => (
+                                    <option key={day} value={day}>
+                                      {ordinal(day)} of each month
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label className="admin-wallet-emi-description">
+                                <span>Mandate description</span>
+                                <input
+                                  type="text"
+                                  maxLength={120}
+                                  value={editDescription}
+                                  onChange={(event) => setEditDescription(event.target.value)}
+                                />
+                              </label>
+                            </div>
+                            <div className="admin-wallet-emi-actions">
+                              <button
+                                type="button"
+                                className="admin-wallet-button"
+                                disabled={isBusy}
+                                onClick={() => void updateMandate(mandate.mandateId)}
+                              >
+                                {isBusy ? "Saving…" : "Save changes"}
+                              </button>
+                              <button
+                                type="button"
+                                className="admin-wallet-button admin-wallet-button--secondary"
+                                disabled={isBusy}
+                                onClick={() => setEditingId(null)}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="admin-wallet-emi-mandate-main">
+                              <div className="admin-wallet-emi-mandate-title">
+                                <strong>{mandate.description}</strong>
+                                <span className={mandate.enabled ? "is-enabled" : "is-paused"}>
+                                  {mandate.enabled ? "Active" : "Paused"}
+                                </span>
+                              </div>
+                              <div className="admin-wallet-emi-mandate-meta">
+                                <strong>{formatMoney(mandate.amountPaise)} / month</strong>
+                                <span>Debit on the {ordinal(mandate.dayOfMonth)}</span>
+                                <span>Next: {formatDate(mandate.nextEmiAt)}</span>
+                              </div>
+                            </div>
+                            <div className="admin-wallet-emi-actions">
+                              <button
+                                type="button"
+                                className="admin-wallet-button admin-wallet-button--secondary"
+                                disabled={isBusy}
+                                onClick={() => beginEdit(mandate)}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                className="admin-wallet-button admin-wallet-button--secondary"
+                                disabled={isBusy}
+                                onClick={() => void toggleMandate(mandate)}
+                              >
+                                {isBusy ? "Updating…" : mandate.enabled ? "Pause" : "Resume"}
+                              </button>
+                              <button
+                                type="button"
+                                className="admin-wallet-button admin-wallet-button--danger"
+                                disabled={isBusy}
+                                onClick={() => void deleteMandate(mandate)}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="admin-wallet-empty">
+                  No EMI mandates yet. Add one below to track monthly wallet debits.
+                </p>
+              )}
+
+              <div className="admin-wallet-emi-create">
+                <div className="admin-wallet-section-heading admin-wallet-section-heading--single">
+                  <div>
+                    <h4>Add EMI mandate</h4>
+                  </div>
+                </div>
+                <div className="admin-wallet-emi-fields">
+                  <label>
+                    <span>Monthly amount (₹)</span>
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={amount}
+                      onChange={(event) => setAmount(event.target.value)}
+                      placeholder="2500.00"
+                    />
+                  </label>
+                  <label>
+                    <span>Debit day</span>
+                    <select
+                      value={dayOfMonth}
+                      onChange={(event) => setDayOfMonth(Number(event.target.value))}
+                    >
+                      {Array.from({ length: 31 }, (_, index) => index + 1).map((day) => (
+                        <option key={day} value={day}>
+                          {ordinal(day)} of each month
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="admin-wallet-emi-description">
+                    <span>Mandate description</span>
+                    <input
+                      type="text"
+                      maxLength={120}
+                      value={description}
+                      onChange={(event) => setDescription(event.target.value)}
+                      placeholder="Motorcycle EMI"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="admin-wallet-button"
+                    disabled={saving}
+                    onClick={() => void createMandate()}
+                  >
+                    {saving ? "Adding…" : "Add mandate"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="admin-wallet-emi-history">
+                <button
+                  type="button"
+                  className="admin-wallet-emi-history-toggle"
+                  aria-expanded={showHistory}
+                  onClick={() => setShowHistory((value) => !value)}
+                >
+                  <span>
+                    <strong>Debit history</strong>
+                    <small>{payload.history.length} recorded monthly debits</small>
+                  </span>
+                  <span aria-hidden="true">{showHistory ? "−" : "+"}</span>
+                </button>
+                {showHistory && (
+                  payload.history.length > 0 ? (
+                    <div className="admin-wallet-emi-history-list">
+                      {payload.history.map((entry) => (
+                        <article className="admin-wallet-history-row" key={entry.eventKey}>
+                          <div className="admin-wallet-history-copy">
+                            <strong>{entry.description}</strong>
+                            <span>{entry.occurrenceMonth} · {formatDate(entry.createdAt)}</span>
+                          </div>
+                          <strong className="is-negative">
+                            −{formatMoney(entry.amountPaise)}
+                          </strong>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="admin-wallet-empty">
+                      Monthly debit records will appear here after the first scheduled occurrence.
+                    </p>
+                  )
                 )}
-              </select>
-            </label>
-            <label className="admin-wallet-emi-description">
-              <span>Description</span>
-              <input
-                type="text"
-                maxLength={120}
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                placeholder="Motorcycle EMI"
-              />
-            </label>
-            <button
-              type="button"
-              className="admin-wallet-button admin-wallet-button--secondary"
-              disabled={saving}
-              onClick={() => void save()}
-            >
-              {saving ? "Saving…" : "Save EMI schedule"}
-            </button>
-          </div>
-          <div className="admin-wallet-emi-status">
-            <span>
-              {settings.enabled
-                ? "Monthly debit enabled"
-                : "Monthly debit paused"}
-            </span>
-            <strong>Next debit: {formatDate(settings.nextEmiAt)}</strong>
-          </div>
+              </div>
+              <p className="admin-wallet-note">
+                This creates internal wallet ledger entries only. It does not register a bank NACH mandate or debit an external bank account.
+              </p>
+            </>
+          )}
         </>
       )}
 
