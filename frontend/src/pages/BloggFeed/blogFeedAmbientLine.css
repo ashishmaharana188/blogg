@@ -1,0 +1,69 @@
+/* Original flowing silhouette, with subtle per-load variation and a stronger stroke. */
+.blog-feed-page {
+  position: relative;
+  isolation: isolate;
+}
+
+.blog-feed-page > .blog-feed-ambient-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none !important;
+  color: #111111;
+}
+
+.blog-feed-page > .blogg-shared-header {
+  position: relative;
+  z-index: 2;
+}
+
+.blog-feed-page > .blog-feed-content {
+  position: relative;
+  z-index: 1;
+}
+
+.blog-feed-ambient-line__track,
+.blog-feed-ambient-line__traveller {
+  fill: none;
+  stroke: currentColor;
+  vector-effect: non-scaling-stroke;
+}
+
+.blog-feed-ambient-line__track {
+  stroke-width: 2.2;
+  stroke-opacity: 0.24;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.blog-feed-ambient-line__traveller {
+  stroke-width: 3.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-opacity: 0.98;
+  stroke-dasharray: 165 835;
+  stroke-dashoffset: 0;
+  animation: blog-feed-ambient-line-travel 26s linear infinite;
+}
+
+@keyframes blog-feed-ambient-line-travel {
+  to { stroke-dashoffset: -1000; }
+}
+
+html.blogg-dark-mode .blog-feed-page > .blog-feed-ambient-line {
+  color: #ffffff;
+}
+
+@media (max-width: 760px) {
+  .blog-feed-ambient-line__track { stroke-width: 2.2; }
+  .blog-feed-ambient-line__traveller { stroke-width: 3.4; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blog-feed-ambient-line__traveller { display: none; }
+}

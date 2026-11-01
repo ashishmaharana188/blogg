@@ -1,0 +1,41 @@
+.feed-background-admin-line-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  margin: 0 0 14px;
+  padding: 0 0 13px;
+  border-bottom: 1px solid #edf0f3;
+}
+
+.feed-background-admin-line-setting__copy {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.feed-background-admin-line-setting__copy strong {
+  color: #374151;
+  font-size: 0.76rem;
+}
+
+.feed-background-admin-line-setting__copy span {
+  color: #647084;
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+html.blogg-dark-mode .feed-background-admin-line-setting {
+  border-color: #404040;
+}
+
+html.blogg-dark-mode .feed-background-admin-line-setting__copy strong {
+  color: #e2e2e2;
+}
+
+html.blogg-dark-mode .feed-background-admin-line-setting__copy span {
+  color: #a3a3a3;
+}

@@ -3,9 +3,12 @@ import { createPortal } from "react-dom";
 import { useAuth } from "../context/authContext";
 import { API_BASE_URL } from "../services/apiBase";
 import "./feedBackgroundAdminPanel.css";
+import "./feedAmbientLineAdminControl.css";
 
 type BackgroundSetting = { url?: string | null; updatedAt?: string | null };
 const FEED_BACKGROUND_PREFERENCE_KEY = "blogg-feed-background-enabled";
+const FEED_AMBIENT_LINE_PREFERENCE_KEY = "blogg-feed-ambient-line-enabled";
+const FEED_AMBIENT_LINE_CHANGE_EVENT = "blogg-feed-ambient-line-preference-change";
 
 function readBackgroundPreference(): boolean {
   try {
@@ -18,11 +21,25 @@ function readBackgroundPreference(): boolean {
   }
 }
 
+function readAmbientLinePreference(): boolean {
+  try {
+    const storedPreference = window.localStorage.getItem(
+      FEED_AMBIENT_LINE_PREFERENCE_KEY,
+    );
+    return storedPreference === null ? true : storedPreference === "true";
+  } catch {
+    return true;
+  }
+}
+
 export default function FeedBackgroundAdminPanel() {
   const { isAdmin } = useAuth();
   const [mountNode, setMountNode] = useState<HTMLElement | null>(null);
   const [backgroundEnabled, setBackgroundEnabled] = useState<boolean>(
     readBackgroundPreference,
+  );
+  const [ambientLineEnabled, setAmbientLineEnabled] = useState<boolean>(
+    readAmbientLinePreference,
   );
   const [currentUrl, setCurrentUrl] = useState("");
   const [loading, setLoading] = useState(false);
@@ -89,6 +106,20 @@ export default function FeedBackgroundAdminPanel() {
       // The preference remains usable for this session if browser storage is unavailable.
     }
   }, [backgroundEnabled]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        FEED_AMBIENT_LINE_PREFERENCE_KEY,
+        String(ambientLineEnabled),
+      );
+    } catch {
+      // The preference remains usable for this session if browser storage is unavailable.
+    }
+    // The storage event does not fire in the tab that changed localStorage.
+    // Dispatch a same-tab event so a mounted Feed reacts immediately as well.
+    window.dispatchEvent(new Event(FEED_AMBIENT_LINE_CHANGE_EVENT));
+  }, [ambientLineEnabled]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -202,6 +233,23 @@ export default function FeedBackgroundAdminPanel() {
           aria-checked={backgroundEnabled}
           className={`feed-background-admin-switch${backgroundEnabled ? " is-on" : ""}`}
           onClick={() => setBackgroundEnabled((enabled) => !enabled)}
+        >
+          <span aria-hidden="true" />
+        </button>
+      </div>
+
+      <div className="feed-background-admin-line-setting">
+        <div className="feed-background-admin-line-setting__copy">
+          <strong>Animated background line</strong>
+          <span>Show the moving line behind Feed posts and widgets.</span>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-label="Animated Feed background line"
+          aria-checked={ambientLineEnabled}
+          className={`feed-background-admin-switch${ambientLineEnabled ? " is-on" : ""}`}
+          onClick={() => setAmbientLineEnabled((enabled) => !enabled)}
         >
           <span aria-hidden="true" />
         </button>

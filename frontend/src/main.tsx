@@ -28,6 +28,7 @@ import "./bloggEditorDarkMode.css";
 import "./bloggDarkModeControls.css";
 import "./bloggFinalMobileDarkMode.css";
 import "./backendStartupNoticePosition.ts";
+import "./pages/BloggFeed/blogFeedAmbientLine.ts";
 
 installUiConsoleDiagnostics();
 
