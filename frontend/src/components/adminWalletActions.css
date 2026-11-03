@@ -1,0 +1,129 @@
+/* Wallet actions are compact text controls, not large bordered buttons. */
+.admin-wallet-panel .admin-wallet-button,
+.admin-wallet-panel .admin-wallet-text-action,
+.admin-wallet-panel .admin-wallet-history-filter {
+  display: inline-flex;
+  width: auto !important;
+  min-width: 0;
+  min-height: 0 !important;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #344f70;
+  font: 600 11px/1.35 Arial, Helvetica, sans-serif !important;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.admin-wallet-panel .admin-wallet-button:hover:not(:disabled),
+.admin-wallet-panel .admin-wallet-text-action:hover:not(:disabled),
+.admin-wallet-panel .admin-wallet-history-filter:hover:not(:disabled) {
+  border: 0 !important;
+  background: transparent !important;
+  color: #1b3553;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.admin-wallet-panel .admin-wallet-button:disabled,
+.admin-wallet-panel .admin-wallet-text-action:disabled,
+.admin-wallet-panel .admin-wallet-history-filter:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.admin-wallet-panel .admin-wallet-button:focus-visible,
+.admin-wallet-panel .admin-wallet-text-action:focus-visible,
+.admin-wallet-panel .admin-wallet-history-filter:focus-visible {
+  outline: 2px solid #64748b;
+  outline-offset: 3px;
+}
+
+.admin-wallet-panel .admin-wallet-text-action--danger {
+  color: #a33e3e;
+}
+
+.admin-wallet-panel .admin-wallet-text-action--danger:hover:not(:disabled) {
+  color: #842d2d;
+}
+
+.admin-wallet-panel .admin-wallet-history-heading-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-wallet-panel .admin-wallet-history-filters {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.admin-wallet-panel .admin-wallet-history-filter {
+  color: #778397;
+  font-weight: 500 !important;
+}
+
+.admin-wallet-panel .admin-wallet-history-filter.is-active {
+  color: #263b58;
+  font-weight: 700 !important;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.admin-wallet-panel .admin-wallet-cycle-heading {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 14px;
+}
+
+.admin-wallet-panel .admin-wallet-cycle-heading .admin-wallet-cycle-toggle {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+}
+
+.admin-wallet-panel .admin-wallet-cycle-heading .admin-wallet-text-action {
+  flex: 0 0 auto;
+}
+
+html.blogg-dark-mode .admin-wallet-panel .admin-wallet-button,
+html.blogg-dark-mode .admin-wallet-panel .admin-wallet-text-action {
+  color: #c7d8ed;
+}
+
+html.blogg-dark-mode .admin-wallet-panel .admin-wallet-history-filter {
+  color: #9aa7b8;
+}
+
+html.blogg-dark-mode .admin-wallet-panel .admin-wallet-history-filter.is-active {
+  color: #e0eafa;
+}
+
+html.blogg-dark-mode .admin-wallet-panel .admin-wallet-text-action--danger {
+  color: #ffbaba;
+}
+
+@media (max-width: 560px) {
+  .admin-wallet-panel .admin-wallet-history-heading-actions {
+    gap: 9px;
+  }
+
+  .admin-wallet-panel .admin-wallet-cycle-heading {
+    gap: 10px;
+  }
+
+  .admin-wallet-panel .admin-wallet-button,
+  .admin-wallet-panel .admin-wallet-text-action,
+  .admin-wallet-panel .admin-wallet-history-filter {
+    font-size: 10px !important;
+  }
+}

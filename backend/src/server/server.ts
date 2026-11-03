@@ -10,6 +10,7 @@ import { initializePostgresSchema } from "../db/postgresSchema.ts";
 import blogInterceptRouter from "../routes/bloggDocument/bloggDocumentIndex.ts";
 import blogStickyNotesRouter from "../routes/blogStickyNotes.ts";
 import adminWalletRouter from "../routes/adminWallet.ts";
+import adminWalletBulkRouter from "../routes/adminWalletBulk.ts";
 import adminWalletAutoEmiRouter, { startAdminWalletEmiScheduler } from "../routes/adminWalletAutoEmi.ts";
 import canvasViewInterceptor from "../routes/canvasView/canvasViewIndex.ts";
 import flipBookInterceptor from "../routes/flipBook/flipBookIndex.ts";
@@ -82,6 +83,8 @@ app.use("/api", blogStickyNotesRouter);
 // The EMI router must precede the wallet router: it processes due recurring
 // debits before the normal wallet summary is returned to Account or Feed.
 app.use("/api", adminWalletAutoEmiRouter);
+// Bulk history/cycle deletions are registered before the parameterized wallet routes.
+app.use("/api", adminWalletBulkRouter);
 app.use("/api", adminWalletRouter);
 
 // A cached rich-link preview can outlive a note being changed from Public to Private.

@@ -6,6 +6,7 @@ import { useAuth } from "../context/authContext";
 import { API_BASE_URL } from "../services/apiBase";
 import "./adminWallet.css";
 import "./adminWalletPolish.css";
+import "./adminWalletActions.css";
 
 type WalletTransaction = {
   eventKey: string;
@@ -83,10 +84,7 @@ function longDate(value: string | null | undefined): string {
   }).format(date);
 }
 
-async function walletRequest<T>(
-  path: string,
-  init: RequestInit = {},
-): Promise<T> {
+async function walletRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     credentials: "include",
     cache: "no-store",
@@ -97,13 +95,9 @@ async function walletRequest<T>(
       ...(init.headers || {}),
     },
   });
-  const payload = (await response.json().catch(() => ({}))) as T & {
-    message?: string;
-  };
+  const payload = (await response.json().catch(() => ({}))) as T & { message?: string };
   if (!response.ok) {
-    throw new Error(
-      payload.message || `Wallet request failed (${response.status}).`,
-    );
+    throw new Error(payload.message || `Wallet request failed (${response.status}).`);
   }
   return payload;
 }
@@ -119,18 +113,20 @@ export default function AdminWalletPanel() {
   const [entryAmount, setEntryAmount] = useState("");
   const [entryDescription, setEntryDescription] = useState("");
   const [savingsTarget, setSavingsTarget] = useState("0.00");
-  const [savingsReason, setSavingsReason] = useState(
-    "Manual Savings balance adjustment",
-  );
+  const [savingsReason, setSavingsReason] = useState("Manual Savings balance adjustment");
   const [loading, setLoading] = useState(true);
   const [savingSettings, setSavingSettings] = useState(false);
   const [savingEntry, setSavingEntry] = useState(false);
   const [adjustingSavings, setAdjustingSavings] = useState(false);
   const [settling, setSettling] = useState(false);
+  const [clearingHistory, setClearingHistory] = useState(false);
+  const [clearingCycles, setClearingCycles] = useState(false);
+  const [historyRange, setHistoryRange] = useState<"month" | "week" | "year">("month");
+  const [transactionHistory, setTransactionHistory] = useState<WalletTransaction[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyReloadKey, setHistoryReloadKey] = useState(0);
   const [updatingTransaction, setUpdatingTransaction] = useState(false);
-  const [removingTransactionKey, setRemovingTransactionKey] = useState<
-    string | null
-  >(null);
+  const [removingTransactionKey, setRemovingTransactionKey] = useState<string | null>(null);
   const [editingEventKey, setEditingEventKey] = useState<string | null>(null);
   const [editingAmount, setEditingAmount] = useState("");
   const [showCycles, setShowCycles] = useState(true);
@@ -155,21 +151,14 @@ export default function AdminWalletPanel() {
 
     const tryAttach = () => {
       if (disposed || mount) return Boolean(mount);
-      const youtubeColumn = document.querySelector<HTMLElement>(
-        ".account-dashboard-youtube-column",
-      );
-      const youtubePanel = youtubeColumn?.querySelector<HTMLElement>(
-        ":scope > .account-dashboard-youtube",
-      );
+      const youtubeColumn = document.querySelector<HTMLElement>(".account-dashboard-youtube-column");
+      const youtubePanel = youtubeColumn?.querySelector<HTMLElement>(":scope > .account-dashboard-youtube");
       if (!youtubeColumn || !youtubePanel) return false;
 
-      anchor = youtubeColumn.querySelector<HTMLDivElement>(
-        ":scope > .admin-wallet-health-anchor",
-      );
+      anchor = youtubeColumn.querySelector<HTMLDivElement>(":scope > .admin-wallet-health-anchor");
       if (!anchor) {
         anchor = document.createElement("div");
-        anchor.className =
-          "admin-wallet-health-anchor account-dashboard-featured-card-list";
+        anchor.className = "admin-wallet-health-anchor account-dashboard-featured-card-list";
         anchor.setAttribute("aria-hidden", "true");
         anchor.style.setProperty("display", "none", "important");
         youtubePanel.insertAdjacentElement("afterend", anchor);
@@ -207,9 +196,7 @@ export default function AdminWalletPanel() {
       setIntervalDays(data.intervalDays);
       setAutoFundingEnabled(data.autoFundingEnabled);
     } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : "Could not load the wallet.",
-      );
+      setError(reason instanceof Error ? reason.message : "Could not load the wallet.");
     } finally {
       setLoading(false);
     }
@@ -221,11 +208,28 @@ export default function AdminWalletPanel() {
     void refreshWallet();
   }, [mountNode, isAdmin, refreshWallet]);
 
+  useEffect(() => {
+    if (!mountNode || !isAdmin) return;
+    let active = true;
+    setHistoryLoading(true);
+    void walletRequest<WalletTransaction[]>(`/api/admin/wallet/transactions?range=${historyRange}`)
+      .then((rows) => {
+        if (active) setTransactionHistory(rows);
+      })
+      .catch((reason) => {
+        if (active) setError(reason instanceof Error ? reason.message : "Could not load transaction history.");
+      })
+      .finally(() => {
+        if (active) setHistoryLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [mountNode, isAdmin, historyRange, historyReloadKey]);
+
   const parsedFundingPaise = useMemo(() => {
     const parsed = Number(fundingAmount);
-    return Number.isFinite(parsed) && parsed >= 0
-      ? Math.round(parsed * 100)
-      : Number.NaN;
+    return Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed * 100) : Number.NaN;
   }, [fundingAmount]);
 
   const completedCycleIds = useMemo(
@@ -239,41 +243,27 @@ export default function AdminWalletPanel() {
       return;
     }
     if (enabled && parsedFundingPaise <= 0) {
-      setError(
-        "Set a funding amount greater than zero before enabling auto funding.",
-      );
+      setError("Set a funding amount greater than zero before enabling auto funding.");
       return;
     }
     setSavingSettings(true);
     setError("");
     setMessage("");
     try {
-      const data = await walletRequest<WalletData>(
-        "/api/admin/wallet/settings",
-        {
-          method: "PATCH",
-          body: JSON.stringify({
-            autoFundingEnabled: enabled,
-            fundingAmountPaise: parsedFundingPaise,
-            intervalDays,
-          }),
-        },
-      );
+      const data = await walletRequest<WalletData>("/api/admin/wallet/settings", {
+        method: "PATCH",
+        body: JSON.stringify({ autoFundingEnabled: enabled, fundingAmountPaise: parsedFundingPaise, intervalDays }),
+      });
       setWallet(data);
+      setHistoryReloadKey((value) => value + 1);
       setAutoFundingEnabled(data.autoFundingEnabled);
       setFundingAmount((data.fundingAmountPaise / 100).toFixed(2));
       setIntervalDays(data.intervalDays);
-      setMessage(
-        enabled
-          ? "Wallet funding settings saved. First activation funds the wallet immediately."
-          : "Automatic funding paused. The current wallet and history are preserved.",
-      );
+      setMessage(enabled
+        ? "Wallet funding settings saved. First activation funds the wallet immediately."
+        : "Automatic funding paused. The current wallet and history are preserved.");
     } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : "Could not save wallet settings.",
-      );
+      setError(reason instanceof Error ? reason.message : "Could not save wallet settings.");
     } finally {
       setSavingSettings(false);
     }
@@ -283,14 +273,8 @@ export default function AdminWalletPanel() {
     event.preventDefault();
     const parsed = Number(entryAmount);
     const amountPaise = Math.round(parsed * 100);
-    if (
-      !Number.isFinite(parsed) ||
-      !Number.isSafeInteger(amountPaise) ||
-      amountPaise === 0
-    ) {
-      setError(
-        "Enter a non-zero amount with up to two decimal places. Use a negative amount for an expense.",
-      );
+    if (!Number.isFinite(parsed) || !Number.isSafeInteger(amountPaise) || amountPaise === 0) {
+      setError("Enter a non-zero amount with up to two decimal places. Use a negative amount for an expense.");
       return;
     }
     if (!entryDescription.trim()) {
@@ -301,26 +285,17 @@ export default function AdminWalletPanel() {
     setError("");
     setMessage("");
     try {
-      const data = await walletRequest<WalletData>(
-        "/api/admin/wallet/entries",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            amountPaise,
-            description: entryDescription.trim(),
-          }),
-        },
-      );
+      const data = await walletRequest<WalletData>("/api/admin/wallet/entries", {
+        method: "POST",
+        body: JSON.stringify({ amountPaise, description: entryDescription.trim() }),
+      });
       setWallet(data);
+      setHistoryReloadKey((value) => value + 1);
       setEntryAmount("");
       setEntryDescription("");
       setMessage("Wallet transaction recorded.");
     } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : "Could not record the transaction.",
-      );
+      setError(reason instanceof Error ? reason.message : "Could not record the transaction.");
     } finally {
       setSavingEntry(false);
     }
@@ -329,14 +304,8 @@ export default function AdminWalletPanel() {
   const adjustSavings = async (resetToZero = false) => {
     const parsed = resetToZero ? 0 : Number(savingsTarget);
     const savingsBalancePaise = Math.round(parsed * 100);
-    if (
-      !Number.isFinite(parsed) ||
-      !Number.isSafeInteger(savingsBalancePaise) ||
-      savingsBalancePaise < 0
-    ) {
-      setError(
-        "Enter a valid non-negative Savings balance with up to two decimal places.",
-      );
+    if (!Number.isFinite(parsed) || !Number.isSafeInteger(savingsBalancePaise) || savingsBalancePaise < 0) {
+      setError("Enter a valid non-negative Savings balance with up to two decimal places.");
       return;
     }
     const current = wallet?.savingsBalancePaise || 0;
@@ -348,28 +317,19 @@ export default function AdminWalletPanel() {
     setError("");
     setMessage("");
     try {
-      const data = await walletRequest<WalletData>(
-        "/api/admin/wallet/savings",
-        {
-          method: "PATCH",
-          body: JSON.stringify({
-            savingsBalancePaise,
-            description:
-              savingsReason.trim() || "Manual Savings balance adjustment",
-          }),
-        },
-      );
+      const data = await walletRequest<WalletData>("/api/admin/wallet/savings", {
+        method: "PATCH",
+        body: JSON.stringify({
+          savingsBalancePaise,
+          description: savingsReason.trim() || "Manual Savings balance adjustment",
+        }),
+      });
       setWallet(data);
+      setHistoryReloadKey((value) => value + 1);
       setSavingsTarget((data.savingsBalancePaise / 100).toFixed(2));
-      setMessage(
-        "Savings balance updated. Its adjustment is recorded in transaction history.",
-      );
+      setMessage("Savings balance updated. Its adjustment is recorded in transaction history.");
     } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : "Could not update the Savings balance.",
-      );
+      setError(reason instanceof Error ? reason.message : "Could not update the Savings balance.");
     } finally {
       setAdjustingSavings(false);
     }
@@ -391,11 +351,7 @@ export default function AdminWalletPanel() {
   const updateTransactionAmount = async (transaction: WalletTransaction) => {
     const parsed = Number(editingAmount);
     const amountPaise = Math.round(parsed * 100);
-    if (
-      !Number.isFinite(parsed) ||
-      !Number.isSafeInteger(amountPaise) ||
-      amountPaise === 0
-    ) {
+    if (!Number.isFinite(parsed) || !Number.isSafeInteger(amountPaise) || amountPaise === 0) {
       setError("Enter a non-zero amount with up to two decimal places.");
       return;
     }
@@ -403,10 +359,7 @@ export default function AdminWalletPanel() {
       setError("Expense amounts must remain negative. Use a minus sign.");
       return;
     }
-    if (
-      (transaction.type === "income" || transaction.type === "funding") &&
-      amountPaise <= 0
-    ) {
+    if ((transaction.type === "income" || transaction.type === "funding") && amountPaise <= 0) {
       setError("Income and funding amounts must remain positive.");
       return;
     }
@@ -419,17 +372,12 @@ export default function AdminWalletPanel() {
         { method: "PATCH", body: JSON.stringify({ amountPaise }) },
       );
       setWallet(data);
+      setHistoryReloadKey((value) => value + 1);
       setEditingEventKey(null);
       setEditingAmount("");
-      setMessage(
-        "Transaction updated. The completed cycle and linked Savings transfer were recalculated.",
-      );
+      setMessage("Transaction updated. The completed cycle and linked Savings transfer were recalculated.");
     } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : "Could not update the transaction.",
-      );
+      setError(reason instanceof Error ? reason.message : "Could not update the transaction.");
     } finally {
       setUpdatingTransaction(false);
     }
@@ -450,19 +398,14 @@ export default function AdminWalletPanel() {
         { method: "DELETE" },
       );
       setWallet(data);
+      setHistoryReloadKey((value) => value + 1);
       if (editingEventKey === transaction.eventKey) {
         setEditingEventKey(null);
         setEditingAmount("");
       }
-      setMessage(
-        "Transaction removed. The completed cycle and linked Savings transfer were recalculated.",
-      );
+      setMessage("Transaction removed. The completed cycle and linked Savings transfer were recalculated.");
     } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : "Could not remove the transaction.",
-      );
+      setError(reason instanceof Error ? reason.message : "Could not remove the transaction.");
     } finally {
       setRemovingTransactionKey(null);
     }
@@ -486,94 +429,99 @@ export default function AdminWalletPanel() {
         body: JSON.stringify({}),
       });
       setWallet(data);
+      setHistoryReloadKey((value) => value + 1);
       setMessage("Current cycle transferred to Savings.");
     } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : "Could not settle the wallet.",
-      );
+      setError(reason instanceof Error ? reason.message : "Could not settle the wallet.");
     } finally {
       setSettling(false);
     }
   };
 
-  const renderTransactionActions = (
-    transaction: WalletTransaction,
-    context: "history" | "cycle",
-  ) => {
+  const clearTransactionHistory = async () => {
+    const confirmed = window.confirm(
+      "Permanently delete all transaction history and completed cycles, and reset the wallet and Savings balances to ₹0? This cannot be undone.",
+    );
+    if (!confirmed) return;
+
+    setClearingHistory(true);
+    setError("");
+    setMessage("");
+    try {
+      // Process any due cycle/EMI entries first so the reset deletes the latest ledger state.
+      await walletRequest<WalletData>("/api/admin/wallet");
+      await walletRequest<{ success: boolean }>("/api/admin/wallet/transactions", {
+        method: "DELETE",
+      });
+      await refreshWallet();
+      setTransactionHistory([]);
+      setHistoryReloadKey((value) => value + 1);
+      setEditingEventKey(null);
+      setEditingAmount("");
+      setExpandedCycleId(null);
+      setMessage("Transaction history cleared. Wallet and Savings balances reset to ₹0.");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not clear transaction history.");
+    } finally {
+      setClearingHistory(false);
+    }
+  };
+
+  const clearCompletedCycles = async () => {
+    if (!wallet?.recentCycles.length) return;
+    const confirmed = window.confirm(
+      "Permanently delete all completed cycles and every transaction linked to them? Their settlement amounts will be removed from Savings. The current open cycle will remain. This cannot be undone.",
+    );
+    if (!confirmed) return;
+
+    setClearingCycles(true);
+    setError("");
+    setMessage("");
+    try {
+      await walletRequest<WalletData>("/api/admin/wallet");
+      await walletRequest<{ success: boolean }>("/api/admin/wallet/cycles/completed", {
+        method: "DELETE",
+      });
+      await refreshWallet();
+      setHistoryReloadKey((value) => value + 1);
+      setExpandedCycleId(null);
+      setMessage("Completed cycles and their linked transactions deleted.");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not clear completed cycles.");
+    } finally {
+      setClearingCycles(false);
+    }
+  };
+
+  const renderTransactionActions = (transaction: WalletTransaction, context: "history" | "cycle") => {
     const isEditing = editingEventKey === transaction.eventKey;
     const isRemoving = removingTransactionKey === transaction.eventKey;
     const locked = isSystemTransaction(transaction);
-    if (locked)
-      return (
-        <small className="admin-wallet-history-system-label">
-          {transaction.type === "savings-adjustment"
-            ? "Savings balance adjustment"
-            : transaction.autoEmiMandateId
-              ? "Scheduled EMI debit history"
-              : "Linked Savings transfer"}
-        </small>
-      );
+    if (locked) return <small className="admin-wallet-history-system-label">
+      {transaction.type === "savings-adjustment"
+        ? "Savings balance adjustment"
+        : transaction.autoEmiMandateId
+          ? "Scheduled EMI debit history"
+          : "Linked Savings transfer"}
+    </small>;
 
-    if (
-      context === "history" &&
-      transaction.cycleId &&
-      completedCycleIds.has(transaction.cycleId)
-    ) {
-      return (
-        <small className="admin-wallet-cycle-manage-hint">
-          Manage this entry in Completed cycles
-        </small>
-      );
+    if (context === "history" && transaction.cycleId && completedCycleIds.has(transaction.cycleId)) {
+      return <small className="admin-wallet-cycle-manage-hint">Manage this entry in Completed cycles</small>;
     }
 
     if (isEditing) {
       return (
-        <form
-          className="admin-wallet-history-edit-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void updateTransactionAmount(transaction);
-          }}
-        >
+        <form className="admin-wallet-history-edit-form" onSubmit={(event) => { event.preventDefault(); void updateTransactionAmount(transaction); }}>
           <label>
             <span>Signed amount (₹)</span>
-            <input
-              type="number"
-              step="0.01"
-              value={editingAmount}
-              onChange={(event) => setEditingAmount(event.target.value)}
-              autoFocus
-              required
-            />
+            <input type="number" step="0.01" value={editingAmount} onChange={(event) => setEditingAmount(event.target.value)} autoFocus required />
           </label>
           <div className="admin-wallet-history-actions">
-            <button
-              type="submit"
-              className="admin-wallet-icon-button is-save"
-              disabled={updatingTransaction}
-              aria-label="Save amount"
-              title="Save amount"
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M5 12.5 9.5 17 19 7.5" />
-              </svg>
+            <button type="submit" className="admin-wallet-icon-button is-save" disabled={updatingTransaction} aria-label="Save amount" title="Save amount">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5 9.5 17 19 7.5" /></svg>
             </button>
-            <button
-              type="button"
-              className="admin-wallet-icon-button"
-              disabled={updatingTransaction}
-              onClick={() => {
-                setEditingEventKey(null);
-                setEditingAmount("");
-              }}
-              aria-label="Cancel editing"
-              title="Cancel editing"
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="m7 7 10 10M17 7 7 17" />
-              </svg>
+            <button type="button" className="admin-wallet-icon-button" disabled={updatingTransaction} onClick={() => { setEditingEventKey(null); setEditingAmount(""); }} aria-label="Cancel editing" title="Cancel editing">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17" /></svg>
             </button>
           </div>
         </form>
@@ -582,31 +530,11 @@ export default function AdminWalletPanel() {
 
     return (
       <div className="admin-wallet-history-actions">
-        <button
-          type="button"
-          className="admin-wallet-icon-button"
-          disabled={Boolean(removingTransactionKey) || updatingTransaction}
-          onClick={() => beginEditTransaction(transaction)}
-          aria-label="Edit transaction amount"
-          title="Edit amount"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="m15 5 4 4M4 20l4.2-.9L19 8.3a2.1 2.1 0 0 0-3-3L5.2 16.1 4 20Z" />
-          </svg>
+        <button type="button" className="admin-wallet-icon-button" disabled={Boolean(removingTransactionKey) || updatingTransaction} onClick={() => beginEditTransaction(transaction)} aria-label="Edit transaction amount" title="Edit amount">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5 4 4M4 20l4.2-.9L19 8.3a2.1 2.1 0 0 0-3-3L5.2 16.1 4 20Z" /></svg>
         </button>
-        <button
-          type="button"
-          className="admin-wallet-icon-button is-danger"
-          disabled={
-            Boolean(removingTransactionKey) || updatingTransaction || isRemoving
-          }
-          onClick={() => void removeTransaction(transaction)}
-          aria-label="Delete transaction"
-          title="Delete entry"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M4 7h16M9 7V4h6v3m3 0-.8 13H6.8L6 7m4 4v5m4-5v5" />
-          </svg>
+        <button type="button" className="admin-wallet-icon-button is-danger" disabled={Boolean(removingTransactionKey) || updatingTransaction || isRemoving} onClick={() => void removeTransaction(transaction)} aria-label="Delete transaction" title="Delete entry">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-.8 13H6.8L6 7m4 4v5m4-5v5" /></svg>
         </button>
       </div>
     );
@@ -615,258 +543,90 @@ export default function AdminWalletPanel() {
   if (!isAdmin || !mountNode) return null;
 
   return createPortal(
-    <section
-      className="admin-wallet-panel"
-      aria-labelledby="admin-wallet-title"
-    >
+    <section className="admin-wallet-panel" aria-label="Admin wallet">
       <header className="admin-wallet-panel__header">
-        <div>
-          <p>Current cycle ledger and accumulated savings.</p>
-        </div>
-        <span
-          className={`admin-wallet-status${autoFundingEnabled ? " is-on" : ""}`}
-        >
+        <span className={`admin-wallet-status${autoFundingEnabled ? " is-on" : ""}`}>
           {autoFundingEnabled ? "Auto funding on" : "Auto funding off"}
         </span>
       </header>
 
-      {loading ? (
-        <p className="admin-wallet-feedback">Loading wallet…</p>
-      ) : (
+      {loading ? <p className="admin-wallet-feedback">Loading wallet…</p> : (
         <>
           <div className="admin-wallet-summary-grid">
-            <div className="admin-wallet-metric">
-              <span>Current wallet</span>
-              <strong>{money(wallet?.walletBalancePaise || 0)}</strong>
-              <small>Available balance this cycle</small>
-            </div>
-            <div className="admin-wallet-metric">
-              <span>Net P&amp;L</span>
-              <strong
-                className={
-                  (wallet?.netPnlPaise || 0) < 0 ? "is-negative" : "is-positive"
-                }
-              >
-                {money(wallet?.netPnlPaise || 0)}
-              </strong>
-              <small>Current cycle result</small>
-            </div>
-            <div className="admin-wallet-metric">
-              <span>Total savings</span>
-              <strong
-                className={
-                  (wallet?.savingsBalancePaise || 0) < 0
-                    ? "is-negative"
-                    : "is-positive"
-                }
-              >
-                {money(wallet?.savingsBalancePaise || 0)}
-              </strong>
-              <small>Completed cycle transfers</small>
-            </div>
-            <div className="admin-wallet-metric">
-              <span>Next funding</span>
-              <strong className="admin-wallet-date">
-                {shortDate(wallet?.nextFundingAt)}
-              </strong>
-              <small>
-                {wallet?.currentCycleStartAt
-                  ? `Cycle began ${shortDate(wallet.currentCycleStartAt)}`
-                  : "No open cycle"}
-              </small>
-            </div>
+            <div className="admin-wallet-metric"><span>Current wallet</span><strong>{money(wallet?.walletBalancePaise || 0)}</strong></div>
+            <div className="admin-wallet-metric"><span>Net P&amp;L</span><strong className={(wallet?.netPnlPaise || 0) < 0 ? "is-negative" : "is-positive"}>{money(wallet?.netPnlPaise || 0)}</strong></div>
+            <div className="admin-wallet-metric"><span>Total savings</span><strong className={(wallet?.savingsBalancePaise || 0) < 0 ? "is-negative" : "is-positive"}>{money(wallet?.savingsBalancePaise || 0)}</strong></div>
+            <div className="admin-wallet-metric"><span>Next funding</span><strong className="admin-wallet-date">{shortDate(wallet?.nextFundingAt)}</strong></div>
           </div>
 
-          <section
-            className="admin-wallet-section"
-            aria-label="Automatic funding settings"
-          >
+          <section className="admin-wallet-section" aria-label="Automatic funding settings">
             <div className="admin-wallet-section-heading">
-              <div>
-                <h3>Automatic funding</h3>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={autoFundingEnabled}
-                aria-label="Toggle automatic wallet funding"
-                className={`admin-wallet-switch${autoFundingEnabled ? " is-on" : ""}`}
-                disabled={savingSettings}
-                onClick={() => void saveSettings(!autoFundingEnabled)}
-              >
-                <span />
-              </button>
+              <div><h3>Automatic funding</h3></div>
+              <button type="button" role="switch" aria-checked={autoFundingEnabled} aria-label="Toggle automatic wallet funding" className={`admin-wallet-switch${autoFundingEnabled ? " is-on" : ""}`} disabled={savingSettings} onClick={() => void saveSettings(!autoFundingEnabled)}><span /></button>
             </div>
             <div className="admin-wallet-settings-fields">
-              <label>
-                <span>Funding amount (₹)</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={fundingAmount}
-                  onChange={(event) => setFundingAmount(event.target.value)}
-                  placeholder="1000.00"
-                />
-              </label>
-              <label>
-                <span>Funding interval</span>
-                <select
-                  value={intervalDays}
-                  onChange={(event) =>
-                    setIntervalDays(Number(event.target.value) as 30 | 31)
-                  }
-                >
-                  <option value={30}>Every 30 days</option>
-                  <option value={31}>Every 31 days</option>
-                </select>
-              </label>
-              <button
-                type="button"
-                className="admin-wallet-button admin-wallet-button--secondary"
-                disabled={savingSettings}
-                onClick={() => void saveSettings()}
-              >
-                {savingSettings ? "Saving…" : "Save schedule"}
-              </button>
+              <label><span>Funding amount (₹)</span><input type="number" min="0" step="0.01" value={fundingAmount} onChange={(event) => setFundingAmount(event.target.value)} placeholder="1000.00" /></label>
+              <label><span>Funding interval</span><select value={intervalDays} onChange={(event) => setIntervalDays(Number(event.target.value) as 30 | 31)}><option value={30}>Every 30 days</option><option value={31}>Every 31 days</option></select></label>
+              <button type="button" className="admin-wallet-button admin-wallet-button--secondary" disabled={savingSettings} onClick={() => void saveSettings()}>{savingSettings ? "Saving…" : "Save schedule"}</button>
             </div>
           </section>
 
-          <section
-            className="admin-wallet-section"
-            aria-label="Record a wallet transaction"
-          >
-            <div className="admin-wallet-section-heading admin-wallet-section-heading--single">
-              <div>
-                <h3>Record transaction</h3>
-              </div>
-            </div>
-            <form
-              className="admin-wallet-entry-form"
-              onSubmit={(event) => void addEntry(event)}
-            >
-              <label>
-                <span>Amount (₹)</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={entryAmount}
-                  onChange={(event) => setEntryAmount(event.target.value)}
-                  placeholder="-250.00 or 500.00"
-                  required
-                />
-              </label>
-              <label className="admin-wallet-entry-description">
-                <span>Description</span>
-                <input
-                  type="text"
-                  maxLength={240}
-                  value={entryDescription}
-                  onChange={(event) => setEntryDescription(event.target.value)}
-                  placeholder="What was this transaction for?"
-                  required
-                />
-              </label>
-              <button
-                type="submit"
-                className="admin-wallet-button"
-                disabled={savingEntry}
-              >
-                {savingEntry ? "Recording…" : "Add transaction"}
-              </button>
+          <section className="admin-wallet-section" aria-label="Record a wallet transaction">
+            <div className="admin-wallet-section-heading admin-wallet-section-heading--single"><div><h3>Record transaction</h3></div></div>
+            <form className="admin-wallet-entry-form" onSubmit={(event) => void addEntry(event)}>
+              <label><span>Amount (₹)</span><input type="number" step="0.01" value={entryAmount} onChange={(event) => setEntryAmount(event.target.value)} placeholder="-250.00 or 500.00" required /></label>
+              <label className="admin-wallet-entry-description"><span>Description</span><input type="text" maxLength={240} value={entryDescription} onChange={(event) => setEntryDescription(event.target.value)} placeholder="What was this transaction for?" required /></label>
+              <button type="submit" className="admin-wallet-button" disabled={savingEntry}>{savingEntry ? "Recording…" : "Add transaction"}</button>
             </form>
           </section>
 
-          <section
-            className="admin-wallet-section"
-            aria-label="Wallet transaction history"
-          >
+          <section className="admin-wallet-section" aria-label="Wallet transaction history">
             <div className="admin-wallet-section-heading">
-              <div>
-                <h3>Transaction history</h3>
-              </div>
+              <div><h3>Transaction history</h3></div>
               <div className="admin-wallet-history-heading-actions">
-                <button
-                  type="button"
-                  className="admin-wallet-button admin-wallet-button--secondary"
-                  disabled={settling || !wallet?.currentCycleId}
-                  onClick={() => void settleWallet()}
-                >
-                  {settling ? "Transferring…" : "Transfer to Savings"}
-                </button>
+                <div className="admin-wallet-history-filters" role="group" aria-label="Transaction history range">
+                  <button type="button" className={`admin-wallet-history-filter${historyRange === "month" ? " is-active" : ""}`} aria-pressed={historyRange === "month"} onClick={() => setHistoryRange("month")}>Month</button>
+                  <button type="button" className={`admin-wallet-history-filter${historyRange === "week" ? " is-active" : ""}`} aria-pressed={historyRange === "week"} onClick={() => setHistoryRange("week")}>Week</button>
+                  <button type="button" className={`admin-wallet-history-filter${historyRange === "year" ? " is-active" : ""}`} aria-pressed={historyRange === "year"} onClick={() => setHistoryRange("year")}>Year</button>
+                </div>
+                <button type="button" className="admin-wallet-text-action" disabled={settling || !wallet?.currentCycleId || clearingHistory || clearingCycles} onClick={() => void settleWallet()}>{settling ? "Transferring…" : "Transfer to Savings"}</button>
+                <button type="button" className="admin-wallet-text-action admin-wallet-text-action--danger" disabled={clearingHistory || clearingCycles || settling} onClick={() => void clearTransactionHistory()}>{clearingHistory ? "Clearing…" : "Clear history"}</button>
               </div>
             </div>
-            {wallet?.recentTransactions.length ? (
+            {historyLoading ? (
+              <p className="admin-wallet-empty">Loading…</p>
+            ) : transactionHistory.length ? (
               <div className="admin-wallet-history-list">
-                {wallet.recentTransactions.map((transaction) => {
-                  const displayAmount =
-                    transaction.type === "settlement" ||
-                    transaction.type === "savings-adjustment"
-                      ? transaction.savingsDeltaPaise
-                      : transaction.walletDeltaPaise;
+                {transactionHistory.map((transaction) => {
+                  const displayAmount = transaction.type === "settlement" || transaction.type === "savings-adjustment"
+                    ? transaction.savingsDeltaPaise
+                    : transaction.walletDeltaPaise;
                   return (
-                    <article
-                      className="admin-wallet-history-row"
-                      key={transaction.eventKey}
-                    >
+                    <article className="admin-wallet-history-row" key={transaction.eventKey}>
                       <div className="admin-wallet-history-copy">
                         <strong>{transaction.description}</strong>
-                        <span>
-                          {longDate(transaction.createdAt)} ·{" "}
-                          {transaction.type.replace(/-/g, " ")}
-                        </span>
-                        {transaction.savingsDeltaPaise !== 0 && (
-                          <small>
-                            Savings{" "}
-                            {transaction.savingsDeltaPaise > 0 ? "+" : "−"}
-                            {money(Math.abs(transaction.savingsDeltaPaise))}
-                          </small>
-                        )}
+                        <span>{longDate(transaction.createdAt)} · {transaction.type.replace(/-/g, " ")}</span>
+                        {transaction.savingsDeltaPaise !== 0 && <small>Savings {transaction.savingsDeltaPaise > 0 ? "+" : "−"}{money(Math.abs(transaction.savingsDeltaPaise))}</small>}
                       </div>
                       <div className="admin-wallet-history-value">
-                        <strong
-                          className={
-                            displayAmount > 0
-                              ? "is-positive"
-                              : displayAmount < 0
-                                ? "is-negative"
-                                : ""
-                          }
-                        >
-                          {money(displayAmount, true)}
-                        </strong>
+                        <strong className={displayAmount > 0 ? "is-positive" : displayAmount < 0 ? "is-negative" : ""}>{money(displayAmount, true)}</strong>
                         {renderTransactionActions(transaction, "history")}
                       </div>
                     </article>
                   );
                 })}
               </div>
-            ) : (
-              <p className="admin-wallet-empty">
-                No wallet transactions have been recorded yet.
-              </p>
-            )}
+            ) : <p className="admin-wallet-empty">No transactions this {historyRange}.</p>}
           </section>
 
-          <section
-            className="admin-wallet-section admin-wallet-cycle-section"
-            aria-label="Completed cycles and Savings controls"
-          >
-            <button
-              type="button"
-              className="admin-wallet-cycle-toggle"
-              aria-expanded={showCycles}
-              onClick={() => setShowCycles((value) => !value)}
-            >
-              <span>
-                <strong>Completed cycles</strong>
-                <small>
-                  {wallet?.recentCycles.length || 0} recent settlements ·
-                  Savings {money(wallet?.savingsBalancePaise || 0)}
-                </small>
-              </span>
-              <span aria-hidden="true">{showCycles ? "⌄" : "›"}</span>
-            </button>
+          <section className="admin-wallet-section admin-wallet-cycle-section" aria-label="Completed cycles and Savings controls">
+            <div className="admin-wallet-cycle-heading">
+              <button type="button" className="admin-wallet-cycle-toggle" aria-expanded={showCycles} onClick={() => setShowCycles((value) => !value)}>
+                <span><strong>Completed cycles</strong></span>
+                <span aria-hidden="true">{showCycles ? "⌄" : "›"}</span>
+              </button>
+              <button type="button" className="admin-wallet-text-action admin-wallet-text-action--danger" disabled={!wallet?.recentCycles.length || clearingCycles || clearingHistory || settling} onClick={() => void clearCompletedCycles()}>{clearingCycles ? "Clearing…" : "Clear cycles"}</button>
+            </div>
             {showCycles && (
               <div className="admin-wallet-cycle-content">
                 <div className="admin-wallet-cycle-savings">
@@ -874,58 +634,11 @@ export default function AdminWalletPanel() {
                     <strong>Savings balance</strong>
                   </div>
                   <div className="admin-wallet-savings-fields">
-                    <label>
-                      <span>Set Savings to (₹)</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={savingsTarget}
-                        onChange={(event) =>
-                          setSavingsTarget(event.target.value)
-                        }
-                        placeholder="0.00"
-                      />
-                    </label>
-                    <label className="admin-wallet-savings-reason">
-                      <span>Reason (optional)</span>
-                      <input
-                        type="text"
-                        maxLength={240}
-                        value={savingsReason}
-                        onChange={(event) =>
-                          setSavingsReason(event.target.value)
-                        }
-                        placeholder="Manual balance correction"
-                      />
-                    </label>
+                    <label><span>Set Savings to (₹)</span><input type="number" min="0" step="0.01" value={savingsTarget} onChange={(event) => setSavingsTarget(event.target.value)} placeholder="0.00" /></label>
+                    <label className="admin-wallet-savings-reason"><span>Reason (optional)</span><input type="text" maxLength={240} value={savingsReason} onChange={(event) => setSavingsReason(event.target.value)} placeholder="Manual balance correction" /></label>
                     <div className="admin-wallet-savings-actions">
-                      <button
-                        type="button"
-                        className="admin-wallet-icon-button is-save"
-                        disabled={adjustingSavings}
-                        onClick={() => void adjustSavings(false)}
-                        aria-label="Set Savings balance"
-                        title="Set Savings balance"
-                      >
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                          <path d="M5 12.5 9.5 17 19 7.5" />
-                        </svg>
-                      </button>
-                      <button
-                        type="button"
-                        className="admin-wallet-icon-button is-danger"
-                        disabled={
-                          adjustingSavings || wallet?.savingsBalancePaise === 0
-                        }
-                        onClick={() => void adjustSavings(true)}
-                        aria-label="Reset Savings to zero"
-                        title="Reset Savings to zero"
-                      >
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                          <path d="M4 11a8 8 0 1 1 2.3 5.7M4 4v7h7" />
-                        </svg>
-                      </button>
+                      <button type="button" className="admin-wallet-icon-button is-save" disabled={adjustingSavings} onClick={() => void adjustSavings(false)} aria-label="Set Savings balance" title="Set Savings balance"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5 9.5 17 19 7.5" /></svg></button>
+                      <button type="button" className="admin-wallet-icon-button is-danger" disabled={adjustingSavings || wallet?.savingsBalancePaise === 0} onClick={() => void adjustSavings(true)} aria-label="Reset Savings to zero" title="Reset Savings to zero"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2.3 5.7M4 4v7h7" /></svg></button>
                     </div>
                   </div>
                 </div>
@@ -933,127 +646,46 @@ export default function AdminWalletPanel() {
                 {wallet?.recentCycles.length ? (
                   <div className="admin-wallet-completed-cycles">
                     {wallet.recentCycles.map((cycle) => {
-                      const cycleTransactions =
-                        wallet.recentTransactions.filter(
-                          (transaction) =>
-                            transaction.cycleId === cycle.cycleId &&
-                            transaction.type !== "settlement",
-                        );
+                      const cycleTransactions = wallet.recentTransactions.filter((transaction) => transaction.cycleId === cycle.cycleId && transaction.type !== "settlement");
                       const expanded = expandedCycleId === cycle.cycleId;
                       return (
-                        <article
-                          className="admin-wallet-completed-cycle"
-                          key={cycle.cycleId}
-                        >
-                          <button
-                            type="button"
-                            className="admin-wallet-completed-cycle-toggle"
-                            aria-expanded={expanded}
-                            onClick={() =>
-                              setExpandedCycleId(
-                                expanded ? null : cycle.cycleId,
-                              )
-                            }
-                          >
+                        <article className="admin-wallet-completed-cycle" key={cycle.cycleId}>
+                          <button type="button" className="admin-wallet-completed-cycle-toggle" aria-expanded={expanded} onClick={() => setExpandedCycleId(expanded ? null : cycle.cycleId)}>
                             <span className="admin-wallet-completed-cycle-main">
-                              <strong>
-                                {shortDate(cycle.startedAt)} –{" "}
-                                {shortDate(cycle.closedAt)}
-                              </strong>
-                              <small>
-                                {cycle.entryCount} entries · Funding{" "}
-                                {money(cycle.fundingPaise)}
-                              </small>
+                              <strong>{shortDate(cycle.startedAt)} – {shortDate(cycle.closedAt)}</strong>
+                              <small>{cycle.entryCount} entries · Funding {money(cycle.fundingPaise)}</small>
                             </span>
                             <span className="admin-wallet-completed-cycle-end">
-                              <strong
-                                className={
-                                  (cycle.savingsTransferPaise || 0) < 0
-                                    ? "is-negative"
-                                    : "is-positive"
-                                }
-                              >
-                                {money(cycle.savingsTransferPaise || 0, true)}
-                              </strong>
-                              <span aria-hidden="true">
-                                {expanded ? "⌃" : "›"}
-                              </span>
+                              <strong className={(cycle.savingsTransferPaise || 0) < 0 ? "is-negative" : "is-positive"}>{money(cycle.savingsTransferPaise || 0, true)}</strong>
+                              <span aria-hidden="true">{expanded ? "⌃" : "›"}</span>
                             </span>
                           </button>
                           {expanded && (
                             <div className="admin-wallet-cycle-entries">
-                              {cycleTransactions.length ? (
-                                cycleTransactions.map((transaction) => (
-                                  <article
-                                    className="admin-wallet-history-row"
-                                    key={transaction.eventKey}
-                                  >
-                                    <div className="admin-wallet-history-copy">
-                                      <strong>{transaction.description}</strong>
-                                      <span>
-                                        {longDate(transaction.createdAt)} ·{" "}
-                                        {transaction.type}
-                                      </span>
-                                    </div>
-                                    <div className="admin-wallet-history-value">
-                                      <strong
-                                        className={
-                                          transaction.walletDeltaPaise > 0
-                                            ? "is-positive"
-                                            : transaction.walletDeltaPaise < 0
-                                              ? "is-negative"
-                                              : ""
-                                        }
-                                      >
-                                        {money(
-                                          transaction.walletDeltaPaise,
-                                          true,
-                                        )}
-                                      </strong>
-                                      {renderTransactionActions(
-                                        transaction,
-                                        "cycle",
-                                      )}
-                                    </div>
-                                  </article>
-                                ))
-                              ) : (
-                                <p className="admin-wallet-empty">
-                                  No individual entries are available in the
-                                  recent transaction window for this cycle.
-                                </p>
-                              )}
-                              <p className="admin-wallet-cycle-note">
-                                Editing or removing an entry recalculates this
-                                cycle’s Savings transfer automatically.
-                              </p>
+                              {cycleTransactions.length ? cycleTransactions.map((transaction) => (
+                                <article className="admin-wallet-history-row" key={transaction.eventKey}>
+                                  <div className="admin-wallet-history-copy"><strong>{transaction.description}</strong><span>{longDate(transaction.createdAt)} · {transaction.type}</span></div>
+                                  <div className="admin-wallet-history-value">
+                                    <strong className={transaction.walletDeltaPaise > 0 ? "is-positive" : transaction.walletDeltaPaise < 0 ? "is-negative" : ""}>{money(transaction.walletDeltaPaise, true)}</strong>
+                                    {renderTransactionActions(transaction, "cycle")}
+                                  </div>
+                                </article>
+                              )) : <p className="admin-wallet-empty">No entries.</p>}
                             </div>
                           )}
                         </article>
                       );
                     })}
                   </div>
-                ) : (
-                  <p className="admin-wallet-empty">
-                    Completed cycles will appear here after settlement.
-                  </p>
-                )}
+                ) : <p className="admin-wallet-empty">No completed cycles.</p>}
               </div>
             )}
           </section>
         </>
       )}
 
-      {message && (
-        <p className="admin-wallet-message" role="status">
-          {message}
-        </p>
-      )}
-      {error && (
-        <p className="admin-wallet-error" role="alert">
-          {error}
-        </p>
-      )}
+      {message && <p className="admin-wallet-message" role="status">{message}</p>}
+      {error && <p className="admin-wallet-error" role="alert">{error}</p>}
     </section>,
     mountNode,
   );
